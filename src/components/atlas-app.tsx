@@ -1,5 +1,35 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Bookmark, Check, ChevronLeft, ChevronRight, CircleHelp, Copy, Download, Eye, FileText, FileUp, History, Image as ImageIcon, ImagePlus, Laptop, Moon, Printer, RotateCw, Sheet, StickyNote, Sun, Trash2, Usb, Wifi } from "lucide-react";
+import {
+  ArrowClockwise as RotateCw,
+  ArrowRight,
+  ArrowsClockwise,
+  BookmarkSimple as Bookmark,
+  CaretDown,
+  CaretLeft as ChevronLeft,
+  CaretRight as ChevronRight,
+  CaretUp,
+  Check,
+  ClipboardText as Sheet,
+  ClockCounterClockwise as History,
+  Copy,
+  DownloadSimple as Download,
+  Eye,
+  FileArrowUp as FileUp,
+  FileText,
+  IconContext,
+  Image as ImageIcon,
+  ImagesSquare as ImagePlus,
+  Laptop,
+  Moon,
+  NotePencil as StickyNote,
+  Plug,
+  Printer,
+  Question as CircleHelp,
+  ShieldCheck,
+  Sun,
+  Trash as Trash2,
+} from "@phosphor-icons/react";
+import { UsbIcon as Usb, WifiIcon as Wifi } from "@/components/link-icons";
 import { Accordion, BottomCTA, BottomSheet, Callout, Chip, IconButton, ListRow, OptionGroup, ProgressBar, Section, Segmented, Stepper, SwitchRow, TopBar } from "@/components/ui-kit";
 import { matchQuery, type MatchResult } from "@/lib/atlas";
 import { grantedUsb, identifyUsb, pickUsb, sendUsbBytes, watchUsbConnect, watchUsbDisconnect } from "@/lib/discover";
@@ -1138,6 +1168,7 @@ export function AtlasApp() {
   ] as const;
 
   return (
+    <IconContext.Provider value={{ weight: "bold" }}>
     <main className={`shell mx-auto flex w-full max-w-lg flex-col gap-3 px-5 ${step === "print" ? "has-cta" : ""}`}>
       {step === "connect" ? (
         <TopBar root title="누구나프린트" actions={headerActions} />
@@ -1153,12 +1184,16 @@ export function AtlasApp() {
         </Callout>
       ) : null}
       {showDiag ? (
-        <BottomSheet title="진단 로그" onClose={() => setShowDiag(false)}>
+        <BottomSheet
+          title="진단 로그"
+          onClose={() => setShowDiag(false)}
+          actions={
+            <IconButton label="로그 복사" onClick={() => void navigator.clipboard.writeText(diagText())}>
+              <Copy className="size-5" aria-hidden="true" />
+            </IconButton>
+          }
+        >
           <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded-2xl bg-bg p-3 text-xs leading-relaxed text-muted">{diagText() || "아직 기록이 없어요."}</pre>
-          <button type="button" onClick={() => void navigator.clipboard.writeText(diagText())} className="btn btn-l btn-secondary mt-3 w-full">
-            <Copy className="size-5" aria-hidden="true" />
-            복사
-          </button>
         </BottomSheet>
       ) : null}
       {step === "connect" ? (
@@ -1167,16 +1202,23 @@ export function AtlasApp() {
           <Section
             title="프린터"
             action={
-              <button type="button" onClick={() => setLinkOpen((value) => !value)} className="btn btn-s btn-ghost">
-                {linkOpen ? "접기" : "연결 변경"}
-              </button>
+              <>
+                {saved.length > 0 ? (
+                  <IconButton label="전에 연결한 복사기 다시 보기" onClick={() => setScanId((value) => value + 1)}>
+                    <ArrowsClockwise className={`size-5 ${scanning ? "animate-spin" : ""}`} aria-hidden="true" />
+                  </IconButton>
+                ) : null}
+                <IconButton label={linkOpen ? "접기" : "연결 변경"} aria-expanded={linkOpen} onClick={() => setLinkOpen((value) => !value)}>
+                  {linkOpen ? <CaretUp className="size-5" aria-hidden="true" /> : <CaretDown className="size-5" aria-hidden="true" />}
+                </IconButton>
+              </>
             }
           >
-            <ListRow icon={<LinkIcon className="size-5" aria-hidden="true" />} dot={linkDot} title={linkLabel} subtitle={selected?.title || "아직 복사기를 고르지 않았어요"} />
+            <ListRow icon={<LinkIcon weight="duotone" className="size-6" aria-hidden="true" />} dot={linkDot} title={linkLabel} subtitle={selected?.title || "아직 복사기를 고르지 않았어요"} />
             {linkOpen ? (
               <div className="mt-3 space-y-3">
                 {saved[0] ? (
-                  <ListRow onClick={useRecent} icon={<History className="size-5" aria-hidden="true" />} title="최근 복사기" subtitle={saved[0].title} right={<ChevronRight className="size-5 text-faint" aria-hidden="true" />} />
+                  <ListRow onClick={useRecent} icon={<History weight="duotone" className="size-6" aria-hidden="true" />} title="최근 복사기" subtitle={saved[0].title} right={<ChevronRight className="size-5 text-faint" aria-hidden="true" />} />
                 ) : null}
                 <button type="button" disabled={lanBusy || sending} onClick={() => void findOnWifi()} className="btn btn-l btn-primary w-full">
                   <Wifi className="size-5" aria-hidden="true" />
@@ -1212,7 +1254,9 @@ export function AtlasApp() {
                       aria-label="복사기 IP 직접 입력"
                       className="field h-12 min-w-0 flex-1 px-4 text-[15px] outline-none"
                     />
-                    <button type="submit">이 IP로</button>
+                    <button type="submit" aria-label="이 IP로 연결" title="이 IP로 연결">
+                      <ArrowRight className="size-5" aria-hidden="true" />
+                    </button>
                   </div>
                 </form>
                 <Accordion title="다른 대역 검색" className="is-inset">
@@ -1243,7 +1287,7 @@ export function AtlasApp() {
                                 setStep(item.host ? "print" : stageForQuery(item.query, item.cmd));
                               }}
                               active={on}
-                              icon={<ViaIcon className="size-5" aria-hidden="true" />}
+                              icon={<ViaIcon weight="duotone" className="size-6" aria-hidden="true" />}
                               title={item.title}
                               subtitle={item.subtitle}
                               right={
@@ -1260,7 +1304,7 @@ export function AtlasApp() {
                   </div>
                 ) : null}
                 <div className="border-t border-line pt-1">
-                  <SwitchRow label="PC 도우미(9100)로 보내기" description="와이파이 직접 인쇄가 막힐 때 같은 망의 PC로 보내요" checked={useHelper} onChange={setUseHelper} />
+                  <SwitchRow icon={<Laptop weight="duotone" className="size-5" aria-hidden="true" />} label="PC 도우미(9100)로 보내기" description="와이파이 직접 인쇄가 막힐 때 같은 망의 PC로 보내요" checked={useHelper} onChange={setUseHelper} />
                 </div>
                 {useHelper ? (
                   <div className="space-y-2">
@@ -1273,6 +1317,7 @@ export function AtlasApp() {
                       className="btn btn-m btn-secondary w-full"
                       onClick={() => void helperPing(helperUrl).then(() => setLanNote("도우미가 응답했어요.")).catch((error: unknown) => setLanNote(error instanceof Error ? error.message : "도우미가 없어요."))}
                     >
+                      <Plug className="size-5" aria-hidden="true" />
                       도우미 연결 확인
                     </button>
                     <a href="/raw-print-helper.mjs" download className="btn btn-s btn-ghost -ml-2.5">
@@ -1300,7 +1345,7 @@ export function AtlasApp() {
               {docTiles.map(([kind, Icon, name, desc]) => (
                 <button key={kind} type="button" onClick={() => startWith(kind)} className="grid-tile">
                   <span className="avatar">
-                    <Icon className="size-5" aria-hidden="true" />
+                    <Icon weight="duotone" className="size-6" aria-hidden="true" />
                   </span>
                   <span className="t-label text-fg">{name}</span>
                   <span className="t-caption text-muted">{desc}</span>
@@ -1316,11 +1361,16 @@ export function AtlasApp() {
               <ListRow
                 onClick={backToConnect}
                 disabled={sending}
-                icon={<LinkIcon className="size-5" aria-hidden="true" />}
+                icon={<LinkIcon weight="duotone" className="size-6" aria-hidden="true" />}
                 dot={linkDot}
                 title={selected?.title || "화면 미리보기 전용"}
                 subtitle={`프린터 · ${linkLabel}`}
-                right={<span className="t-label text-accent">바꾸기</span>}
+                right={
+                  <>
+                    <span className="sr-only">프린터 바꾸기</span>
+                    <ChevronRight className="size-5 text-faint" aria-hidden="true" />
+                  </>
+                }
               />
             </section>
           ) : null}
@@ -1460,7 +1510,7 @@ export function AtlasApp() {
                             </Chip>
                           </OptionGroup>
                         ) : null}
-                        <SwitchRow label="보안 인쇄" description="복사기 화면에서 PIN을 넣어야 출력돼요" checked={secureOn} onChange={setSecureOn} />
+                        <SwitchRow icon={<ShieldCheck weight="duotone" className="size-5" aria-hidden="true" />} label="보안 인쇄" description="복사기 화면에서 PIN을 넣어야 출력돼요" checked={secureOn} onChange={setSecureOn} />
                         {secureOn ? (
                           <div className="flex gap-2">
                             <input value={pin} onChange={(event) => setPin(event.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" placeholder="PIN 4자리" aria-label="보안 PIN" className="field tabular h-11 w-28 px-3 outline-none" />
@@ -1494,7 +1544,7 @@ export function AtlasApp() {
           )}
         </>
       )}
-      <Accordion title="연결이 안 될 때" className="is-card">
+      <Accordion icon={<CircleHelp weight="duotone" className="size-5" aria-hidden="true" />} title="연결이 안 될 때" className="is-card">
         <ul className="t-body-s list-disc space-y-2 pb-3 pl-4 text-muted">
           <li>컴퓨터는 Chrome으로 여세요. 선을 꽂고 USB로 연결하면 목록이 나옵니다. 아이폰은 선을 잡을 수 없어요.</li>
           <li>삼성 기본 인쇄 앱으로는 넘기지 않아요.</li>
@@ -1502,12 +1552,8 @@ export function AtlasApp() {
           <li>같은 와이파이 주소가 안 보이면 복사기 화면의 IP를 직접 넣으세요.</li>
         </ul>
       </Accordion>
-      {saved.length > 0 ? (
-        <button type="button" onClick={() => setScanId((value) => value + 1)} className="btn btn-s btn-ghost self-center">
-          전에 연결한 복사기 다시 보기
-        </button>
-      ) : null}
     </main>
+    </IconContext.Provider>
   );
 }
 
@@ -1537,27 +1583,27 @@ function ReadyCard({
         : "삼성 기본 앱으로 넘기지 않고, 이 화면에 미리보기를 띄워요.";
   return (
     <div>
-      <span className="badge is-ok gap-1">
-        <Check className="size-3.5" aria-hidden="true" />
-        확인됨
-      </span>
+      <div className="flex items-start justify-between gap-3">
+        <span className="badge is-ok mt-1 gap-1">
+          <Check className="size-3.5" aria-hidden="true" />
+          확인됨
+        </span>
+        <IconButton
+          label={saved ? "기억 지우기" : "이 복사기 기억하기"}
+          aria-pressed={saved}
+          tone={saved ? "accent" : undefined}
+          onClick={saved ? onForget : onRemember}
+          className="-mr-2 -mt-1"
+        >
+          <Bookmark weight={saved ? "fill" : "bold"} className="size-6" aria-hidden="true" />
+        </IconButton>
+      </div>
       <h2 className="t-h2 mt-2 text-fg">
         {printer.brand} {printer.model}
       </h2>
       <p className="t-body mt-2 text-fg">{line}</p>
       {inkjet ? null : <p className="t-body-s mt-1 text-muted">{direct ? "USB로 이 브라우저에서 바로 넣습니다." : "이 화면에 미리보기를 띄웁니다."}</p>}
-      <p className="t-caption mt-3 text-faint">파일을 받지 않고, 이 브라우저에 복사기 종류만 기억합니다.</p>
-      {saved ? (
-        <button type="button" onClick={onForget} className="btn btn-m btn-secondary mt-3 w-full">
-          <Trash2 className="size-4" aria-hidden="true" />
-          기억 지우기
-        </button>
-      ) : (
-        <button type="button" onClick={onRemember} className="btn btn-m btn-secondary mt-3 w-full">
-          <Bookmark className="size-4" aria-hidden="true" />
-          이 복사기 기억하기
-        </button>
-      )}
+      <p className="t-caption mt-3 text-faint">파일을 받지 않고, 이 브라우저에 복사기 종류만 기억합니다. {saved ? "기억해 뒀어요." : "책갈피를 누르면 다음에도 이 복사기가 나와요."}</p>
     </div>
   );
 }
@@ -1732,7 +1778,7 @@ function PrintChooser({
             PDF 고르기
             <input type="file" accept="application/pdf,.pdf" disabled={sending} className="sr-only" onChange={(event) => onPdfFile(event.target.files?.[0])} />
           </label>
-          {pdfName ? <ListRow icon={<FileText className="size-5" aria-hidden="true" />} title={pdfName} subtitle={`총 ${pdfCount}쪽`} /> : null}
+          {pdfName ? <ListRow icon={<FileText weight="duotone" className="size-6" aria-hidden="true" />} title={pdfName} subtitle={`총 ${pdfCount}쪽`} /> : null}
           {pdfNeedsKey ? (
             <form
               className="flex gap-2"
@@ -1959,15 +2005,13 @@ function PaperPreview({
       )}
       {docKind === "pdf" && pdfCount > 1 ? (
         <div className="preview-pager">
-          <button type="button" disabled={previewPage <= 1} onClick={() => onPreview(previewPage - 1)} className="paper-btn inline-flex items-center gap-1 disabled:opacity-40">
+          <button type="button" disabled={previewPage <= 1} onClick={() => onPreview(previewPage - 1)} aria-label="이전 쪽" title="이전 쪽" className="paper-btn inline-grid w-10 place-items-center p-0 disabled:opacity-40">
             <ChevronLeft className="size-4" aria-hidden="true" />
-            이전
           </button>
           <span className="preview-caption tabular min-w-16 text-center text-sm font-semibold">
             {previewPage} / {pdfCount}
           </span>
-          <button type="button" disabled={previewPage >= pdfCount} onClick={() => onPreview(Math.min(pdfCount, previewPage + 1))} className="paper-btn inline-flex items-center gap-1 disabled:opacity-40">
-            다음
+          <button type="button" disabled={previewPage >= pdfCount} onClick={() => onPreview(Math.min(pdfCount, previewPage + 1))} aria-label="다음 쪽" title="다음 쪽" className="paper-btn inline-grid w-10 place-items-center p-0 disabled:opacity-40">
             <ChevronRight className="size-4" aria-hidden="true" />
           </button>
         </div>

@@ -2,72 +2,80 @@
 @import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 
 @theme {
-  /* 토스 권장 Pretendard → 당근식 시스템 폰트 폴백 */
-  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+  /* 토스 TDS 폰트 스택 — Pretendard(토스 TPS 대체) → 애플 SF Pro → 시스템 폰트(당근 SEED) */
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", system-ui, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-display: "Gowun Batang", "IBM Plex Sans KR", serif;
-  --font-mono: ui-monospace, monospace;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 
-  --color-bg: #0f172a;
-  --color-elevated: #1e293b;
-  --color-subtle: #172235;
-  --color-fg: #f8fafc;
-  --color-muted: #cbd5e1;
-  --color-faint: #94a3b8;
-  --color-line: #334155;
-  --color-accent: #3b82f6;
-  --color-accent-fg: #f8fafc;
-  --color-paper: #f8fafc;
-  --color-ink: #f8fafc;
-  --color-navy: #1e293b;
-  --color-ok: #86efac;
-  --color-warn: #fcd34d;
-  --color-bad: #fca5a5;
+  --color-bg: #17171c;
+  --color-elevated: #202027;
+  --color-subtle: #2c2c35;
+  --color-fg: #ffffff;
+  --color-muted: #c3c3c6;
+  --color-faint: #9e9ea4;
+  --color-line: #3c3c47;
+  --color-accent: #3485fa;
+  --color-accent-fg: #ffffff;
+  --color-paper: #ffffff;
+  --color-ink: #ffffff;
+  --color-navy: #202027;
+  --color-ok: #35ce9a;
+  --color-warn: #ff9e65;
+  --color-bad: #ff6e60;
   --color-swatch-c: #1d4e89;
   --color-swatch-m: #8d2f45;
   --color-swatch-y: #8a7428;
 
-  --bg: #0f172a;
-  --surface: #1e293b;
-  --surface-elevated: #1e293b;
-  --border: #334155;
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --input-bg: #0f172a;
-  --input-text: #f8fafc;
-  --input-placeholder: #94a3b8;
-  --input-border: #475569;
-  --accent: #3b82f6;
+  --bg: #17171c;
+  --surface: #202027;
+  --surface-elevated: #2c2c35;
+  --border: #3c3c47;
+  --text-primary: #ffffff;
+  --text-secondary: #c3c3c6;
+  --text-muted: #9e9ea4;
+  --input-bg: #2c2c35;
+  --input-text: #ffffff;
+  --input-placeholder: #7e7e87;
+  --input-border: #3c3c47;
+  --accent: #3485fa;
 }
 
+/* 어두운 테마 — 토스 TDS 다크 팔레트(@toss/tds-colors colors.dark.css)
+   바탕 background → 카드 layeredBackground → 떠 있는 표면 floatBackground 순으로 쌓는다 (당근 SEED layer 원칙) */
 :root,
 html[data-theme="dark"] {
-  --color-bg: #0f172a;
-  --color-elevated: #1e293b;
-  --color-subtle: #172235;
-  --color-fg: #f8fafc;
-  --color-muted: #cbd5e1;
-  --color-faint: #94a3b8;
-  --color-line: #334155;
-  --color-accent: #3b82f6;
-  --color-accent-fg: #f8fafc;
-  --color-paper: #f8fafc;
-  --color-ink: #f8fafc;
-  --color-navy: #1e293b;
-  --bg: #0f172a;
-  --surface: #1e293b;
-  --surface-elevated: #172235;
-  --border: #334155;
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --input-bg: #0f172a;
-  --input-text: #f8fafc;
-  --input-placeholder: #94a3b8;
-  --input-border: #475569;
-  --accent: #3b82f6;
-  /* 떠오르는 표면(세그먼트 선택 · 스위치 노브 바탕) — 기존 팔레트 값 */
-  --color-raised: #334155;
+  --color-bg: #17171c;
+  --color-elevated: #202027;
+  --color-subtle: #2c2c35;
+  --color-fg: #ffffff;
+  --color-muted: #c3c3c6;
+  --color-faint: #9e9ea4;
+  --color-line: #3c3c47;
+  --color-accent: #3485fa;
+  --color-accent-fg: #ffffff;
+  --color-paper: #ffffff;
+  --color-ink: #ffffff;
+  --color-navy: #202027;
+  --color-ok: #35ce9a;
+  --color-warn: #ff9e65;
+  --color-bad: #ff6e60;
+  --bg: #17171c;
+  --surface: #202027;
+  --surface-elevated: #2c2c35;
+  --border: #3c3c47;
+  --text-primary: #ffffff;
+  --text-secondary: #c3c3c6;
+  --text-muted: #9e9ea4;
+  --input-bg: #2c2c35;
+  --input-text: #ffffff;
+  --input-placeholder: #7e7e87;
+  --input-border: #3c3c47;
+  --accent: #3485fa;
+  /* 떠오르는 표면(세그먼트 선택) */
+  --color-raised: #4d4d59;
+  /* 카드 안의 채움 표면 (당근 bg-layer-fill) */
+  --color-fill: rgb(255 255 255 / 0.06);
+  --color-press: rgb(255 255 255 / 0.08);
   /* 모션 (TDS) */
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -95,16 +103,19 @@ html[data-theme="dark"] {
     font-family: var(--font-sans);
     font-size: 15px;
     line-height: 1.5;
-    letter-spacing: -0.005em;
+    letter-spacing: -0.01em;
+    font-optical-sizing: auto;
+    text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     -webkit-tap-highlight-color: transparent;
     background: var(--color-bg);
     color: var(--color-fg);
   }
 
-  /* Lucide 24px 그리드 · 1.8 stroke — TDS 1.5~1.67과 SEED 굵은 선의 중간 */
-  svg.lucide {
-    stroke-width: 1.8px;
+  /* Phosphor 아이콘 — 글자 기준선에 붙지 않게 블록으로 */
+  svg {
+    flex-shrink: 0;
   }
 
   button:focus-visible,
@@ -115,35 +126,39 @@ html[data-theme="dark"] {
   }
 }
 
+/* 밝은 테마 — 토스 회색 바탕(grey-100) 위 흰 카드, 글자는 순검정이 아닌 grey-900 */
 html[data-theme="light"] {
-  --color-bg: #f8fafc;
+  --color-bg: #f2f4f6;
   --color-elevated: #ffffff;
-  --color-subtle: #e2e8f0;
-  --color-fg: #0f172a;
-  --color-muted: #334155;
-  --color-faint: #64748b;
-  --color-line: #cbd5e1;
-  --color-accent: #1d4ed8;
-  --color-accent-fg: #f8fafc;
-  --color-paper: #0f172a;
-  --color-ink: #0f172a;
-  --color-navy: #0f172a;
-  --color-ok: #166534;
-  --color-warn: #92400e;
-  --color-bad: #991b1b;
-  --bg: #f8fafc;
+  --color-subtle: #e5e8eb;
+  --color-fg: #191f28;
+  --color-muted: #4e5968;
+  --color-faint: #6b7684;
+  --color-line: #e5e8eb;
+  --color-accent: #3182f6;
+  --color-accent-fg: #ffffff;
+  --color-paper: #191f28;
+  --color-ink: #191f28;
+  --color-navy: #191f28;
+  /* 의미 색 — 당근 SEED (성공 green-800 · 주의 carrot-800 · 오류 red-800) */
+  --color-ok: #00745f;
+  --color-warn: #b93901;
+  --color-bad: #ca1d13;
+  --bg: #f2f4f6;
   --surface: #ffffff;
-  --surface-elevated: #f1f5f9;
-  --border: #cbd5e1;
-  --text-primary: #0f172a;
-  --text-secondary: #334155;
-  --text-muted: #64748b;
-  --input-bg: #ffffff;
-  --input-text: #0f172a;
-  --input-placeholder: #64748b;
-  --input-border: #94a3b8;
-  --accent: #1d4ed8;
+  --surface-elevated: #f9fafb;
+  --border: #e5e8eb;
+  --text-primary: #191f28;
+  --text-secondary: #4e5968;
+  --text-muted: #6b7684;
+  --input-bg: #f2f4f6;
+  --input-text: #191f28;
+  --input-placeholder: #8b95a1;
+  --input-border: #e5e8eb;
+  --accent: #3182f6;
   --color-raised: #ffffff;
+  --color-fill: #f2f4f6;
+  --color-press: rgb(0 0 0 / 0.05);
   color-scheme: light;
 }
 
@@ -231,9 +246,9 @@ html[data-theme="light"] {
   box-shadow: inset 0 0 0 1.5px var(--color-accent);
 }
 
-.dot-usb { background: #22c55e; }
-.dot-wifi { background: #3b82f6; }
-.dot-idle { background: #94a3b8; }
+.dot-usb { background: var(--color-ok); }
+.dot-wifi { background: var(--color-accent); }
+.dot-idle { background: var(--color-faint); }
 
 .wifi-card {
   border: 1px solid var(--border);
@@ -243,17 +258,19 @@ html[data-theme="light"] {
 
 /* ───────── 토스 · 당근 design.md 기반 부품 (색은 기존 토큰만) ───────── */
 @layer components {
-  /* 타이포 램프 — TDS h2/h3/title-1/label-m/body-2/body-3/caption */
-  .t-h2 { font-size: 24px; font-weight: 700; line-height: 1.3; letter-spacing: -0.02em; }
-  .t-h3 { font-size: 22px; font-weight: 700; line-height: 1.3; letter-spacing: -0.015em; }
-  .t-title { font-size: 18px; font-weight: 600; line-height: 1.45; letter-spacing: -0.01em; }
-  .t-label { font-size: 15px; font-weight: 600; line-height: 1.4; letter-spacing: -0.005em; }
-  .t-body { font-size: 15px; font-weight: 400; line-height: 1.5; letter-spacing: -0.005em; }
-  .t-body-s { font-size: 13px; font-weight: 400; line-height: 1.5; }
-  .t-caption { font-size: 12px; font-weight: 500; line-height: 1.4; }
+  /* 타이포 램프 — 크기·굵기는 토스 TDS, 자간은 애플 SF처럼 클수록 더 좁힌다 */
+  .t-large { font-size: 28px; font-weight: 700; line-height: 1.25; letter-spacing: -0.03em; }
+  .t-h2 { font-size: 24px; font-weight: 700; line-height: 1.3; letter-spacing: -0.027em; }
+  .t-h3 { font-size: 22px; font-weight: 700; line-height: 1.3; letter-spacing: -0.025em; }
+  .t-h4 { font-size: 20px; font-weight: 700; line-height: 1.35; letter-spacing: -0.022em; }
+  .t-title { font-size: 18px; font-weight: 700; line-height: 1.4; letter-spacing: -0.02em; }
+  .t-label { font-size: 16px; font-weight: 600; line-height: 1.4; letter-spacing: -0.017em; }
+  .t-body { font-size: 15px; font-weight: 400; line-height: 1.5; letter-spacing: -0.012em; }
+  .t-body-s { font-size: 13px; font-weight: 400; line-height: 1.5; letter-spacing: -0.006em; }
+  .t-caption { font-size: 12px; font-weight: 500; line-height: 1.4; letter-spacing: 0; }
   .tabular { font-variant-numeric: tabular-nums; }
 
-  /* 56px 상단바 */
+  /* 56px 상단바 — 애플식 반투명 유리 (스크롤된 내용이 비친다) */
   .topbar {
     position: sticky;
     top: env(safe-area-inset-top, 0px);
@@ -264,7 +281,9 @@ html[data-theme="light"] {
     height: 56px;
     margin-inline: -20px;
     padding-inline: 8px;
-    background: var(--color-bg);
+    background: color-mix(in srgb, var(--color-bg) 82%, transparent);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
   }
 
   .icon-btn {
@@ -276,16 +295,16 @@ html[data-theme="light"] {
     color: var(--color-fg);
     transition: background-color 120ms var(--ease), transform 120ms var(--ease);
   }
-  .icon-btn:active:not(:disabled) { background: color-mix(in srgb, var(--color-fg) 10%, transparent); transform: scale(0.95); }
+  .icon-btn:active:not(:disabled) { background: var(--color-press); transform: scale(0.95); }
   .icon-btn:disabled { opacity: 0.3; }
+  .icon-btn.is-accent { color: var(--color-accent); }
   @media (hover: hover) {
-    .icon-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--color-fg) 7%, transparent); }
+    .icon-btn:hover:not(:disabled) { background: var(--color-press); }
   }
 
-  /* 섹션 카드 — 24px 라운드, 1px 헤어라인 */
+  /* 섹션 카드 — 24px 라운드. 테두리 없이 바탕과의 명도 차로만 나눈다 (토스 · 당근 layer) */
   .section {
     border-radius: 24px;
-    border: 1px solid var(--color-line);
     background: var(--color-elevated);
     padding: 20px;
   }
@@ -311,10 +330,10 @@ html[data-theme="light"] {
     text-align: left;
     transition: background-color 120ms var(--ease), transform 120ms var(--ease);
   }
-  .list-row.is-pressable:active:not(:disabled) { background: color-mix(in srgb, var(--color-fg) 7%, transparent); transform: scale(0.99); }
+  .list-row.is-pressable:active:not(:disabled) { background: var(--color-press); transform: scale(0.99); }
   .list-row:disabled { opacity: 0.3; }
   @media (hover: hover) {
-    .list-row.is-pressable:hover:not(:disabled) { background: color-mix(in srgb, var(--color-fg) 5%, transparent); }
+    .list-row.is-pressable:hover:not(:disabled) { background: var(--color-press); }
   }
 
   .avatar {
@@ -328,6 +347,7 @@ html[data-theme="light"] {
     background: color-mix(in srgb, var(--color-accent) 14%, transparent);
     color: var(--color-accent);
   }
+  .avatar.is-sm { width: 36px; height: 36px; border-radius: 12px; }
   .avatar-dot {
     position: absolute;
     right: -2px;
@@ -348,14 +368,13 @@ html[data-theme="light"] {
     gap: 2px;
     padding: 16px;
     border-radius: 20px;
-    border: 1px solid var(--color-line);
-    background: var(--surface-elevated);
+    background: var(--color-fill);
     text-align: left;
-    transition: transform 120ms var(--ease), border-color 200ms var(--ease);
+    transition: transform 120ms var(--ease), background-color 200ms var(--ease);
   }
   .grid-tile:active { transform: scale(0.97); }
   @media (hover: hover) {
-    .grid-tile:hover { border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-line)); }
+    .grid-tile:hover { background: color-mix(in srgb, var(--color-accent) 8%, var(--color-fill)); }
   }
   .grid-tile .avatar { width: 40px; height: 40px; border-radius: 12px; margin-bottom: 10px; }
 
@@ -371,11 +390,16 @@ html[data-theme="light"] {
   .btn:active:not(:disabled) { transform: scale(0.98); }
   .btn:disabled { opacity: 0.3; cursor: not-allowed; }
   .btn-xl { height: 56px; padding-inline: 20px; border-radius: 16px; font-size: 17px; font-weight: 700; }
-  .btn-l { height: 48px; padding-inline: 16px; border-radius: 14px; font-size: 16px; font-weight: 600; }
-  .btn-m { height: 40px; padding-inline: 14px; border-radius: 12px; font-size: 15px; font-weight: 600; }
+  .btn-l { height: 48px; padding-inline: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; letter-spacing: -0.017em; }
+  .btn-m { height: 40px; padding-inline: 14px; border-radius: 12px; font-size: 15px; font-weight: 600; letter-spacing: -0.012em; }
   .btn-s { height: 32px; padding-inline: 10px; border-radius: 10px; font-size: 13px; font-weight: 600; }
+  .btn-xl { letter-spacing: -0.02em; }
   .btn-primary { background: var(--color-accent); color: var(--color-accent-fg); }
-  .btn-secondary { background: color-mix(in srgb, var(--color-fg) 9%, transparent); color: var(--color-fg); }
+  /* 보조 버튼 — 토스 grey-100 채움 / 다크는 흰 8% */
+  .btn-secondary { background: var(--color-fill); color: var(--color-fg); }
+  /* 누름 — 토스 press-overlay (그림자가 아니라 덮개) */
+  .btn-primary:active:not(:disabled),
+  .btn-secondary:active:not(:disabled) { box-shadow: inset 0 0 0 999px rgb(0 0 0 / 0.12); }
   .btn-ghost { background: transparent; color: var(--color-accent); }
   .btn-ghost:active:not(:disabled) { background: color-mix(in srgb, var(--color-accent) 12%, transparent); }
 
@@ -395,7 +419,8 @@ html[data-theme="light"] {
     transition: background-color 200ms var(--ease), border-color 200ms var(--ease), color 200ms var(--ease), transform 120ms var(--ease);
   }
   .chip:active:not(:disabled) { transform: scale(0.97); }
-  .chip.is-on { border-color: var(--color-accent); background: var(--color-accent); color: var(--color-accent-fg); font-weight: 600; }
+  /* 선택된 칩은 토스처럼 grey-900(다크에선 흰색)으로 뒤집는다 */
+  .chip.is-on { border-color: var(--color-fg); background: var(--color-fg); color: var(--color-bg); font-weight: 600; }
   .chip:disabled { opacity: 0.3; cursor: not-allowed; }
 
   /* 세그먼트 컨트롤 */
@@ -406,7 +431,7 @@ html[data-theme="light"] {
     gap: 4px;
     padding: 4px;
     border-radius: 14px;
-    background: color-mix(in srgb, var(--color-fg) 8%, transparent);
+    background: var(--color-fill);
   }
   .seg button {
     min-height: 40px;
@@ -514,11 +539,11 @@ html[data-theme="light"] {
   .accordion-chevron { transition: transform 200ms var(--ease); }
   .accordion[open] .accordion-chevron { transform: rotate(180deg); }
   .accordion-body { padding-bottom: 8px; }
-  .accordion.is-card { border-radius: 24px; border: 1px solid var(--color-line); background: var(--color-elevated); padding-inline: 20px; }
-  .accordion.is-inset { border-radius: 16px; background: color-mix(in srgb, var(--color-fg) 5%, transparent); padding-inline: 16px; }
+  .accordion.is-card { border-radius: 24px; background: var(--color-elevated); padding-inline: 20px; }
+  .accordion.is-inset { border-radius: 16px; background: var(--color-fill); padding-inline: 16px; }
 
   /* 진행 막대 */
-  .progress { height: 6px; overflow: hidden; border-radius: 999px; background: var(--color-line); }
+  .progress { height: 6px; overflow: hidden; border-radius: 999px; background: var(--color-subtle); }
   .progress > span { display: block; height: 100%; border-radius: inherit; background: var(--color-accent); transition: width 200ms var(--ease); }
 
   /* 하단 고정 CTA + 보호 그라디언트 */
@@ -541,7 +566,7 @@ html[data-theme="light"] {
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    background: rgb(0 0 0 / 0.6);
+    background: rgb(0 0 0 / 0.56);
     animation: fade-in 200ms var(--ease);
   }
   .sheet {
@@ -728,22 +753,12 @@ body.is-copying .print-page.is-sheet {
   margin-top: 16px;
   overflow: visible;
   border-radius: 20px;
-  border: 1px solid #334155;
-  background: #172235;
+  background: var(--color-fill);
   padding: 14px 12px 28px;
 }
 
-html[data-theme="light"] .preview-stage {
-  border-color: #cbd5e1;
-  background: #e8eef6;
-}
-
 .preview-stage .preview-caption {
-  color: #cbd5e1;
-}
-
-html[data-theme="light"] .preview-stage .preview-caption {
-  color: #1e293b;
+  color: var(--color-muted);
 }
 
 .preview-pager {
@@ -757,17 +772,11 @@ html[data-theme="light"] .preview-stage .preview-caption {
 }
 
 button.btn-send:disabled {
-  background: #334155;
-  color: #94a3b8;
-  -webkit-text-fill-color: #94a3b8;
+  background: var(--color-subtle);
+  color: var(--color-faint);
+  -webkit-text-fill-color: var(--color-faint);
   opacity: 1;
   cursor: not-allowed;
-}
-
-html[data-theme="light"] button.btn-send:disabled {
-  background: #e2e8f0;
-  color: #475569;
-  -webkit-text-fill-color: #475569;
 }
 
 .preview-caption,
@@ -786,9 +795,9 @@ html[data-theme="light"] button.btn-send:disabled {
 }
 
 .paper-btn.is-on {
-  border-color: #1d4ed8;
-  background: #1d4ed8;
-  color: #f8fafc;
+  border-color: #191f28;
+  background: #191f28;
+  color: #ffffff;
 }
 
 .sheet-a4 {

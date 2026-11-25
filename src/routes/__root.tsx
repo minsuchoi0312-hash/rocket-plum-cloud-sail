@@ -10,7 +10,7 @@ export const Route = createRootRoute({
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "누구나프린트" },
       { name: "description", content: "사진이나 PDF를 고른 뒤 이 화면에서 인쇄합니다. 삼성 기본 인쇄 앱으로 넘기지 않아요." },
-      { name: "theme-color", content: "#1b2a45" },
+      { name: "theme-color", content: "#17171c" },
       { name: "apple-mobile-web-app-title", content: "누구나프린트" },
     ],
     links: [
