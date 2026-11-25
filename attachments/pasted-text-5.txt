@@ -1,0 +1,97 @@
+안드로이드 스튜디오에서 바로 열어 빌드·실행할 수 있는 **Flutter(Dart) 기반 사무용 복사기·레이저 복합기 전용 자체 인쇄 앱(Android + iOS 공용)**을 만들어 줘.
+핵심 목표는 **안드로이드 기본 인쇄 앱이나 iOS AirPrint 창으로 넘기지 않고, 이 앱 안에서 사내 와이파이 복사기(TCP 9100)와 안드로이드 USB 복사기로 직접 데이터를 전송해 출력하는 것**이야.
+
+아래 명세와 오류 방지 규칙을 하나도 빠뜨리지 말고 정확히 지켜서 구현해 줘.
+
+---
+
+### 1. 프로젝트 환경 및 빌드 오류 방지 규칙
+- **프레임워크:** Flutter (Dart, null-safety 엄격 적용). 안드로이드 스튜디오에서 바로 열 수 있는 표준 Flutter 프로젝트 구조로 생성.
+- **최소 지원 버전:** Android `minSdk 26` 이상(`compileSdk 35`, Gradle/Kotlin 최신 호환 버전 일치), iOS `14.0` 이상.
+- **불필요 기능 금지:** 영수증 프린터(58/80mm, ESC/POS, 커터), 블루투스(BLE), 가짜 드라이버 설치 용량 표시, 로그인/DB 기능은 절대 넣지 마.
+- **네이티브 플랫폼 설정 필수 반영 (누락 시 런타임 크래시·통신 차단 발생):**
+  - **Android (`android/app/src/main/AndroidManifest.xml`):**
+    - `INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE` 권한 추가.
+    - `<uses-feature android:name="android.hardware.usb.host" android:required="false" />` 추가.
+    - `android:usesCleartextTraffic="true"` 설정 (사내 사설 IP 통신 허용).
+  - **iOS (`ios/Runner/Info.plist`):**
+    - `NSLocalNetworkUsageDescription` (로컬 네트워크 복사기 검색·인쇄 권한 안내 한글 문구) 필수 추가.
+    - `NSBonjourServices` 배열에 `_pdl-datastream._tcp`, `_ipp._tcp`, `_ipps._tcp`, `_printer._tcp` 필수 등록 (누락 시 iOS에서 mDNS 검색과 9100 소켓 연결이 조용히 차단됨).
+    - 파일 선택/사진 접근 권한(`NSPhotoLibraryUsageDescription`) 추가.
+
+---
+
+### 2. 대상 기기 및 UI 흐름 (3단계 단일 상태)
+- **대상 브랜드:** 캐논, 신도리코, 후지필름/제록스, 리코, 코니카미놀타, 삼성, 교세라, HP 사무용 복사기·레이저 복합기.
+- **화면 상태:** `ConnectStep` → `ConfirmStep` → `PrintStep` 3단계 단일 상태 머신. 첫 진입 시 저장된 복사기가 있어도 3단계로 자동 점프하지 마.
+- **1단계 (연결):**
+  - **와이파이 복사기 자동 검색(mDNS):** 같은 네트워크의 `_pdl-datastream._tcp` (포트 9100), `_ipp._tcp` 복사기 목록을 실시간 표시 (복사기 이름, IP 주소, 포트).
+  - **IP 직접 입력:** 자동 검색이 막힌 사내망을 위해 IP 주소(예: `192.168.0.50`)와 포트(기본 `9100`) 직접 입력 + 연결 테스트(TCP 9100 3초 핑) 제공.
+  - **USB 선으로 연결 (Android 전용):** `Platform.isAndroid`일 때만 버튼 노출. iOS에서는 숨김 처리.
+  - **최근 사용한 복사기:** `shared_preferences`에 최대 20대 저장(이름, IP/포트, 지원 언어).
+- **2단계 (확인):** 연결된 복사기의 모델명·지원 언어(`PDF Direct` / `PCL5e`)가 불명확할 때만 진입. 확인 건너뛰기 가능.
+- **3단계 (인쇄):**
+  - 탭 순서: `PDF 문서`(기본) | `사진 인쇄` | `간단 메모` | `테스트`.
+  - PDF 탭: 총 쪽수 표시, `< 이전 | 현재쪽 / 전체쪽 | 다음 >` 미리보기 쪽 넘김, 인쇄 범위(전체 / 시작~끝 쪽), 열기 암호 걸린 PDF면 비밀번호 입력창 표시.
+  - 사무용 옵션: 용지(`A4`, `A3`, `B5`), 색(`컬러`, `흑백`), 양면(`단면`, `긴 쪽 넘김`, `짧은 쪽 넘김`), 장수(`1~99부`).
+  - 전송 중(`sending == true`)에는 파일 선택, 탭 전환, 뒤로가기, 옵션 변경을 모두 잠그고 진행률(%)과 `취소` 버튼만 활성화.
+  - 버튼 문구: 와이파이/USB 직접 전송 시 `복사기로 바로 인쇄`. (OS 기본 인쇄 창을 띄우지 않음)
+
+---
+
+### 3. 문서 렌더링 (네이티브 엔진 활용, 메모리 안전)
+- **PDF 렌더링:** 웹용 JS 라이브러리 대신 Android `PdfRenderer` / iOS `PDFKit` 기반 Flutter 플러그인(예: `pdfx` 또는 플랫폼 채널)을 사용해 한글 비임베디드 공문서·도장·폼 깨짐과 번들 비대화를 원천 차단해 줘.
+- **가로형(Landscape) PDF 자동 회전:** 이미 `/Rotate`가 적용된 최종 표시 크기 기준으로 `width > height`인 페이지는 90도 자동 회전시켜 세로 인쇄 가능 영역을 꽉 채우게 해 줘. (180도 뒤집힘 방지)
+- **72px 물리 여백 처리:** 300dpi 풀사이즈에서 사방 72px를 잘라내지(crop) 말고, 처음부터 인쇄 가능 영역 크기(A4 `2336×3364`, A3 `3368×4817`, B5 `2008×2891`) 안에 원본이 안 잘리게 `contain`으로 맞춰 그려 줘.
+- **긴 메모 다쪽 분할:** `간단 메모`가 1쪽 높이를 넘으면 자르지 말고 자동으로 여러 쪽으로 분할해 렌더링해 줘.
+- **메모리·경합 방어:**
+  - 쪽 넘김 연타 시 이전 렌더 요청을 취소하고 최신 요청 번호만 화면에 반영.
+  - 각 페이지 비트맵은 PCL 인코딩 직후 즉시 해제(`dispose`)해 50~100쪽 대용량 PDF에서도 OOM(메모리 부족)이 나지 않게 해 줘.
+  - 무거운 디더링과 PackBits 압축은 반드시 `Isolate.run()`(백그라운드 스레드)에서 실행해 UI가 얼지 않게 해 줘.
+
+---
+
+### 4. 프로토콜 엔진 (`lib/engine/` — Pure Dart, 실기기 검증 규격)
+모든 바이트 생성 로직은 UI/네트워크와 완전히 분리된 순수 Dart 모듈로 작성하고 아래 규격을 100% 지켜 줘.
+
+1. **경로 분기 단일화 (`resolvePrintRoute`):**
+   - `PDF Direct`: PDF 탭 + 암호 없음 + 전체 쪽 + 컬러 + 25MB 이하 + 기기가 PDF 지원일 때만.
+   - `PCL5e 래스터`: 그 외 모든 PDF(일부 쪽·흑백·암호 해제본)·사진·메모·테스트. (PCL5e 경로에서는 흑백만 지원함을 안내하고 컬러 토글 잠금)
+2. **PJL 헤더/푸터 (`\r\n` 줄바꿈, `ESC` = `0x1B`):**
+   - 시작: `ESC%-12345X@PJL JOB\r\n`
+   - 장수 이중 적용 금지: PCL 내부 장수(`ESC & l n X`)는 절대 넣지 마. 여러 쪽 문서는 `@PJL SET QTY=<n>`(부수 묶음), 1쪽 문서는 `@PJL SET COPIES=<n>`만 전송.
+   - 용지: A4는 `@PJL SET PAPER=A4`, A3는 `@PJL SET PAPER=A3`, **B5는 호환성 문제로 PJL 용지 줄을 생략**하고 PCL 본문 `ESC & l 45 A`만 사용.
+   - 양면: 단면은 `@PJL SET DUPLEX=OFF`, 양면은 `@PJL SET DUPLEX=ON` + `@PJL SET BINDING=LONGEDGE` 또는 `SHORTEDGE`.
+   - 종료: 마지막에 반드시 `ESC E` + `ESC%-12345X@PJL EOJ\r\n` + `ESC%-12345X`로 닫아 수신 대기 멈춤 방지.
+3. **PCL5e 본문 정밀 규격:**
+   - 작업 헤더: `ESC E`, 용지(`A4:26A / A3:27A / B5:45A`), 세로(`ESC & l 0 O`), 양면(`0S / 1S / 2S`), `ESC & u 300 D`, `ESC & l 0 E`, `ESC & l 0 L`, `ESC * t 300 R`, `ESC * r 0 F`.
+   - 매 페이지 시작: `ESC * p 0 x 72 Y` (반드시 소문자 `x`, 세로 72점 이동으로 상단 잘림 방지), `ESC * r <폭px> S`, `ESC * r <높이px> T`, `ESC * r 1 A`, 그 직후 매 페이지마다 `ESC * b 2 M` (TIFF PackBits 압축 재선언 필수).
+   - 압축 및 빈 줄: TIFF PackBits(`0x80` NOOP 미생성, 128바이트 경계 정확 분할) + 연속 흰 줄 건너뛰기(`ESC * b <skip> Y`).
+   - 흑백 변환: 메모·테스트는 단순 임계값(밝기 175 미만 검정), PDF·사진은 240 이상→255 / 40 이하→0 클리핑 후 Floyd-Steinberg 디더링.
+   - 완전 빈 페이지 및 홀수 양면 패딩: 잉크가 0인 백지도 우하단 끝 1픽셀을 찍어 복사기의 "빈 페이지 절약"에 무시되지 않게 확정. 양면 인쇄 시 총 쪽수가 홀수면 마지막에 확정 빈 페이지 1쪽을 패딩해 2부 1쪽이 1부 뒷면에 찍히는 사고 방지.
+   - 페이지 끝: `ESC * r C` + `0x0C` (FF).
+
+---
+
+### 5. 전송 계층 (`lib/transport/` — 안정성·취소·복구)
+1. **Wi-Fi Raw TCP 9100 (`Socket.connect`):**
+   - 연결 타임아웃 5초, 쓰기(전송) 타임아웃 15초 적용.
+   - 페이지 단위로 스트리밍 전송하되, 반드시 완전한 `ESC * b <n> W` 줄 경계 단위로 ~4KB 청크를 묶어 전송.
+   - 전송 중 취소 시 명령 중간을 자르지 말고 현재 줄 경계에서 멈춘 뒤 `ESC * r C` + `ESC E` + UEL + `@PJL EOJ` + UEL을 보내고 `socket.flush()` → `socket.close()` 실행.
+   - 오류·타임아웃 시 `try/finally`로 소켓을 `destroy()`해서 리소스 누수 차단.
+2. **Android USB 직결 (`MethodChannel` + Kotlin `UsbManager`):**
+   - 프린터 인터페이스 선택 시 `USB_CLASS_PRINTER (7)`이면서 `protocol == 2`(양방향) → `protocol == 1`(단방향) 순으로만 선택. `protocol == 4`(IPP-over-USB), `3`(1284.4), 스캐너 제외.
+   - `claimInterface(intf, true)`로 강제 점유.
+   - `GET_DEVICE_ID`로 `MFG`, `MDL`, `CMD` 파싱 (`wIndex`는 `(interface << 8) | alternate` 먼저 시도 후 실패 시 `interface` 폴백).
+   - `bulkTransfer` 타임아웃 15초, 부분 전송(`bytesWritten < length`) 시 남은 바이트 이어 보내기.
+   - 종료·오류 시 `releaseInterface`와 `close`를 각각 `try/catch`로 감싸 반드시 해제.
+
+---
+
+### 6. 필수 검증 (완료 전 반드시 통과시킬 것)
+코드를 다 짠 뒤 아래 3가지를 모두 실행하고 결과를 보고해 줘.
+1. `dart test` / `flutter test`:
+   - PackBits 128바이트 반복/비반복 경계, `0x80` 미생성, 끝 1~2바이트 테스트.
+   - PJL `QTY`/`COPIES` 단일화(`ESC & l n X` 미포함), B5 PJL 생략, 홀수 양면 빈 페이지 패딩, 백지 1점 확정, 매 페이지 `ESC * p 0 x 72 Y` + `ESC * r 1 A` + `ESC * b 2 M` + `W` 줄 경계 청킹, 종료 `ESC E` + `@PJL EOJ` 바이트 검증.
+2. `flutter analyze` 에러·경고 0건 확인.
+3. 안드로이드 빌드(`flutter build apk --debug` 또는 Gradle 구성 검증)에 문법·의존성 충돌이 없는지 확인.
