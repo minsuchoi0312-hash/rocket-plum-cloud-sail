@@ -1,3 +1,4 @@
+import { tr } from "./i18n/core.ts";
 type PdfViewport = { width: number; height: number };
 type PdfPage = {
   rotate?: number;
@@ -205,9 +206,9 @@ export async function imagesToPdf(
 
 export function parsePageRange(input: string, total: number): { pages: number[] } | { error: string } {
   const compact = input.replace(/\s+/g, "");
-  if (!compact) return { error: "쪽 범위를 입력해 주세요." };
-  if (!total) return { error: "PDF를 먼저 열어 주세요." };
-  if (compact.startsWith(",") || compact.endsWith(",") || compact.includes(",,")) return { error: "빈 콤마는 쓸 수 없어요." };
+  if (!compact) return { error: tr("pr.empty") };
+  if (!total) return { error: tr("pr.noPdf") };
+  if (compact.startsWith(",") || compact.endsWith(",") || compact.includes(",,")) return { error: tr("pr.comma") };
   const pages: number[] = [];
   const seen = new Set<number>();
   for (const part of compact.split(",")) {
@@ -215,9 +216,9 @@ export function parsePageRange(input: string, total: number): { pages: number[] 
     if (range) {
       const start = Number(range[1]);
       const end = Number(range[2]);
-      if (start < 1 || end < 1) return { error: "0이나 음수 쪽은 없어요." };
-      if (start > end) return { error: "시작 쪽이 끝 쪽보다 커요." };
-      if (end > total) return { error: `총 ${total}쪽을 넘었어요.` };
+      if (start < 1 || end < 1) return { error: tr("pr.negative") };
+      if (start > end) return { error: tr("pr.order") };
+      if (end > total) return { error: tr("pr.over", { total }) };
       for (let page = start; page <= end; page += 1) {
         if (seen.has(page)) continue;
         seen.add(page);
@@ -225,16 +226,16 @@ export function parsePageRange(input: string, total: number): { pages: number[] 
       }
       continue;
     }
-    if (!/^\d+$/.test(part)) return { error: "1, 3-5, 8 처럼 적어 주세요." };
+    if (!/^\d+$/.test(part)) return { error: tr("pr.format") };
     const page = Number(part);
-    if (page < 1) return { error: "0이나 음수 쪽은 없어요." };
-    if (page > total) return { error: `총 ${total}쪽을 넘었어요.` };
+    if (page < 1) return { error: tr("pr.negative") };
+    if (page > total) return { error: tr("pr.over", { total }) };
     if (!seen.has(page)) {
       seen.add(page);
       pages.push(page);
     }
   }
-  return pages.length ? { pages } : { error: "보낼 쪽이 없어요." };
+  return pages.length ? { pages } : { error: tr("pr.none") };
 }
 
 export function nupGroups(pages: number[], per: number, reverse = false) {

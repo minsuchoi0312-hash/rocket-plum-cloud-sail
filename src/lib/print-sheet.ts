@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n/core";
 import { grayCanvas, renderSheetCanvas, sheetMemoChunks } from "@/lib/pdf-page";
 
 export type PrintJob =
@@ -32,7 +33,7 @@ export function clearPrintRoot() {
 export function canvasObjectUrl(canvas: HTMLCanvasElement, quality = 0.92) {
   return new Promise<string>((resolve, reject) => {
     canvas.toBlob((blob) => {
-      if (!blob) reject(new Error("인쇄 이미지를 만들지 못했어요."));
+      if (!blob) reject(new Error(tr("err.makeImage")));
       else resolve(track(URL.createObjectURL(blob)));
     }, "image/jpeg", quality);
   });
@@ -42,7 +43,7 @@ function loadImage(src: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("사진을 열지 못했어요."));
+    image.onerror = () => reject(new Error(tr("err.openPhoto")));
     image.src = src;
   });
 }
@@ -69,10 +70,10 @@ function finishPrint(root: HTMLElement) {
     const bar = document.createElement("div");
     bar.id = "copy-bar";
     const text = document.createElement("p");
-    text.textContent = "이 브라우저에서 만든 미리보기예요. 삼성 기본 앱은 열지 않아요.";
+    text.textContent = tr("ps.previewNote");
     const button = document.createElement("button");
     button.type = "button";
-    button.textContent = "닫기";
+    button.textContent = tr("ps.close");
     button.addEventListener("click", () => clearPrintRoot());
     bar.append(text, button);
     document.body.append(bar);
@@ -159,7 +160,7 @@ export async function printSheet(job: PrintJob) {
   page.className = `print-page paper-${job.paper.toLowerCase()}`;
   const kicker = document.createElement("p");
   kicker.className = "print-kicker";
-  kicker.textContent = "인쇄 확인";
+  kicker.textContent = tr("ps.kicker");
   const heading = document.createElement("h1");
   heading.textContent = job.title;
   const body = document.createElement("p");

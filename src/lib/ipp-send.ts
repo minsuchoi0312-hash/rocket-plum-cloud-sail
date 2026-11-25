@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n/core";
 function concat(parts: Uint8Array[]) {
   const size = parts.reduce((sum, part) => sum + part.length, 0);
   const out = new Uint8Array(size);
@@ -60,7 +61,7 @@ function printJobPacket(host: string, pdf: Uint8Array, options: { copies: number
   return concat([header, attrs, pdf]);
 }
 
-const CORS_HINT = "브라우저 보안 정책(CORS) 때문에 이 복사기로 직접 보낼 수 없어요. 같은 와이파이의 PC 도우미를 켜거나 USB/설치형 앱을 이용해 주세요.";
+const corsHint = () => tr("ipp.cors");
 
 /** 같은 망의 IPP(631)로 PDF를 넣는다. 실패해도 기기 인쇄 창은 열지 않는다. */
 export async function sendIppPdf(host: string, pdf: Uint8Array, options: { copies: number; duplex: "simplex" | "long" | "short"; paper: "A4" | "A3" | "B5"; gray: boolean }) {
@@ -74,9 +75,9 @@ export async function sendIppPdf(host: string, pdf: Uint8Array, options: { copie
       targetAddressSpace: "local",
     } as RequestInit);
   } catch {
-    throw new Error(CORS_HINT);
+    throw new Error(corsHint());
   }
   if (!response.ok && response.type !== "opaque") {
-    throw new Error(response.status === 0 ? CORS_HINT : `${host} 가 작업을 거절했어요 (${response.status}). 삼성 인쇄 앱은 열지 않아요.`);
+    throw new Error(response.status === 0 ? corsHint() : tr("ipp.rejected", { host, code: response.status }));
   }
 }

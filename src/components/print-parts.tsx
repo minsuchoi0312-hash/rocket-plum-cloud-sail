@@ -1,0 +1,395 @@
+/**
+ * 인쇄 화면 부품: 확인된 기종 카드 · 용지/양면/부수 옵션 · 문서 탭과 하단 버튼 묶음.
+ * atlas-app.tsx에서 분리한 컴포넌트.
+ */
+import type { ReactNode } from "react";
+import { ArrowLeft, ArrowRight, Bookmark, Printer, RotateCw, Trash2, Upload } from "@/components/icons";
+import type { MatchResult } from "@/lib/atlas";
+import type { DuplexMode, OfficePaper } from "@/lib/office-job";
+import type { PrintRoute } from "@/lib/print-route";
+import type { DocKind } from "@/components/paper-preview";
+import { tr } from "@/lib/i18n";
+import type { MsgKey } from "@/lib/i18n/types";
+
+export function docLabel(kind: DocKind) {
+  return tr(`doc.${kind}` as MsgKey);
+}
+
+export function isInkjet(match: Extract<MatchResult, { kind: "match" }>) {
+  return match.pack.id === "raster-ink";
+}
+
+export function ReadyCard({
+  match,
+  saved,
+  direct,
+  route,
+  viaHelper = false,
+  onRemember,
+  onForget,
+}: {
+  match: Extract<MatchResult, { kind: "match" }>;
+  saved: boolean;
+  direct: boolean;
+  route: PrintRoute;
+  /** PC 도우미(9100)로 보내는 중이면 USB 문구 대신 도우미 문구를 보여 준다 */
+  viaHelper?: boolean;
+  onRemember: () => void;
+  onForget: () => void;
+}) {
+  const printer = match.printer;
+  const inkjet = isInkjet(match);
+  const line = tr(inkjet ? "rc.inkjet" : viaHelper ? "rc.helper" : route === "usb-pdf" ? "rc.usbPdf" : route === "usb-pcl" ? "rc.usbPcl" : "rc.preview");
+  return (
+    <div>
+      <p className="text-xs text-muted">{tr("rc.confirmed")}</p>
+      <h2 className="mt-1 text-2xl font-semibold leading-tight">
+        {printer.brand} {printer.model}
+      </h2>
+      <p className="mt-3 text-sm leading-relaxed text-fg">{line}</p>
+      {inkjet ? null : <p className="mt-2 text-sm text-muted">{tr(viaHelper ? "rc.helperDirect" : direct ? "rc.direct" : "rc.previewOnly")}</p>}
+      <p className="mt-3 text-xs leading-relaxed text-faint">{tr("rc.memory")}</p>
+      {saved ? (
+        <button type="button" onClick={onForget} className="mt-3 flex h-11 w-full items-center justify-center gap-1 rounded-2xl border border-line text-sm">
+          <Trash2 className="size-3.5" aria-hidden="true" />
+          {tr("rc.forget")}
+        </button>
+      ) : (
+        <button type="button" onClick={onRemember} className="mt-3 flex h-11 w-full items-center justify-center gap-1 rounded-2xl border border-line text-sm">
+          <Bookmark className="size-3.5" aria-hidden="true" />
+          {tr("rc.remember")}
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function OfficeOptions({
+  paper,
+  gray,
+  duplex,
+  copies,
+  route,
+  locked,
+  controls,
+  copyMax,
+  onPaper,
+  onGray,
+  onDuplex,
+  onCopies,
+}: {
+  paper: OfficePaper;
+  gray: boolean;
+  duplex: DuplexMode;
+  copies: number;
+  route: PrintRoute;
+  locked?: boolean;
+  controls: boolean;
+  copyMax: number;
+  onPaper: (value: OfficePaper) => void;
+  onGray: (value: boolean) => void;
+  onDuplex: (value: DuplexMode) => void;
+  onCopies: (value: number) => void;
+}) {
+  const liveJob = controls;
+  const monoUsb = route === "usb-pcl";
+  const sides = [
+    ["simplex", tr("opt.simplex")],
+    ["long", tr("opt.long")],
+    ["short", tr("opt.short")],
+  ] as const;
+  return (
+    <div className="mt-4 space-y-3">
+      <div className="flex flex-wrap gap-2">
+        {(["A4", "A3", "B5"] as const).map((item) => (
+          <button key={item} type="button" disabled={locked} onClick={() => onPaper(item)} className={`chip h-10 rounded-full px-3 text-sm ${paper === item ? "is-on" : ""}`}>
+            {item}
+          </button>
+        ))}
+        <button type="button" disabled={monoUsb || locked} onClick={() => onGray(!gray)} className={`chip h-10 rounded-full px-3 text-sm disabled:cursor-not-allowed ${monoUsb || gray ? "is-on" : ""}`}>
+          {tr(monoUsb || gray ? "opt.gray" : "opt.color")}
+        </button>
+      </div>
+      <div className={`flex flex-wrap items-center gap-2 ${liveJob && !locked ? "" : "opt-idle"}`}>
+        {sides.map(([id, text]) => (
+          <button key={id} type="button" disabled={!liveJob || locked} onClick={() => onDuplex(id)} className={`chip h-10 rounded-full px-3 text-sm disabled:cursor-not-allowed ${duplex === id && liveJob ? "is-on" : ""}`}>
+            {text}
+          </button>
+        ))}
+        <span className="copies-group inline-flex shrink-0 flex-nowrap items-center gap-1" role="group" aria-label={tr("opt.copiesAria")}>
+          <button type="button" disabled={!liveJob || locked} className="chip size-10 shrink-0 rounded-full disabled:cursor-not-allowed" onClick={() => onCopies(Math.max(1, copies - 1))} aria-label={tr("opt.less")}>
+            −
+          </button>
+          <span className="w-8 shrink-0 text-center text-sm font-medium tabular-nums text-fg">{liveJob ? copies : 1}</span>
+          <button type="button" disabled={!liveJob || locked || copies >= copyMax} className="chip size-10 shrink-0 rounded-full disabled:cursor-not-allowed" onClick={() => onCopies(Math.min(copyMax, copies + 1))} aria-label={tr("opt.more")}>
+            +
+          </button>
+        </span>
+      </div>
+      {monoUsb ? <p className="text-xs leading-relaxed text-muted">{tr("opt.usbMono")}</p> : null}
+      {liveJob ? null : <p className="text-xs text-muted">{tr("opt.connectFirst")}</p>}
+    </div>
+  );
+}
+
+export function PrintChooser({
+  docKind,
+  memo,
+  photoUrl,
+  album,
+  pdfName,
+  pdfCount,
+  pageMode,
+  pageList,
+  onPageList,
+  pageFrom,
+  pageTo,
+  sending,
+  progress,
+  ready,
+  showPages = true,
+  label,
+  canSend = true,
+  summary,
+  preflight,
+  onConnect,
+  preview,
+  extras,
+  onKind,
+  onMemo,
+  onPhotos,
+  onRemovePhoto,
+  onMovePhoto,
+  photoTurns = {},
+  onRotatePhoto,
+  busyBanner,
+  doneBanner,
+  onFocusPhoto,
+  onPdfFile,
+  pdfNeedsKey,
+  onPdfUnlock,
+  onPageMode,
+  onPageFrom,
+  onPageTo,
+  onPrint,
+  onColorPrint,
+  onPdf,
+  onCancel,
+}: {
+  docKind: DocKind;
+  memo: string;
+  photoUrl: string | null;
+  album: string[];
+  pdfName: string;
+  pdfCount: number;
+  pageMode: "all" | "span" | "list";
+  pageList: string;
+  onPageList: (value: string) => void;
+  pageFrom: number;
+  pageTo: number;
+  sending: boolean;
+  progress: number;
+  ready: boolean;
+  showPages?: boolean;
+  label: string;
+  canSend?: boolean;
+  summary?: string;
+  preflight?: ReactNode;
+  onConnect?: () => void;
+  preview: ReactNode;
+  extras?: ReactNode;
+  onKind: (kind: DocKind) => void;
+  onMemo: (value: string) => void;
+  onPhotos: (files: File[]) => void;
+  onRemovePhoto: (url: string) => void;
+  onMovePhoto: (url: string, dir: -1 | 1) => void;
+  photoTurns?: Record<string, number>;
+  onRotatePhoto?: (url: string) => void;
+  busyBanner?: ReactNode;
+  doneBanner?: ReactNode;
+  onFocusPhoto: (url: string) => void;
+  onPdfFile: (file: File | undefined) => void;
+  pdfNeedsKey: boolean;
+  onPdfUnlock: (password: string) => void;
+  onPageMode: (mode: "all" | "span" | "list") => void;
+  onPageFrom: (value: number) => void;
+  onPageTo: (value: number) => void;
+  onPrint: () => void;
+  onColorPrint?: () => void;
+  onPdf: () => void;
+  onCancel: () => void;
+}) {
+  const tabs = (["pdf", "photo", "memo", "test"] as const).map((id) => [id, docLabel(id)] as const);
+  return (
+    <div className="mt-4">
+      <div className="doc-tabs grid grid-cols-4 gap-1 rounded-2xl p-1" role="tablist" aria-label={tr("ch.tabsAria")}>
+        {tabs.map(([id, text]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={docKind === id}
+            onClick={() => {
+              if (!sending) onKind(id);
+            }}
+            disabled={sending}
+            className={`doc-tab min-h-10 min-w-0 break-words rounded-xl px-1 py-2 text-sm leading-tight disabled:opacity-40 ${docKind === id ? "is-on" : ""}`}
+          >
+            {text}
+          </button>
+        ))}
+      </div>
+      {docKind === "pdf" ? (
+        <div className="mt-3 space-y-2">
+          <label className="pick flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl text-sm">
+            <Upload className="size-4" aria-hidden="true" />
+            {tr("ch.pickPdf")} <span className="hidden text-xs text-muted sm:inline">{tr("ch.orDrop")}</span>
+            <input type="file" accept="application/pdf,.pdf" disabled={sending} className="sr-only" onChange={(event) => onPdfFile(event.target.files?.[0])} />
+          </label>
+          {pdfName ? <p className="break-all text-sm text-muted">{tr("ch.pdfInfo", { name: pdfName, n: pdfCount })}</p> : null}
+          {pdfNeedsKey ? (
+            <form
+              className="flex gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const value = new FormData(event.currentTarget).get("pdf-key");
+                onPdfUnlock(typeof value === "string" ? value : "");
+              }}
+            >
+              <input name="pdf-key" type="password" placeholder={tr("ch.pdfKey")} className="field h-10 min-w-0 flex-1 rounded-xl px-3 text-sm outline-none" />
+              <button type="submit" className="h-10 rounded-xl bg-accent px-3 text-sm text-accent-fg">
+                {tr("ch.open")}
+              </button>
+            </form>
+          ) : null}
+          {showPages ? (
+            <>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={sending} onClick={() => onPageMode("all")} className={`h-10 rounded-full px-3 text-sm disabled:opacity-40 ${pageMode === "all" ? "bg-accent text-accent-fg" : "border border-line text-fg"}`}>
+              {tr("ch.all")}
+            </button>
+            <button type="button" disabled={!pdfCount || sending} onClick={() => onPageMode("span")} className={`h-10 rounded-full px-3 text-sm disabled:opacity-40 ${pageMode === "span" ? "bg-accent text-accent-fg" : "border border-line text-fg"}`}>
+              {tr("ch.span")}
+            </button>
+            <button type="button" disabled={!pdfCount || sending} onClick={() => onPageMode("list")} className={`h-10 rounded-full px-3 text-sm disabled:opacity-40 ${pageMode === "list" ? "bg-accent text-accent-fg" : "border border-line text-fg"}`}>
+              {tr("ch.list")}
+            </button>
+          </div>
+          {pageMode === "list" ? (
+            <input value={pageList} onChange={(event) => onPageList(event.target.value)} placeholder="1, 3-5, 8" aria-label={tr("ch.rangeAria")} className="field h-10 w-full rounded-xl px-3 text-sm outline-none" />
+          ) : null}
+          {pageMode === "span" ? (
+            <div className="flex items-center gap-2 text-sm text-fg">
+              <input type="number" min={1} max={pdfCount || 1} disabled={sending} value={pageFrom} onChange={(event) => onPageFrom(Number(event.target.value))} className="field h-10 w-16 rounded-xl px-2 text-center disabled:opacity-40" aria-label={tr("ch.from")} />
+              <span>~</span>
+              <input type="number" min={1} max={pdfCount || 1} disabled={sending} value={pageTo} onChange={(event) => onPageTo(Number(event.target.value))} className="field h-10 w-16 rounded-xl px-2 text-center disabled:opacity-40" aria-label={tr("ch.to")} />
+            </div>
+          ) : null}
+            </>
+          ) : null}
+        </div>
+      ) : null}
+      {docKind === "photo" ? (
+        <div className="mt-3 space-y-2">
+          <label className="pick flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl text-sm text-fg">
+            <Upload className="size-4" aria-hidden="true" />
+            {tr("ch.pickPhotos")} <span className="hidden text-xs text-muted sm:inline">{tr("ch.paste")}</span>
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.heic,.heif" multiple disabled={sending} className="sr-only" onChange={(event) => {
+              const files = [...(event.target.files ?? [])];
+              event.target.value = "";
+              onPhotos(files);
+            }} />
+          </label>
+          {album.length ? (
+            <ul className="flex gap-2 overflow-x-auto pb-1" aria-label={tr("ch.photosAria")}>
+              {album.map((src, index) => (
+                <li key={src} className="shrink-0">
+                  <button type="button" onClick={() => onFocusPhoto(src)} aria-pressed={src === photoUrl} aria-label={tr("ch.photoN", { n: index + 1 })} className={`relative block overflow-hidden rounded-lg border-2 ${src === photoUrl ? "border-accent" : "border-line"}`}>
+                    <img src={src} alt="" className="h-[68px] w-[68px] object-cover" style={{ transform: `rotate(${photoTurns[src] || 0}deg)` }} />
+                    <span className="thumb-num">{index + 1}</span>
+                    {photoTurns[src] ? <span className="thumb-badge">{photoTurns[src]}°</span> : null}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {album.length && photoUrl && album.includes(photoUrl) ? (
+            (() => {
+              const at = album.indexOf(photoUrl);
+              return (
+                <div className="photo-actions grid grid-cols-4 gap-1.5" role="group" aria-label={tr("ch.photoGroup", { n: at + 1 })}>
+                  <button type="button" disabled={sending || at === 0} onClick={() => onMovePhoto(photoUrl, -1)} className="chip photo-act rounded-xl">
+                    <ArrowLeft className="size-4" aria-hidden="true" />
+                    {tr("ch.forward")}
+                  </button>
+                  <button type="button" disabled={sending || at === album.length - 1} onClick={() => onMovePhoto(photoUrl, 1)} className="chip photo-act rounded-xl">
+                    <ArrowRight className="size-4" aria-hidden="true" />
+                    {tr("ch.back")}
+                  </button>
+                  <button type="button" disabled={sending || !onRotatePhoto} onClick={() => onRotatePhoto?.(photoUrl)} className="chip photo-act rounded-xl">
+                    <RotateCw className="size-4" aria-hidden="true" />
+                    {tr("ch.rotate")}
+                  </button>
+                  <button type="button" disabled={sending} onClick={() => onRemovePhoto(photoUrl)} className="chip photo-act is-danger rounded-xl">
+                    <Trash2 className="size-4" aria-hidden="true" />
+                    {tr("ch.delete")}
+                  </button>
+                </div>
+              );
+            })()
+          ) : null}
+          <p className="text-xs text-muted">{album.length ? tr("ch.albumHint", { n: album.length }) : tr("ch.photoHint")}</p>
+        </div>
+      ) : null}
+      {docKind === "memo" ? (
+        <textarea
+          value={memo}
+          onChange={(event) => onMemo(event.target.value)}
+          rows={4}
+          disabled={sending}
+          placeholder={tr("ch.memoPh")}
+          className="field mt-3 w-full rounded-xl px-3 py-2 text-sm outline-none"
+        />
+      ) : null}
+      {docKind === "test" ? <p className="mt-3 text-sm text-muted">{tr("ch.testHint")}</p> : null}
+      {preview}
+      {extras}
+      {doneBanner}
+      {preflight}
+      {summary ? (
+        <p className="summary-bar mt-4 rounded-2xl px-3 py-2.5 text-sm font-medium" aria-live="polite">
+          {summary}
+        </p>
+      ) : null}
+      {sending ? (
+        busyBanner || (
+          <button type="button" onClick={onCancel} className="chip mt-3 h-14 w-full rounded-2xl text-base font-medium">
+            {tr("ch.cancel", { p: progress })}
+          </button>
+        )
+      ) : (
+        <div className="mt-3 flex flex-col gap-2">
+          {canSend ? (
+            <button type="button" onClick={onPrint} disabled={!ready} className="btn-send btn-solid flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-base font-semibold">
+              <Printer className="size-5" aria-hidden="true" />
+              {label}
+            </button>
+          ) : (
+            <button type="button" onClick={onConnect} className="btn-solid flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-base font-semibold">
+              <Printer className="size-5" aria-hidden="true" />
+              {tr("ch.connect")}
+            </button>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={onColorPrint} disabled={!ready || !onColorPrint} className="chip h-11 rounded-2xl text-sm font-medium">
+              {tr("ch.preview")}
+            </button>
+            <button type="button" onClick={onPdf} disabled={!ready} className="chip h-11 rounded-2xl text-sm font-medium">
+              {tr("ch.pdf")}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

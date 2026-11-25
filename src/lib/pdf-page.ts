@@ -1,4 +1,6 @@
+import { tr } from "@/lib/i18n/core";
 import { paginateLines, wrapMeasuredLines } from "@/lib/office-job";
+import { drawTestSheet, type TestSheetInfo } from "@/lib/test-sheet";
 
 function concat(parts: Uint8Array[]) {
   const size = parts.reduce((sum, part) => sum + part.length, 0);
@@ -68,7 +70,7 @@ export function jpegToPdf(jpeg: Uint8Array, imgW: number, imgH: number, pageW: n
 
 export async function downloadCanvasPdf(canvas: HTMLCanvasElement, filename: string, page: { width: number; height: number }) {
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.86));
-  if (!blob) throw new Error("PDF로 만들지 못했어요.");
+  if (!blob) throw new Error(tr("pdf.makeFail"));
   const jpeg = new Uint8Array(await blob.arrayBuffer());
   const bytes = jpegToPdf(jpeg, canvas.width, canvas.height, page.width, page.height);
   const file = new Blob([bytes], { type: "application/pdf" });
@@ -115,6 +117,8 @@ export async function renderSheetCanvas(options: {
   turn?: number;
   gray?: boolean;
   frame?: { width: number; height: number };
+  /** kind가 test일 때 점검용 테스트 시트로 그린다 */
+  test?: TestSheetInfo;
 }) {
   const fallback = options.paper === "A3" ? [1754, 2480] : options.paper === "B5" ? [1075, 1518] : options.paper === "Letter" ? [1275, 1650] : [1240, 1754];
   const width = options.frame?.width || fallback[0];
@@ -124,6 +128,7 @@ export async function renderSheetCanvas(options: {
   canvas.height = height;
   const ctx = canvas.getContext("2d");
   if (!ctx) return canvas;
+  if (options.kind === "test" && options.test) return drawTestSheet(canvas, options.test);
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, width, height);
   ctx.fillStyle = "#1a2744";

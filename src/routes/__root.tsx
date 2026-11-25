@@ -1,5 +1,4 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
-import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
@@ -9,8 +8,8 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "누구나프린트" },
-      { name: "description", content: "사진이나 PDF를 고른 뒤 이 화면에서 인쇄합니다. 삼성 기본 인쇄 앱으로 넘기지 않아요." },
-      { name: "theme-color", content: "#17171c" },
+      { name: "description", content: "설치 없이 바로 인쇄하세요. 사진이나 PDF를 선택하면 이 화면에서 복사기로 바로 보내요." },
+      { name: "theme-color", content: "#17171C" },
       { name: "apple-mobile-web-app-title", content: "누구나프린트" },
     ],
     links: [
@@ -30,7 +29,7 @@ export const Route = createRootRoute({
     scripts: [
       {
         children:
-          "try{var t=localStorage.getItem('atlas-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch(e){}",
+          "try{var t=localStorage.getItem('atlas-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;var c=t==='light'?'#F2F4F6':'#17171C';document.querySelectorAll('meta[name=theme-color]').forEach(function(m){m.setAttribute('content',c)});}catch(e){}",
       },
     ],
   }),
@@ -41,9 +40,7 @@ export const Route = createRootRoute({
       </head>
       <body>
         <PreviewHostBridge />
-        <AuthProvider>
-          <Outlet />
-        </AuthProvider>
+        <Outlet />
         <Scripts />
       </body>
     </html>

@@ -1,129 +1,66 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import {
-  ArrowClockwise as RotateCw,
-  ArrowRight,
-  ArrowsClockwise,
-  BookmarkSimple as Bookmark,
-  CaretDown,
-  CaretLeft as ChevronLeft,
-  CaretRight as ChevronRight,
-  CaretUp,
-  Check,
-  ClipboardText as Sheet,
-  ClockCounterClockwise as History,
-  Copy,
-  DownloadSimple as Download,
-  Eye,
-  FileArrowUp as FileUp,
-  FileText,
-  IconContext,
-  Image as ImageIcon,
-  ImagesSquare as ImagePlus,
-  Laptop,
-  Moon,
-  NotePencil as StickyNote,
-  Plug,
-  Printer,
-  Question as CircleHelp,
-  ShieldCheck,
-  Sun,
-  Trash as Trash2,
-} from "@phosphor-icons/react";
-import { UsbIcon as Usb, WifiIcon as Wifi } from "@/components/link-icons";
-import { Accordion, BottomCTA, BottomSheet, Callout, Chip, IconButton, ListRow, OptionGroup, ProgressBar, Section, Segmented, Stepper, SwitchRow, TopBar } from "@/components/ui-kit";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CircleHelp, Moon, Sun, Upload } from "@/components/icons";
+import { I18nProvider, m, msgText, tr, useI18n, type Msg } from "@/lib/i18n";
+import { LangSwitcher } from "@/components/lang-switcher";
+import { AppErrorBoundary } from "@/components/error-boundary";
+import { Toaster } from "@/components/toaster";
+import { syncThemeColor } from "@/lib/theme-color";
+import { cleanPin, cleanText, pjlToken } from "@/lib/sanitize";
 import { matchQuery, type MatchResult } from "@/lib/atlas";
 import { grantedUsb, identifyUsb, pickUsb, sendUsbBytes, watchUsbConnect, watchUsbDisconnect } from "@/lib/discover";
-import { canvasObjectUrl, clearPrintRoot, printSheet, type PrintJob } from "@/lib/print-sheet";
+import { clearPrintRoot, printSheet, type PrintJob } from "@/lib/print-sheet";
 import { downloadCanvasPdf, grayCanvas, renderSheetCanvas, sheetMemoChunks } from "@/lib/pdf-page";
 import { bundleCommands, canvasPclCommands, drawOfficePage, needsBlankBack, officeMemoChunks, osRasterSize, paperPoints, pclAbortFooter, pclJobFooter, pclJobHeader, pclPageCommands, previewSize, printPixelSize, printableSize, wrapPdfJob, type DuplexMode, type OfficePaper } from "@/lib/office-job";
 import { canPdfDirect, imagesToPdf, nupGroups, openPdf, pageSpan, parsePageRange, renderPdfPage, slicePdf, type OpenedPdf } from "@/lib/pdf-doc";
 import { languageIsPcl5, resolvePrintRoute, type PrintRoute } from "@/lib/print-route";
-import { discoverLanPrinters, isValidIPv4 } from "@/lib/lan-find";
+import { isValidIPv4, learnSubnetFromIp, type ScanProgress } from "@/lib/lan-find";
 import { sendIppPdf } from "@/lib/ipp-send";
-import { diag, diagText } from "@/lib/diag";
-import { helperPing, helperSend } from "@/lib/helper-send";
-import { composeSheet } from "@/lib/compose-sheet";
+import { diag } from "@/lib/diag";
+import { helperProbe, helperSend } from "@/lib/helper-send";
+import { composeSheet, insetCanvas, MARGIN_MM, nupCell, stampSheet, stampsOn, watermarkLabel, type MarginMode, type StampOptions, type WatermarkPreset } from "@/lib/compose-sheet";
 import { usePrinterStore, type SavedPrinter } from "@/lib/printer-store";
+import { drawTestSheet, paperMm, type TestSheetInfo } from "@/lib/test-sheet";
+import { addHistory, clearHistory, loadHistory, type PrintRecord } from "@/lib/print-history";
+import { composeIdSheet, processPhotoUrl, type PhotoFilter, type PhotoLayout } from "@/lib/image-enhance";
+import { drawMemoStyled, memoChunksStyled, memoIsDefault, memoToday, type MemoSize, type MemoStyle } from "@/lib/memo-sheet";
+import type { Preset, PresetSettings } from "@/lib/presets";
+import { SupportCenter, type SupportTab } from "@/components/support-center";
+import { PaperPreview, type DocKind } from "@/components/paper-preview";
+import { PrinterQrModal, type QrTarget } from "@/components/printer-qr-modal";
+import { PrinterPanel, type HelperStatus } from "@/components/printer-panel";
+import { lanSearch, useFileDrop, useLinkParams, useOnline, useSavedHelper } from "@/components/app-effects";
+import { PrinterStatusCard } from "@/components/printer-status-card";
+import { usePrinterStatus } from "@/components/use-printer-status";
+import { DiagPanel } from "@/components/diag-panel";
+import { PreflightChips } from "@/components/preflight-chips";
+import { preflight, type PreflightAction } from "@/lib/preflight";
+import type { DiagFix } from "@/lib/self-diag";
+import { PrintOptions } from "@/components/print-options";
+import { PreviewZoomModal } from "@/components/preview-zoom-modal";
+import { downloadText, launcherFileName, macLauncher, windowsLauncher } from "@/lib/helper-launcher";
+import { DoneBanner, JobBanner, type JobPhase } from "@/components/job-banner";
+import { blobUrl, chunkLoadError, downloadBytes, humanError, inAppBrowser, isSure, loadImage, marginLabel, stageForQuery, uidOf, viaLabel, type Found, type LinkTab, type PageChip, type ProbeState, type Step } from "@/lib/app-utils";
+import { isInkjet, PrintChooser, ReadyCard } from "@/components/print-parts";
 
-type Via = "saved" | "usb" | "wifi";
-type DocKind = "pdf" | "photo" | "memo" | "test";
-type Step = "connect" | "confirm" | "print";
-
-type Found = {
-  id: string;
-  title: string;
-  subtitle: string;
-  via: Via;
-  query: string;
-  cmd?: string;
-  live?: boolean;
-  usbKey?: string;
-  host?: string;
-};
-
-const VIA_LABEL: Record<Via, string> = {
-  saved: "저장",
-  usb: "USB",
-  wifi: "와이파이",
-};
-
-function uidOf(title: string) {
-  return title.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9가-힣-]/g, "");
-}
-
-function chunkLoadError(error: unknown) {
-  return error instanceof Error && /Failed to fetch|dynamically imported|Importing a module script failed|Loading chunk|error loading dynamically/i.test(error.message);
-}
-
-function humanError(error: unknown, fallback: string) {
-  if (chunkLoadError(error)) return "네트워크에 다시 연결하거나 새로고침해 주세요.";
-  if (error instanceof DOMException) {
-    if (error.name === "NotFoundError") return "기기 고르기를 취소했어요.";
-    if (error.name === "NotAllowedError" || error.name === "SecurityError") return "여기서는 기기 창이 안 열려요. Chrome으로 열어 주세요.";
-    if (error.name === "NetworkError") return "복사기와 연결이 끊겼어요. 다시 연결해 주세요.";
-    if (error.name === "InvalidStateError") return "복사기가 다른 곳에서 쓰이는 중이에요. 다시 눌러 주세요.";
-  }
-  if (error instanceof Error && /[가-힣]/.test(error.message)) return error.message;
-  return fallback;
-}
-
-function inAppBrowser() {
-  return /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\//i.test(navigator.userAgent);
-}
-
-function loadImage(src: string) {
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("사진을 열지 못했어요."));
-    image.src = src;
-  });
-}
-
-function isSure(result: MatchResult | null, query: string) {
-  if (!result || result.kind !== "match") return false;
-  if (result.source === "catalog") return result.confidence >= 88;
-  if (result.source === "driver-db") return result.confidence >= 90;
-  if (result.source === "heuristic" && result.confidence >= 70) return /\d{2,}/.test(query);
-  return false;
-}
-
-function stageForQuery(query: string, cmd?: string): Step {
-  const text = query.trim();
-  const found = text ? matchQuery(text, { cmd }) : null;
-  const matched = found && found.kind === "match" ? found : null;
-  if (matched && isSure(found, text)) return "print";
-  return "confirm";
-}
-
-function isInkjet(match: Extract<MatchResult, { kind: "match" }>) {
-  return match.pack.id === "raster-ink";
-}
-
+/** 언어 상자를 감싸 앱 전체가 같은 언어를 쓰게 한다 */
 export function AtlasApp() {
+  return (
+    <I18nProvider>
+      <AppErrorBoundary>
+        <AtlasMain />
+      </AppErrorBoundary>
+      <Toaster />
+    </I18nProvider>
+  );
+}
+
+function AtlasMain() {
+  // 언어가 바뀌면 이 컴포넌트부터 다시 그려져 하위 화면 문구가 모두 바뀐다.
+  const { lang } = useI18n();
   const saved = usePrinterStore((state) => state.saved);
   const remember = usePrinterStore((state) => state.remember);
   const forget = usePrinterStore((state) => state.forget);
+  const rename = usePrinterStore((state) => state.rename);
   const [scanId, setScanId] = useState(0);
   const [scanning, setScanning] = useState(true);
   const [hits, setHits] = useState<Found[]>([]);
@@ -131,13 +68,14 @@ export function AtlasApp() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [overrideQuery, setOverrideQuery] = useState<string | null>(null);
   const [askName, setAskName] = useState("");
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState<Msg>("");
   const [copies, setCopies] = useState(1);
   const [paper, setPaper] = useState<OfficePaper>("A4");
   const [gray, setGray] = useState(false);
   const [duplex, setDuplex] = useState<DuplexMode>("simplex");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [inApp, setInApp] = useState(false);
+  const [isIos, setIsIos] = useState(false);
   const [usbMissed, setUsbMissed] = useState(false);
   const [step, setStep] = useState<Step>("connect");
   const [docKind, setDocKind] = useState<DocKind>("pdf");
@@ -152,14 +90,14 @@ export function AtlasApp() {
   const [pageMode, setPageMode] = useState<"all" | "span" | "list">("all");
   const [pageFrom, setPageFrom] = useState(1);
   const [pageTo, setPageTo] = useState(1);
-  const [previewPage, setPreviewPage] = useState(1);
+  const [previewSheet, setPreviewSheet] = useState(1);
   const [sending, setSending] = useState(false);
   const [progress, setProgress] = useState(0);
   const [photoFit, setPhotoFit] = useState<"contain" | "cover">("contain");
   const [photoTurn, setPhotoTurn] = useState(0);
   const [orient, setOrient] = useState<"auto" | "portrait" | "landscape">("auto");
   const [lanBusy, setLanBusy] = useState(false);
-  const [lanNote, setLanNote] = useState("");
+  const [lanNote, setLanNote] = useState<Msg>("");
   const [ipInput, setIpInput] = useState("");
   const [pageList, setPageList] = useState("");
   const [nup, setNup] = useState<1 | 2 | 4>(1);
@@ -176,6 +114,55 @@ export function AtlasApp() {
   const [linkOpen, setLinkOpen] = useState(true);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [usbOk, setUsbOk] = useState(false);
+  const [linkTab, setLinkTab] = useState<LinkTab>("wifi");
+  const [scanProg, setScanProg] = useState<ScanProgress | null>(null);
+  const [scanMode, setScanMode] = useState<"quick" | "full" | "helper" | null>(null);
+  const [showIpGuide, setShowIpGuide] = useState(false);
+  const [supportTab, setSupportTab] = useState<SupportTab>("help");
+  const [margin, setMargin] = useState<MarginMode>("none");
+  const [dragOver, setDragOver] = useState(false);
+  const [history, setHistory] = useState<PrintRecord[]>([]);
+  const [editingUid, setEditingUid] = useState<string | null>(null);
+  const [aliasDraft, setAliasDraft] = useState("");
+  const [helperOk, setHelperOk] = useState(false);
+  /* v3 */
+  const [qrTarget, setQrTarget] = useState<QrTarget | null>(null);
+  const [probes, setProbes] = useState<Record<string, ProbeState>>({});
+  const [pageChip, setPageChip] = useState<PageChip>("all");
+  const [photoFilter, setPhotoFilter] = useState<PhotoFilter>("none");
+  const [photoTurns, setPhotoTurns] = useState<Record<string, number>>({});
+  const [photoLayout, setPhotoLayout] = useState<PhotoLayout>("normal");
+  const [cutLines, setCutLines] = useState(true);
+  const [procTick, setProcTick] = useState(0);
+  const [pageNumber, setPageNumber] = useState(false);
+  const [wmChoice, setWmChoice] = useState<string>("none");
+  const [wmCustom, setWmCustom] = useState("");
+  const [memoSize, setMemoSize] = useState<MemoSize>("normal");
+  const [memoHeader, setMemoHeader] = useState(false);
+  const [memoTitle, setMemoTitle] = useState("");
+  const [phase, setPhase] = useState<JobPhase | null>(null);
+  const [helperStatus, setHelperStatus] = useState<HelperStatus | null>(null);
+  const [ippFail, setIppFail] = useState(false);
+  const [healRetry, setHealRetry] = useState(false);
+  const [photoDims, setPhotoDims] = useState<{ w: number; h: number } | null>(null);
+  const [zoom, setZoom] = useState<{ pages: string[]; index: number } | null>(null);
+  const [presetMark, setPresetMark] = useState<{ id: string; sig: string | null } | null>(null);
+  const [appOrigin, setAppOrigin] = useState("");
+  const [doneText, setDoneText] = useState<string | null>(null);
+  const procCache = useRef(new Map<string, string>());
+  const zoomSeq = useRef(0);
+  /* 인쇄 버튼 더블클릭: state 반영 전 두 번째 클릭까지 막는 잠금 */
+  const printLock = useRef(false);
+  const pinRef = useRef<HTMLInputElement | null>(null);
+  /* 렌더 중(효과 의존성 배열 포함) 먼저 쓰이므로 상태 바로 아래에서 계산한다 */
+  const orientKey: "portrait" | "landscape" = orient === "landscape" ? "landscape" : "portrait";
+  const watermarkText = wmChoice === "none" ? "" : wmChoice === "custom" ? cleanText(wmCustom, 16) : watermarkLabel(wmChoice as WatermarkPreset);
+  const stamps: StampOptions = { pageNumber, watermark: watermarkText };
+  /* 쪽 번호·워터마크는 테스트 페이지에는 찍지 않는다 */
+  const stampActive = docKind !== "test" && stampsOn(stamps);
+  const memoStyle: MemoStyle = { size: memoSize, header: memoHeader, title: memoTitle || tr("ap.memo"), date: memoToday() };
+  const memoCustom = !memoIsDefault(memoStyle);
+  const scanAbortRef = useRef<AbortController | null>(null);
   const stopRef = useRef(false);
   const photoUrlRef = useRef<string | null>(null);
   const albumRef = useRef<string[]>([]);
@@ -188,7 +175,10 @@ export function AtlasApp() {
     setUsbOk(typeof navigator !== "undefined" && "usb" in navigator);
     const rememberedSubnet = localStorage.getItem("nuguna-subnet") || "";
     if (rememberedSubnet) setSubnetInput(rememberedSubnet);
+    setHistory(loadHistory());
+    setAppOrigin(window.location.origin);
     setInApp(inAppBrowser());
+    setIsIos(/iPad|iPhone|iPod/.test(navigator.userAgent));
     if ("serviceWorker" in navigator) {
       let hadController = Boolean(navigator.serviceWorker.controller);
       navigator.serviceWorker.addEventListener("controllerchange", () => {
@@ -201,10 +191,10 @@ export function AtlasApp() {
       navigator.serviceWorker.register("/sw.js").catch(() => undefined);
     }
     const stopDisconnect = watchUsbDisconnect((usbKey) => {
-      const mark = (item: Found) => (item.usbKey === usbKey ? { ...item, live: false, subtitle: "USB가 빠졌어요" } : item);
+      const mark = (item: Found) => (item.usbKey === usbKey ? { ...item, live: false, subtitle: tr("ap.usbOut") } : item);
       setHits((prev) => prev.map(mark));
       setExtra((prev) => prev.map(mark));
-      setNotice("USB 케이블이 빠졌어요. 다시 연결해 주세요.");
+      setNotice(m("ap.usbPulled"));
     });
     const stopConnect = watchUsbConnect((device) => {
       void identifyUsb(device)
@@ -222,10 +212,10 @@ export function AtlasApp() {
           const merge = (prev: Found[]) => [item, ...prev.filter((row) => row.usbKey !== linked.usbKey)];
           setHits(merge);
           setExtra(merge);
-          setNotice(linked.live ? "USB 복사기를 다시 연결했어요." : "USB는 다시 꽂혔지만 바로 보내지는 못해요.");
+          setNotice(m(linked.live ? "ap.usbBack" : "ap.usbBackNoSend"));
         })
         .catch((error: unknown) => {
-          setNotice(error instanceof Error ? error.message : "USB 복사기를 열지 못했어요.");
+          setNotice(humanError(error, tr("ap.usbOpenFail")));
         });
     });
     return () => {
@@ -234,6 +224,40 @@ export function AtlasApp() {
     };
   }, []);
 
+  useLinkParams({ setHelperUrl, setHelperCode, setUseHelper, setLinkTab, setLinkOpen, setHelperOk, setLanNote, setSubnetInput, setNotice, addWifi, rememberHost });
+  useSavedHelper({ helperOk, helperUrl, helperCode, setHelperUrl, setHelperCode, setHelperStatus, setHelperOk, setUseHelper });
+
+  /* 사진 회전·문서 보정 결과를 미리 만들어 둔다 (안 쓰는 결과는 정리) */
+  useEffect(() => {
+    let stop = false;
+    const live = new Set(album.map((src) => procKey(src)));
+    for (const [key, url] of procCache.current) {
+      if (!live.has(key)) {
+        URL.revokeObjectURL(url);
+        procCache.current.delete(key);
+      }
+    }
+    void (async () => {
+      for (const src of album) {
+        if (stop) return;
+        await processedSrc(src).catch(() => src);
+      }
+      if (!stop) setProcTick((value) => value + 1);
+    })();
+    return () => {
+      stop = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [album, photoTurns, photoFilter]);
+
+  useEffect(
+    () => () => {
+      for (const url of procCache.current.values()) URL.revokeObjectURL(url);
+      procCache.current.clear();
+    },
+    [],
+  );
+
   function toggleTheme() {
     const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
@@ -241,10 +265,14 @@ export function AtlasApp() {
     localStorage.setItem("atlas-theme", next);
   }
 
+  /* 폰 브라우저 주소창 색을 앱 테마와 맞춘다(라이트 웜 페이퍼 / 다크 슬레이트) */
+  useEffect(() => syncThemeColor(theme), [theme]);
+
   useEffect(() => {
     let stop = false;
     setScanning(true);
-    setHits([]);
+    /* 다시 스캔해도 링크·QR·검색으로 잡은 와이파이 프린터는 남긴다 (USB 목록만 새로 고침) */
+    setHits((prev) => prev.filter((row) => row.host));
     (async () => {
       try {
         await usePrinterStore.persist.rehydrate();
@@ -268,7 +296,7 @@ export function AtlasApp() {
         });
       }
       if (stop) return;
-      setHits(usbHits);
+      setHits((prev) => [...usbHits, ...prev.filter((row) => row.host && !usbHits.some((u) => u.id === row.id))]);
       setScanning(false);
     })();
     return () => {
@@ -280,7 +308,7 @@ export function AtlasApp() {
     const fromSaved: Found[] = saved.map((item) => ({
       id: `saved:${item.uid}`,
       title: item.title,
-      subtitle: `저장됨 · ${item.via}`,
+      subtitle: m("ap.savedVia", { via: item.via }),
       via: "saved" as const,
       query: item.query,
     }));
@@ -289,7 +317,8 @@ export function AtlasApp() {
     const merged: Found[] = [];
     for (const item of [...hits, ...extra, ...fromSaved]) {
       const queryKey = item.query.trim().toLowerCase();
-      if (queryKey && seenQuery.has(queryKey)) continue;
+      /* 와이파이 주소가 다르면 같은 모델 복합기 2대도 따로 보여 준다 */
+      if (queryKey && !item.host && seenQuery.has(queryKey)) continue;
       if (seen.has(item.id)) continue;
       seen.add(item.id);
       if (queryKey) seenQuery.add(queryKey);
@@ -301,11 +330,6 @@ export function AtlasApp() {
   useEffect(() => {
     albumRef.current = album;
   }, [album]);
-
-  // 단계가 바뀌면 새 화면처럼 맨 위에서 시작한다
-  useEffect(() => {
-    window.scrollTo({ top: 0 });
-  }, [step]);
 
   useEffect(() => {
     return () => {
@@ -341,12 +365,16 @@ export function AtlasApp() {
   }
 
   async function connectUsb(all = false) {
+    if (sending) {
+      setNotice(m("ap.busySending"));
+      return;
+    }
     setNotice("");
     try {
       const device = await pickUsb(all);
       const linked = await identifyUsb(device);
       const ids = linked.usbKey.split(":");
-      diag(`USB VID=${ids[0] || "?"} PID=${ids[1] || "?"} ${linked.title} CMD=${linked.cmd || "(없음)"}`);
+      diag(`USB VID=${ids[0] || "?"} PID=${ids[1] || "?"} ${linked.title} CMD=${linked.cmd || tr("ap.none")}`);
       addFound({
         id: `usb-pick:${linked.usbKey}:${linked.query}`,
         title: linked.title,
@@ -358,24 +386,27 @@ export function AtlasApp() {
         usbKey: linked.usbKey,
       });
       setUsbMissed(false);
-      setNotice(linked.live ? "USB로 연결했어요." : "USB로 기기는 잡았어요. 이 화면에서 인쇄할 내용을 고르세요.");
+      if (linked.title.trim().length >= 2) {
+        remember({ uid: `usb-${uidOf(linked.title) || uidOf(linked.query)}`, title: linked.title, query: linked.query, via: "USB", link: "usb", savedAt: Date.now() });
+      }
+      setNotice(m(linked.live ? "ap.usbLinked" : "ap.usbFound"));
     } catch (error) {
       setUsbMissed(true);
-      setNotice(humanError(error, "USB 복사기를 열지 못했어요."));
+      setNotice(humanError(error, tr("ap.usbOpenFail")));
     }
   }
 
   function applyName(name: string) {
     const text = name.trim();
     if (text.length < 2 || !selected) {
-      setNotice("앞면에 적힌 이름을 적어 주세요.");
+      setNotice(m("ap.needName"));
       return;
     }
     setExtra((prev) => prev.map((item) => (item.id === selected.id ? { ...item, title: text, query: text } : item)));
     setOverrideQuery(text);
     setAskName("");
     setStep(stageForQuery(text, selected.cmd));
-    setNotice("그 이름으로 다시 봤어요.");
+    setNotice(m("ap.recheckName"));
   }
 
   function onRemember() {
@@ -386,12 +417,12 @@ export function AtlasApp() {
       uid: uidOf(title) || uidOf(query),
       title,
       query: title,
-      via: selected?.via ? VIA_LABEL[selected.via] : "직접",
+      via: selected?.via ? viaLabel(selected.via) : tr("ap.direct"),
       savedAt: Date.now(),
     };
     remember(item);
     setSelectedId(`saved:${item.uid}`);
-    setNotice("다음에도 이 복사기가 나와요.");
+    setNotice(m("ap.remembered"));
   }
 
   function openChooser() {
@@ -412,80 +443,98 @@ export function AtlasApp() {
     setNotice("");
   }
 
-  function addWifi(host: string, answered: boolean) {
+  function addWifi(host: string, answered: boolean, opts: { title?: string; subtitle?: Msg; query?: string; select?: boolean } = {}) {
     const item: Found = {
       id: `wifi:${host}`,
-      title: `프린터 ${host}`,
-      subtitle: answered ? "631 응답 확인 · 직접 인쇄 시 CORS 허용 필요" : "직접 넣은 주소",
+      title: opts.title || tr("fx.printerIp", { ip: host }),
+      subtitle: opts.subtitle || m(answered ? "ap.ippReply" : "ap.typedIp"),
       via: "wifi",
-      query: host,
+      query: opts.query || host,
       host,
       live: true,
     };
     setHits((prev) => [item, ...prev.filter((row) => row.id !== item.id)]);
-    setSelectedId(item.id);
+    if (opts.select !== false) setSelectedId(item.id);
+    return item;
   }
 
-  async function findOnWifi() {
-    if (lanBusy || sending) return;
-    setLanBusy(true);
-    setLanNote("브라우저가 같은 망 접근을 물어보면 허용하세요. 삼성 앱은 열지 않아요.");
-    try {
-      const found = await discoverLanPrinters(setLanNote, [subnetInput, localStorage.getItem("nuguna-subnet") || ""]);
-      if (found.length === 0) {
-        setLanNote("응답한 주소가 없어요. 대역(예: 192.168.50)이나 복사기 IP를 직접 넣으세요.");
-        return;
-      }
-      const subnet = found[0].host.split(".").slice(0, 3).join(".");
-      localStorage.setItem("nuguna-subnet", subnet);
-      setSubnetInput(subnet);
-      for (const hit of found) addWifi(hit.host, true);
-      setLanNote(`${found.length}대를 찾았어요. 그 주소로 이 화면에서 보냅니다.`);
-    } catch {
-      setLanNote("같은 망을 보지 못했어요. IP를 직접 넣으세요.");
-    } finally {
-      setLanBusy(false);
-    }
+  /** 와이파이·PC 도우미 주소를 '최근 프린터'에 남긴다 (별칭은 유지) */
+  function rememberHost(host: string, title: string, viaHelper: boolean) {
+    remember({ uid: `wifi-${host.replace(/\./g, "-")}`, title, query: host, host, via: tr(viaHelper ? "fx.helper" : "via.wifi"), link: viaHelper ? "helper" : "wifi", savedAt: Date.now() });
   }
+
+  const { stopScan, findOnWifi, findViaHelper, pickPreset } = lanSearch({ lanBusy, sending, useHelper, helperUrl, helperCode, subnetInput, scanAbortRef, setLanBusy, setScanMode, setScanProg, setLanNote, setSubnetInput, setHelperOk, setUseHelper, addWifi });
 
   function addTypedIp() {
+    if (sending) {
+      setNotice(m("ap.busySending"));
+      return;
+    }
     const host = ipInput.trim();
     if (!isValidIPv4(host)) {
-      setLanNote("IP는 192.168.0.10 처럼 넣어 주세요.");
+      setLanNote(m("ap.ipFormat"));
       return;
     }
     addWifi(host, false);
-    setLanNote(`${host} 를 이 화면의 프린터로 골랐어요.`);
+    rememberHost(host, tr("fx.printerIp", { ip: host }), useHelper);
+    setLanNote(m("ap.ipChosen", { host }));
+  }
+
+  /** 최근 프린터 원터치 재연결 */
+  function reconnect(item: SavedPrinter) {
+    if (sending) {
+      setNotice(m("ap.busySending"));
+      return;
+    }
+    setNotice("");
+    setOverrideQuery(null);
+    setAskName("");
+    if (item.host) {
+      const viaHelper = item.link === "helper";
+      if (viaHelper) setUseHelper(true);
+      setLinkTab(viaHelper ? "helper" : "wifi");
+      addWifi(item.host, false, { title: item.title, subtitle: m("ap.recentAt", { host: item.host }), query: item.title === tr("fx.printerIp", { ip: item.host }) || item.title.startsWith("프린터 ") ? item.host : item.title });
+      setStep("print");
+      return;
+    }
+    const key = item.query.trim().toLowerCase();
+    const live = list.find((row) => row.live && row.usbKey && row.query.trim().toLowerCase() === key);
+    if (live) {
+      setSelectedId(live.id);
+      setStep("print");
+      return;
+    }
+    if (item.link === "usb") {
+      setLinkTab("usb");
+      setSelectedId(`saved:${item.uid}`);
+      setNotice(m("ap.plugUsb"));
+      return;
+    }
+    setSelectedId(`saved:${item.uid}`);
+    setStep("print");
+  }
+
+  function saveAlias(uid: string) {
+    rename(uid, aliasDraft);
+    setEditingUid(null);
+    setAliasDraft("");
   }
 
   function leaveInApp() {
     const url = window.location.href;
     if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-      void navigator.clipboard.writeText(url).then(() => setNotice("주소를 복사했어요. Safari 주소창에 붙여 넣으세요."));
+      void navigator.clipboard.writeText(url).then(() => setNotice(m("ap.urlCopied")));
       return;
     }
     const bare = url.replace(/^https?:\/\//, "");
     window.location.href = `intent://${bare}#Intent;scheme=${window.location.protocol.replace(":", "")};package=com.android.chrome;end`;
   }
 
-  function useRecent() {
-    const recent = saved[0];
-    if (!recent) return;
-    const key = recent.query.trim().toLowerCase();
-    const matches = list.filter((item) => item.query.trim().toLowerCase() === key);
-    const live = matches.find((item) => item.live && item.via === "usb");
-    const picked = live || matches[0];
-    setSelectedId(picked ? picked.id : `saved:${recent.uid}`);
-    setOverrideQuery(null);
-    setAskName("");
-    setStep("print");
-  }
-
   async function choosePhotos(files: File[]) {
     if (!files.length || sending) return;
     const room = 20 - album.length;
     if (room < 1) {
-      setNotice("사진은 20장까지예요.");
+      setNotice(m("ap.max20"));
       return;
     }
     const urls: string[] = [];
@@ -496,16 +545,16 @@ export function AtlasApp() {
         continue;
       }
       if (file.size > 12 * 1024 * 1024) {
-        setNotice("사진이 너무 커요. JPG나 PNG로, 긴 변 2000px 정도로 줄여 주세요.");
+        setNotice(m("ap.tooBig"));
         continue;
       }
       try {
         urls.push(await shrinkPhoto(file));
       } catch {
-        setNotice("사진을 열지 못했어요.");
+        setNotice(m("err.openPhoto"));
       }
     }
-    if (heic) setNotice("HEIC는 브라우저에서 못 읽어요. JPG/PNG로 저장하거나 공유 메뉴에서 변환해 올려 주세요.");
+    if (heic) setNotice(m("ap.heic"));
     if (!urls.length) return;
     clearPrintRoot();
     setAlbum((prev) => [...prev, ...urls].slice(0, 20));
@@ -521,6 +570,11 @@ export function AtlasApp() {
       return next;
     });
     if (photoUrlRef.current === url) photoUrlRef.current = null;
+    setPhotoTurns((prev) => {
+      const next = { ...prev };
+      delete next[url];
+      return next;
+    });
     URL.revokeObjectURL(url);
   }
 
@@ -550,7 +604,7 @@ export function AtlasApp() {
       canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.86));
       URL.revokeObjectURL(raw);
-      if (!blob) throw new Error("사진을 열지 못했어요.");
+      if (!blob) throw new Error(tr("err.openPhoto"));
       return URL.createObjectURL(blob);
     } catch (error) {
       URL.revokeObjectURL(raw);
@@ -588,19 +642,51 @@ export function AtlasApp() {
         }
         const opened = pdfRef.current?.opened;
         if (!opened || cancel || requestId !== previewReq.current) return;
-        const page = Math.min(opened.doc.numPages, Math.max(1, previewPage));
-        const size = oriented(previewSize(paper));
-        const canvas = await renderPdfPage(opened.doc, page, size.width, size.height, slot, orient === "auto" ? "auto" : "fit");
-        if (!canvas || cancel || requestId !== previewReq.current) {
-          if (canvas) {
-            canvas.width = 0;
-            canvas.height = 0;
-          }
+        /* 실제로 인쇄될 시트 목록(쪽 범위 → 모아찍기 → 역순) 그대로 미리본다 */
+        const sheets = sheetsFor(opened.doc.numPages);
+        if (!sheets.length) {
+          setPdfPreview(null);
           return;
         }
+        const sheetIndex = Math.min(sheets.length - 1, Math.max(0, previewSheet - 1));
+        const group = sheets[sheetIndex];
+        const size = oriented(previewSize(paper));
+        const mode = orient === "auto" ? "auto" : "fit";
+        const free = (items: (HTMLCanvasElement | null | undefined)[]) => {
+          for (const item of items) {
+            if (!item) continue;
+            item.width = 0;
+            item.height = 0;
+          }
+        };
+        /* 모아찍기: 미리보기 쪽이 들어가는 묶음을 실제와 같은 2분할/4분할로 보여 준다 */
+        let composed: HTMLCanvasElement | null = null;
+        if (nup > 1) {
+          const { width: cellW, height: cellH } = nupCell(nup, size.width, size.height);
+          const cells: HTMLCanvasElement[] = [];
+          for (const number of group) {
+            const cell = await renderPdfPage(opened.doc, number, cellW, cellH, slot, mode);
+            if (!cell || cancel || requestId !== previewReq.current) {
+              free([cell, ...cells]);
+              return;
+            }
+            cells.push(cell);
+          }
+          composed = composeSheet(cells, cells.map((cell) => ({ width: cell.width, height: cell.height })), size.width, size.height, nup, "contain");
+          free(cells);
+        } else {
+          composed = await renderPdfPage(opened.doc, group[0], size.width, size.height, slot, mode);
+        }
+        if (!composed || cancel || requestId !== previewReq.current) {
+          free([composed]);
+          return;
+        }
+        const sheetW = paperMm(paper, orient === "landscape" ? "landscape" : "portrait").width;
+        const canvas = insetCanvas(composed, MARGIN_MM[margin], sheetW);
+        /* 쪽 번호: 실제 출력 시트 번호 / 전체 시트 수 (인쇄 경로와 같은 규칙) */
+        if (stampsOn(stamps)) stampSheet(canvas, sheetIndex, sheets.length, stamps, canvas.width / sheetW);
         setPdfPreview(canvas.toDataURL("image/jpeg", 0.82));
-        canvas.width = 0;
-        canvas.height = 0;
+        free(canvas === composed ? [canvas] : [canvas, composed]);
         setPdfNeedsKey(false);
       } catch (error) {
         if (cancel || requestId !== previewReq.current) return;
@@ -608,21 +694,22 @@ export function AtlasApp() {
         if (name === "PasswordException" || (error instanceof Error && /password/i.test(error.message))) {
           setPdfNeedsKey(true);
           setPdfPreview(null);
-          setNotice(pdfKey ? "비밀번호가 맞지 않아요." : "이 PDF는 열기 비밀번호가 필요해요.");
+          setNotice(m(pdfKey ? "ap.pdfBadKey" : "ap.pdfNeedKey"));
           return;
         }
         if (chunkLoadError(error)) {
-          setNotice("네트워크에 다시 연결하거나 새로고침해 주세요.");
+          setNotice(m("err.chunk"));
           return;
         }
-        setNotice("PDF를 열지 못했어요.");
+        setNotice(m("ap.pdfOpenFail"));
       }
     })();
     return () => {
       cancel = true;
       slot.current?.cancel();
     };
-  }, [pdfBytes, previewPage, paper, pdfKey, orient]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pdfBytes, previewSheet, paper, pdfKey, orient, nup, reverse, margin, pageNumber, watermarkText, pageMode, pageList, pageFrom, pageTo]);
 
   useEffect(
     () => () => {
@@ -641,9 +728,10 @@ export function AtlasApp() {
       setPdfBytes(new Uint8Array(buffer));
       setPdfName(file.name);
       setPageMode("all");
+      setPageChip("all");
       setPageFrom(1);
       setPageTo(1);
-      setPreviewPage(1);
+      setPreviewSheet(1);
       setPdfKey("");
       setPdfNeedsKey(false);
       setDocKind("pdf");
@@ -653,7 +741,16 @@ export function AtlasApp() {
 
   const catalogPcl5 = Boolean(match && sure && !isInkjet(match) && languageIsPcl5((match.printer.languages || []).join(" ")));
   const helperLive = Boolean(useHelper && selected?.host && helperUrl.trim());
-  const rasterForced = Boolean(pdfKey) || nup !== 1 || reverse || pageMode !== "all" || secureOn || orient === "landscape";
+  const marginMm = MARGIN_MM[margin];
+  /* 여백을 넣으면 원본 PDF를 그대로 넘길 수 없으니(PDF Direct 불가) 래스터로 보낸다 */
+  /* 복사기 실제 상태 (도우미 /status 또는 USB 장치 정보) */
+  const helperAlive = helperStatus?.state === "on" || helperOk;
+  const usbInfo = selected?.usbKey ? { cmd: selected.cmd || "", live: Boolean(selected.live), title: selected.title } : null;
+  const printer = usePrinterStatus({ host: selected?.host || "", helperUrl, helperCode, helperAlive, usb: usbInfo });
+  /* 자가 복구: 복사기가 PDF 직통을 지원하지 않는다고 확인되면 PCL5e 래스터로 안전하게 분기 */
+  const pdfDirectBlocked = printer.status?.source === "helper" && printer.status.capabilities.pdfDirect === false;
+  const online = useOnline();
+  const rasterForced = pdfDirectBlocked || Boolean(pdfKey) || nup !== 1 || reverse || pageMode !== "all" || secureOn || orient === "landscape" || marginMm > 0 || stampActive;
   const route: PrintRoute = resolvePrintRoute({
     liveUsb: Boolean(selected?.live && selected.usbKey) || helperLive,
     cmd: selected?.cmd || (helperLive ? "PCL5e,PDF" : ""),
@@ -675,30 +772,153 @@ export function AtlasApp() {
     return orient === "landscape" ? { width: points.height, height: points.width } : points;
   }
 
+  /** PDF 쪽 캔버스에 여백(보통 10mm / 좁게 5mm)을 넣는다. 없음이면 같은 캔버스를 그대로 돌려준다. */
+  function withMargin(canvas: HTMLCanvasElement) {
+    if (!marginMm) return canvas;
+    const out = insetCanvas(canvas, marginMm, paperMm(paper, orient === "landscape" ? "landscape" : "portrait").width);
+    if (out !== canvas) {
+      canvas.width = 0;
+      canvas.height = 0;
+    }
+    return out;
+  }
+
+  /* ── 쪽 번호·워터마크 / 메모 서식 / 사진 보정 공용 도우미 ── */
+  function pxPerMmOf(canvas: HTMLCanvasElement) {
+    return canvas.width / paperMm(paper, orientKey).width;
+  }
+
+  function stamp(canvas: HTMLCanvasElement, index: number, total: number) {
+    if (stampActive) stampSheet(canvas, index, total, stamps, pxPerMmOf(canvas));
+    return canvas;
+  }
+
+  /** 시스템 래스터(IPP·PDF 저장·화면 미리보기)용 메모 쪽 캔버스. 기본 서식이면 기존 렌더러 그대로. */
+  async function systemMemoCanvases(text: string, frame: { width: number; height: number }, grayOn: boolean) {
+    const pxPerMm = frame.width / paperMm(paper, orientKey).width;
+    let pagesOut: HTMLCanvasElement[];
+    if (!memoCustom) {
+      const chunks = sheetMemoChunks(text, paper, frame);
+      pagesOut = [];
+      for (const chunk of chunks) pagesOut.push(await renderSheetCanvas({ kind: "memo", title: "", note: chunk, paper, gray: grayOn, frame }));
+    } else {
+      pagesOut = memoChunksStyled(text, frame.width, frame.height, memoStyle, pxPerMm).map((chunk) => {
+        const canvas = document.createElement("canvas");
+        canvas.width = frame.width;
+        canvas.height = frame.height;
+        return drawMemoStyled(canvas, chunk, memoStyle, pxPerMm);
+      });
+    }
+    pagesOut.forEach((canvas, index) => stamp(canvas, index, pagesOut.length));
+    return pagesOut;
+  }
+
+  /** 회전·문서 보정을 반영한 사진 주소 (캐시) */
+  function procKey(src: string) {
+    return `${src}|${photoTurns[src] || 0}|${photoFilter}`;
+  }
+
+  async function processedSrc(src: string) {
+    const turn = photoTurns[src] || 0;
+    if (!turn && photoFilter === "none") return src;
+    const key = procKey(src);
+    const hit = procCache.current.get(key);
+    if (hit) return hit;
+    const url = await processPhotoUrl(src, { turn, filter: photoFilter });
+    /* 같은 사진을 동시에 두 번 보정했으면 먼저 끝난 결과를 쓰고 새 주소는 바로 해제(누수 방지) */
+    const raced = procCache.current.get(key);
+    if (raced) {
+      URL.revokeObjectURL(url);
+      return raced;
+    }
+    procCache.current.set(key, url);
+    return url;
+  }
+
+  async function printSources() {
+    const base = album.length ? album : photoUrl ? [photoUrl] : [];
+    return Promise.all(base.map((src) => processedSrc(src).catch(() => src)));
+  }
+
+  async function focusedSource() {
+    const src = photoUrl || album[0];
+    return src ? processedSrc(src).catch(() => src) : null;
+  }
+
+  function linkText() {
+    if (helperLive && selected?.host) return tr("ap.linkHelper", { host: selected.host });
+    if (selected?.host) return tr("ap.linkWifi", { host: selected.host });
+    if (selected?.live && selected.usbKey) return `USB ${selected.title}`;
+    return tr("ap.linkNone");
+  }
+
+  function testInfo(forceGray = false): TestSheetInfo {
+    return {
+      printer: match ? `${match.printer.brand} ${match.printer.model}` : selected?.title || "",
+      link: linkText(),
+      paper,
+      orient: orient === "landscape" ? "landscape" : "portrait",
+      gray: forceGray || gray || route === "usb-pcl",
+      at: Date.now(),
+    };
+  }
+
+  function docName() {
+    if (docKind === "pdf") return pdfName || tr("ap.docPdf");
+    if (docKind === "photo") return tr("ap.photosN", { n: album.length || (photoUrl ? 1 : 0) });
+    if (docKind === "memo") return tr("ap.memo");
+    return tr("ap.testPage");
+  }
+
+  function recordHistory(routeName: string, pageTotal: number) {
+    setHistory(
+      addHistory({
+        name: docName(),
+        kind: docKind,
+        pages: pageTotal,
+        printer: selected ? (saved.find((row) => row.host && row.host === selected.host)?.alias || selected.title) : "",
+        route: routeName,
+        at: Date.now(),
+      }),
+    );
+  }
+
   async function canvasJpeg(canvas: HTMLCanvasElement) {
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
     const width = canvas.width;
     const height = canvas.height;
     canvas.width = 0;
     canvas.height = 0;
-    if (!blob) throw new Error("인쇄 이미지를 만들지 못했어요.");
+    if (!blob) throw new Error(tr("err.makeImage"));
     return { jpeg: new Uint8Array(await blob.arrayBuffer()), width, height };
   }
 
   async function photoSheetJpegs() {
-    const sources = album.length ? album : photoUrl ? [photoUrl] : [];
-    if (!sources.length) throw new Error("사진을 골라 주세요.");
-    const groups = nupGroups(sources.map((_, index) => index + 1), nup, reverse);
+    const sources = await printSources();
+    if (!sources.length) throw new Error(tr("ap.pickPhoto"));
     const px = oriented(printPixelSize(paper));
     const sheets: { jpeg: Uint8Array; width: number; height: number }[] = [];
-    for (const group of groups) {
+    if (photoLayout !== "normal") {
+      /* 증명사진·여권사진: 고른 사진 1장을 실물 크기로 반복 배열 */
+      const src = (await focusedSource()) || sources[0];
+      const image = await loadImage(src);
+      const sheet = composeIdSheet(image, { width: image.naturalWidth || image.width, height: image.naturalHeight || image.height }, px.width, px.height, px.width / paperMm(paper, orientKey).width, photoLayout, cutLines);
+      stamp(sheet, 0, 1);
+      if (gray) grayCanvas(sheet);
+      sheets.push(await canvasJpeg(sheet));
+      return sheets;
+    }
+    const groups = nupGroups(sources.map((_, index) => index + 1), nup, reverse);
+    for (const [index, group] of groups.entries()) {
       const images = await Promise.all(group.map((number) => loadImage(sources[number - 1])));
       if (nup === 1 && group.length === 1) {
         const canvas = await renderSheetCanvas({ kind: "photo", title: "", note: "", paper, image: images[0], fit: photoFit, turn: photoTurn, gray, frame: px });
+        stamp(canvas, index, groups.length);
         if (gray) grayCanvas(canvas);
         sheets.push(await canvasJpeg(canvas));
       } else {
         const sheet = composeSheet(images, images.map((image) => ({ width: image.naturalWidth || image.width, height: image.naturalHeight || image.height })), px.width, px.height, nup, photoFit);
+        stamp(sheet, index, groups.length);
         if (gray) grayCanvas(sheet);
         sheets.push(await canvasJpeg(sheet));
       }
@@ -708,22 +928,15 @@ export function AtlasApp() {
 
   async function buildSystem(forceColor = false): Promise<PrintJob> {
     const useGray = forceColor ? false : gray;
-    const title = match ? `${match.printer.brand} ${match.printer.model}` : selected?.title || "인쇄";
-    const note = docKind === "memo" ? memo.trim() : "이 브라우저에서 만든 인쇄본입니다.";
+    const title = match ? `${match.printer.brand} ${match.printer.model}` : selected?.title || tr("ap.print");
+    const note = docKind === "memo" ? memo.trim() : tr("ap.browserCopy");
     if (docKind === "pdf" && pdfBytes) {
       const opened = await openPdf(pdfBytes, pdfKey || undefined);
       try {
-        const picked = currentPages(opened.doc.numPages);
-        const numbers = picked.pages;
-        const size = oriented(osRasterSize(paper, numbers.length));
         const urls: string[] = [];
-        for (const number of numbers) {
-          const canvas = await renderPdfPage(opened.doc, number, size.width, size.height, undefined, orient === "auto" ? "auto" : "fit");
-          if (!canvas) throw new Error("PDF를 열지 못했어요.");
-          urls.push(await canvasObjectUrl(canvas, 0.86));
-          canvas.width = 0;
-          canvas.height = 0;
-        }
+        await forEachPdfSheet(opened.doc, async (canvas) => {
+          urls.push(await blobUrl(canvas, 0.86));
+        });
         return { kind: "pdf", pages: urls, paper, gray: useGray };
       } finally {
         await opened.destroy();
@@ -738,8 +951,66 @@ export function AtlasApp() {
       });
       return { kind: "pdf", pages, paper, gray: false };
     }
-    if (docKind === "memo") return { kind: "memo", text: memo.trim(), paper, gray: useGray };
+    if (docKind === "memo") {
+      /* 서식·쪽 번호·워터마크가 실제와 같게 직접 그린 쪽을 띄운다 */
+      const canvases = await systemMemoCanvases(memo.trim(), oriented(printPixelSize(paper)), useGray);
+      const urls: string[] = [];
+      for (const canvas of canvases) {
+        urls.push(await blobUrl(canvas, 0.92));
+        canvas.width = 0;
+        canvas.height = 0;
+      }
+      return { kind: "pdf", pages: urls, paper, gray: useGray };
+    }
+    if (docKind === "test") {
+      /* 점검용 테스트 시트를 실제 인쇄본과 같은 그림으로 띄운다 */
+      const canvas = await renderSheetCanvas({ kind: "test", title, note, paper, gray: useGray, frame: oriented(printPixelSize(paper)), test: { ...testInfo(), gray: useGray } });
+      const url = await blobUrl(canvas, 0.92);
+      canvas.width = 0;
+      canvas.height = 0;
+      return { kind: "pdf", pages: [url], paper, gray: useGray };
+    }
     return { kind: "test", title, note, paper, gray: useGray };
+  }
+
+  /** 실제 출력 시트: 고른 쪽 → 모아찍기 묶음 → 역순. 미리보기·USB·IPP·PDF 저장이 모두 이 순서를 쓴다. */
+  function sheetsFor(total: number) {
+    const picked = currentPages(total).pages;
+    return picked.length ? nupGroups(picked, docKind === "pdf" ? nup : 1, reverse) : [];
+  }
+
+  /** 시스템 래스터(화면 미리보기·IPP·PDF 저장)용: 시트를 한 장씩 그려 fn에 넘긴다 (여백·쪽 번호·워터마크 포함) */
+  async function forEachPdfSheet(doc: OpenedPdf["doc"], fn: (canvas: HTMLCanvasElement, index: number, total: number) => Promise<void>, onPrep?: (done: number, total: number) => void) {
+    const sheets = sheetsFor(doc.numPages);
+    const size = oriented(osRasterSize(paper, sheets.length));
+    const mode = orient === "auto" ? "auto" : "fit";
+    for (const [index, group] of sheets.entries()) {
+      onPrep?.(index, sheets.length);
+      let composed: HTMLCanvasElement;
+      if (nup > 1) {
+        const cell = nupCell(nup, size.width, size.height);
+        const cells: HTMLCanvasElement[] = [];
+        for (const number of group) {
+          const rendered = await renderPdfPage(doc, number, cell.width, cell.height, undefined, mode);
+          if (!rendered) throw new Error(tr("ap.pdfOpenFail"));
+          cells.push(rendered);
+        }
+        composed = composeSheet(cells, cells.map((c) => ({ width: c.width, height: c.height })), size.width, size.height, nup, "contain");
+        for (const c of cells) {
+          c.width = 0;
+          c.height = 0;
+        }
+      } else {
+        const rendered = await renderPdfPage(doc, group[0], size.width, size.height, undefined, mode);
+        if (!rendered) throw new Error(tr("ap.pdfOpenFail"));
+        composed = rendered;
+      }
+      const canvas = stamp(withMargin(composed), index, sheets.length);
+      await fn(canvas, index, sheets.length);
+      canvas.width = 0;
+      canvas.height = 0;
+    }
+    return sheets.length;
   }
 
   function currentPages(total: number): { pages: number[]; error?: string } {
@@ -752,12 +1023,25 @@ export function AtlasApp() {
 
   function secureOpts() {
     if (!secureOn) return undefined;
-    if (!/^\d{4}$/.test(pin)) return null;
-    return { pin, user: jobUser.replace(/[^A-Za-z0-9]/g, "").slice(0, 16) || "USER" };
+    const safePin = cleanPin(pin);
+    if (!safePin) return null;
+    /* PJL 헤더에 들어가는 값은 중앙 정화 함수로 한 번 더 거른다 */
+    return { pin: safePin, user: pjlToken(jobUser) };
   }
 
-  async function onPrint(trial = false) {
-    if (sending) return;
+  async function onPrint(trial = false, copiesOverride?: number) {
+    if (sending || printLock.current) return;
+    printLock.current = true;
+    try {
+      await runPrint(trial, copiesOverride);
+    } finally {
+      printLock.current = false;
+    }
+  }
+
+  async function runPrint(trial: boolean, copiesOverride?: number) {
+    const jobCopies = copiesOverride ?? copies;
+    setDoneText(null);
     const pages = trial ? [1] : docKind === "pdf" ? currentPages(pdfCount).pages : [1];
     if (!trial && docKind === "pdf") {
       const picked = currentPages(pdfCount);
@@ -766,56 +1050,61 @@ export function AtlasApp() {
         return;
       }
       if (!pdfBytes || picked.pages.length < 1) {
-        setNotice("PDF를 골라 주세요.");
+        setNotice(m("ap.pickPdf"));
         return;
       }
     }
     if (docKind === "memo" && memo.trim().length < 1) {
-      setNotice("메모를 적어 주세요.");
+      setNotice(m("ap.typeMemo"));
       return;
     }
     if (docKind === "photo" && !photoUrl && album.length < 1) {
-      setNotice("사진을 골라 주세요.");
+      setNotice(m("ap.pickPhoto"));
       return;
     }
-    const title = match ? `${match.printer.brand} ${match.printer.model}` : selected?.title || "인쇄";
+    const title = match ? `${match.printer.brand} ${match.printer.model}` : selected?.title || tr("ap.print");
     const secure = secureOpts();
     if (secure === null) {
-      setNotice("보안 인쇄 PIN은 숫자 4자리로 넣어 주세요.");
+      setNotice(m("ap.pin4"));
       return;
     }
-    const note = docKind === "memo" ? memo.trim() : "이 브라우저에서 만든 인쇄본입니다.";
+    const note = docKind === "memo" ? memo.trim() : tr("ap.browserCopy");
     const viaHelper = helperLive;
+    const jobPageCount = trial ? 1 : pageCount;
+    const prep = (done: number, total: number) => setPhase({ stage: "prep", done, total, percent: total ? (done / total) * 100 : 0 });
+    const sendStage = (total: number) => setPhase({ stage: "send", done: total, total, percent: 0 });
     if (selected?.host && !viaHelper && !trial) {
       setSending(true);
-      setNotice(`${selected.host} 로 넣는 중…`);
+      setProgress(0);
+      prep(0, Math.max(1, jobPageCount));
+      setNotice(m("ap.sendingTo", { host: selected.host }));
       try {
         let bytes = pdfBytes;
         if (docKind === "pdf") {
-          if (!bytes) throw new Error("PDF를 골라 주세요.");
-          if (orient === "landscape") {
+          if (!bytes) throw new Error(tr("ap.pickPdf"));
+          /* 원본 PDF를 그대로 못 보내는 경우(가로·여백·쪽 번호·워터마크·모아찍기·역순)는 실제 시트 순서대로 래스터 */
+          if (orient === "landscape" || marginMm > 0 || stampActive || nup > 1 || reverse) {
             const opened = await openPdf(bytes, pdfKey || undefined);
             try {
-              const picked = pages;
-              const size = oriented(osRasterSize(paper, picked.length));
               const sheets: { jpeg: Uint8Array; width: number; height: number }[] = [];
-              for (const number of picked) {
-                const canvas = await renderPdfPage(opened.doc, number, size.width, size.height, undefined, "fit");
-                if (!canvas) throw new Error("PDF를 열지 못했어요.");
-                if (gray) grayCanvas(canvas);
-                sheets.push(await canvasJpeg(canvas));
-              }
+              await forEachPdfSheet(
+                opened.doc,
+                async (canvas) => {
+                  if (gray) grayCanvas(canvas);
+                  sheets.push(await canvasJpeg(canvas));
+                },
+                prep,
+              );
               bytes = new Uint8Array(await imagesToPdf(sheets, pageBox()));
             } finally {
               await opened.destroy();
             }
           } else if (pageMode !== "all") bytes = await slicePdf(bytes, pages);
         } else if (docKind === "memo") {
-          const frame = oriented(printPixelSize(paper));
-          const chunks = sheetMemoChunks(note, paper, frame);
+          const canvases = await systemMemoCanvases(note, oriented(printPixelSize(paper)), gray);
           const sheets: { jpeg: Uint8Array; width: number; height: number }[] = [];
-          for (const chunk of chunks) {
-            const canvas = await renderSheetCanvas({ kind: "memo", title: selected.title, note: chunk, paper, gray, frame });
+          for (const canvas of canvases) {
+            prep(sheets.length, canvases.length);
             if (gray) grayCanvas(canvas);
             sheets.push(await canvasJpeg(canvas));
           }
@@ -824,87 +1113,130 @@ export function AtlasApp() {
           bytes = new Uint8Array(await imagesToPdf(await photoSheetJpegs(), pageBox()));
         } else {
           const frame = oriented(printPixelSize(paper));
-          const canvas = await renderSheetCanvas({ kind: "test", title: selected.title, note, paper, gray, frame });
+          const canvas = await renderSheetCanvas({ kind: "test", title: selected.title, note, paper, gray, frame, test: testInfo() });
           if (gray) grayCanvas(canvas);
           const sheet = await canvasJpeg(canvas);
           bytes = new Uint8Array(await imagesToPdf([sheet], pageBox()));
         }
-        await sendIppPdf(selected.host, bytes, { copies, duplex, paper, gray });
-        setNotice(`${selected.host} 로 보냈어요. 삼성 기본 앱은 열지 않았어요.`);
+        sendStage(Math.max(1, jobPageCount));
+        setProgress(45);
+        await sendIppPdf(selected.host, bytes, { copies: jobCopies, duplex, paper, gray });
+        setProgress(100);
+        diag(tr("ap.logIpp", { host: selected.host, kind: docKind }));
+        rememberHost(selected.host, selected.title, false);
+        learnSubnetFromIp(selected.host);
+        recordHistory("ipp", jobPageCount);
+        setIppFail(false);
+        const doneMsg = `${tr("ap.ippDone", { host: selected.host })}${jobCopies > 1 ? ` ${tr("ap.copiesN", { n: jobCopies })}` : ""}`;
+        setNotice(doneMsg);
+        setDoneText(doneMsg);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "그 주소로 넣지 못했어요.";
+        const message = humanError(error, tr("ap.ippFail"));
         diag(`IPP ${selected.host} ${message}`);
         setNotice(message);
+        setIppFail(true);
       } finally {
         setSending(false);
+        setPhase(null);
       }
       return;
     }
     const effective = trial && selected?.usbKey ? "usb-pcl" : route;
     if (effective === "preview-only" || (!selected?.usbKey && !viaHelper)) {
-      setNotice("보낼 연결이 없어요. 화면 미리보기나 PDF 저장을 눌러 주세요.");
+      setNotice(m("ap.noRoute"));
       return;
     }
     const usbKey = selected?.usbKey || "";
+    /* PC 도우미(9100): 복사기는 9100 연결 하나를 작업 하나로 본다 → 작업 전체를 모았다가 한 연결로 보낸다 */
+    const helperJob: Uint8Array[] = [];
     const write = async (bytes: Uint8Array, onProgress?: (percent: number) => void, shouldStop?: () => boolean, atomic = false) => {
       if (viaHelper && selected?.host) {
-        await helperSend(helperUrl, helperCode, selected.host, bytes);
+        helperJob.push(bytes);
         onProgress?.(100);
         return;
       }
       await sendUsbBytes(usbKey, bytes, onProgress, shouldStop, atomic);
     };
+    const flushHelper = async () => {
+      if (!viaHelper || !selected?.host || !helperJob.length) return;
+      const total = helperJob.reduce((sum, part) => sum + part.length, 0);
+      const job = new Uint8Array(total);
+      let offset = 0;
+      for (const part of helperJob) {
+        job.set(part, offset);
+        offset += part.length;
+      }
+      helperJob.length = 0;
+      setPhase({ stage: "send", done: 1, total: 1, percent: 0 });
+      setProgress(90);
+      await helperSend(helperUrl, helperCode, selected.host, job);
+      diag(tr("ap.logHelperSend", { n: total }));
+    };
     stopRef.current = false;
     setSending(true);
     setProgress(0);
+    prep(0, Math.max(1, jobPageCount));
     let started = false;
     const stop = () => stopRef.current;
     const fatalUsb = (error: unknown) => error instanceof Error && /15초|USB 연결을 닫|거절/.test(error.message);
     const sendPackets = async (commands: Uint8Array[], progress: (percent: number) => void) => {
       const packets = bundleCommands(commands);
       for (const [index, packet] of packets.entries()) {
-        if (stopRef.current) throw new Error("보내기를 멈췄어요.");
+        if (stopRef.current) throw new Error(tr("ap.stopped"));
         await write(packet, () => progress(Math.round(((index + 1) / packets.length) * 100)), () => false, true);
       }
     };
     try {
       if (effective === "usb-pdf" && pdfBytes && !trial) {
-        const bytes = wrapPdfJob(pdfBytes, { copies, duplex, paper, pages: Math.max(1, pdfCount), secure });
+        const bytes = wrapPdfJob(pdfBytes, { copies: jobCopies, duplex, paper, pages: Math.max(1, pdfCount), secure });
+        sendStage(Math.max(1, pdfCount));
         setProgress(8);
         await write(bytes, (percent) => setProgress(8 + Math.round(percent * 0.92)), stop);
+        await flushHelper();
       } else {
         const size = oriented(printableSize(paper));
-        const memoChunks = !trial && docKind === "memo" ? officeMemoChunks(note, size.width, size.height) : null;
-        const sources = album.length ? album : photoUrl ? [photoUrl] : [];
-        const photoGroups = nupGroups(sources.map((_, index) => index + 1), nup, reverse);
+        /* PCL 300dpi: 1mm = 300/25.4 px (증명사진 실물 크기·쪽 번호 크기의 기준) */
+        const pclPxPerMm = 300 / 25.4;
+        const memoChunks = !trial && docKind === "memo" ? (memoCustom ? memoChunksStyled(note, size.width, size.height, memoStyle, pclPxPerMm) : officeMemoChunks(note, size.width, size.height)) : null;
+        const sources = !trial && docKind === "photo" ? await printSources() : [];
+        const idSheet = docKind === "photo" && photoLayout !== "normal" && sources.length > 0;
+        const photoGroups = idSheet ? [[1]] : nupGroups(sources.map((_, index) => index + 1), nup, reverse);
         const pdfGroups = nupGroups(pages, nup, reverse);
         const jobPages = trial ? 1 : docKind === "pdf" ? Math.max(1, pdfGroups.length) : memoChunks?.length || photoGroups.length || 1;
-        await write(pclJobHeader({ copies, duplex, paper, pages: jobPages, secure, orient: orient === "landscape" ? "landscape" : "portrait" }), () => setProgress(2), stop, true);
+        await write(pclJobHeader({ copies: jobCopies, duplex, paper, pages: jobPages, secure, orient: orient === "landscape" ? "landscape" : "portrait" }), () => setProgress(2), stop, true);
         started = true;
-        if (stopRef.current) throw new Error("보내기를 멈췄어요.");
+        if (stopRef.current) throw new Error(tr("ap.stopped"));
         if (!trial && docKind === "pdf" && pdfBytes) {
           const opened = await openPdf(pdfBytes, pdfKey || undefined);
           try {
-            const cellW = nup === 4 ? Math.floor(size.width / 2) : size.width;
-            const cellH = nup === 1 ? size.height : Math.floor(size.height / (nup === 4 ? 2 : 2));
+            const { width: cellW, height: cellH } = nupCell(nup, size.width, size.height);
             for (const [index, group] of pdfGroups.entries()) {
-              if (stopRef.current) throw new Error("보내기를 멈췄어요.");
+              if (stopRef.current) throw new Error(tr("ap.stopped"));
+              prep(index, pdfGroups.length);
               const rendered: HTMLCanvasElement[] = [];
               for (const number of group) {
                 const canvas = await renderPdfPage(opened.doc, number, cellW, cellH, undefined, orient === "auto" ? "auto" : "fit");
                 if (!canvas || stopRef.current) {
                   canvas?.width && (canvas.width = 0);
-                  throw new Error("보내기를 멈췄어요.");
+                  throw new Error(tr("ap.stopped"));
                 }
                 rendered.push(canvas);
               }
-              const sheet = nup === 1 && rendered[0] ? rendered[0] : composeSheet(rendered, rendered.map((canvas) => ({ width: canvas.width, height: canvas.height })), size.width, size.height, nup, "contain");
+              const composed = nup === 1 && rendered[0] ? rendered[0] : composeSheet(rendered, rendered.map((canvas) => ({ width: canvas.width, height: canvas.height })), size.width, size.height, nup, "contain");
+              /* 여백: 묶음 한 장 전체를 안쪽으로 줄인다 (없음이면 composed 그대로) */
+              const sheet = insetCanvas(composed, marginMm, paperMm(paper, orient === "landscape" ? "landscape" : "portrait").width);
+              if (stampActive) stampSheet(sheet, index, pdfGroups.length, stamps, pclPxPerMm);
               const commands = canvasPclCommands(sheet, "dither");
+              sendStage(pdfGroups.length);
               for (const canvas of rendered) {
                 canvas.width = 0;
                 canvas.height = 0;
               }
-              if (sheet !== rendered[0]) {
+              if (composed !== rendered[0]) {
+                composed.width = 0;
+                composed.height = 0;
+              }
+              if (sheet !== composed) {
                 sheet.width = 0;
                 sheet.height = 0;
               }
@@ -919,16 +1251,27 @@ export function AtlasApp() {
         } else if (memoChunks) {
           const groups = nup === 1 && !reverse ? memoChunks.map((chunk) => [chunk]) : nupGroups(memoChunks.map((_, index) => index + 1), nup, reverse).map((group) => group.map((number) => memoChunks[number - 1]));
           for (const [index, group] of groups.entries()) {
-            if (stopRef.current) throw new Error("보내기를 멈췄어요.");
+            if (stopRef.current) throw new Error(tr("ap.stopped"));
+            prep(index, groups.length);
             const cells = group.map((chunk) => {
               const canvas = document.createElement("canvas");
-              canvas.width = nup === 4 ? Math.floor(size.width / 2) : size.width;
-              canvas.height = nup === 1 ? size.height : Math.floor(size.height / 2);
+              if (memoCustom) {
+                /* 서식 메모: 한 장 크기로 그린 뒤 모아찍기 칸에 축소 (화면 미리보기와 같은 모양) */
+                canvas.width = size.width;
+                canvas.height = size.height;
+                return drawMemoStyled(canvas, chunk, memoStyle, pclPxPerMm);
+              }
+              const cell = nupCell(nup, size.width, size.height);
+              canvas.width = cell.width;
+              canvas.height = cell.height;
               drawOfficePage(canvas, { kind: "memo", title, note: chunk, gray: true });
               return canvas;
             });
             const sheet = nup === 1 ? cells[0] : composeSheet(cells, cells.map((canvas) => ({ width: canvas.width, height: canvas.height })), size.width, size.height, nup, "contain");
-            const commands = canvasPclCommands(sheet, "threshold");
+            if (stampActive) stampSheet(sheet, index, groups.length, stamps, pclPxPerMm);
+            /* 연한 워터마크는 문턱값으로 보내면 사라지므로 디더링 */
+            const commands = canvasPclCommands(sheet, stamps.watermark.trim() ? "dither" : "threshold");
+            sendStage(groups.length);
             for (const canvas of cells) {
               canvas.width = 0;
               canvas.height = 0;
@@ -940,9 +1283,24 @@ export function AtlasApp() {
           }
         } else if (docKind === "photo" && sources.length) {
           for (const [index, group] of photoGroups.entries()) {
-            if (stopRef.current) throw new Error("보내기를 멈췄어요.");
+            if (stopRef.current) throw new Error(tr("ap.stopped"));
+            prep(index, photoGroups.length);
+            if (idSheet) {
+              const src = (await focusedSource()) || sources[0];
+              const image = await loadImage(src);
+              const sheet = composeIdSheet(image, { width: image.naturalWidth || image.width, height: image.naturalHeight || image.height }, size.width, size.height, pclPxPerMm, photoLayout, cutLines);
+              stampSheet(sheet, 0, 1, stamps, pclPxPerMm);
+              const commands = canvasPclCommands(sheet, "dither");
+              sheet.width = 0;
+              sheet.height = 0;
+              sendStage(1);
+              await sendPackets(commands, () => setProgress(92));
+              continue;
+            }
             const images = await Promise.all(group.map((number) => loadImage(sources[number - 1])));
             const sheet = composeSheet(images, images.map((image) => ({ width: image.naturalWidth || image.width, height: image.naturalHeight || image.height })), size.width, size.height, nup === 1 && group.length === 1 ? 1 : nup, photoFit);
+            if (stampActive && !photoTurn) stampSheet(sheet, index, photoGroups.length, stamps, pclPxPerMm);
+            sendStage(photoGroups.length);
             if (photoTurn) {
               const turned = document.createElement("canvas");
               turned.width = size.width;
@@ -952,6 +1310,7 @@ export function AtlasApp() {
               ctx?.rotate((photoTurn * Math.PI) / 180);
               ctx?.drawImage(sheet, -size.width / 2, -size.height / 2);
               sheet.width = 0;
+              if (stampActive) stampSheet(turned, index, photoGroups.length, stamps, pclPxPerMm);
               const commands = canvasPclCommands(turned, "dither");
               turned.width = 0;
               turned.height = 0;
@@ -970,27 +1329,41 @@ export function AtlasApp() {
           const canvas = document.createElement("canvas");
           canvas.width = size.width;
           canvas.height = size.height;
-          drawOfficePage(canvas, { kind: "test", title, note, gray: true });
-          if (stopRef.current) throw new Error("보내기를 멈췄어요.");
-          const commands = canvasPclCommands(canvas, "threshold");
+          /* 점검용 테스트 시트: 농도 막대가 살도록 디더링으로 보낸다 */
+          drawTestSheet(canvas, testInfo(true));
+          if (stopRef.current) throw new Error(tr("ap.stopped"));
+          const commands = canvasPclCommands(canvas, "dither");
           canvas.width = 0;
           canvas.height = 0;
+          sendStage(1);
           await sendPackets(commands, (percent) => setProgress(8 + Math.round(percent * 0.84)));
           if (needsBlankBack(1, duplex)) {
             await sendPackets(pclPageCommands(new Uint8Array(size.width * size.height), size.width, size.height), () => setProgress(96));
           }
         }
-        if (stopRef.current) throw new Error("보내기를 멈췄어요.");
+        if (stopRef.current) throw new Error(tr("ap.stopped"));
         await write(pclJobFooter(), () => setProgress(100), () => false, true);
+        /* 도우미: 머리말~꼬리말까지 모은 작업을 이제 한 번에 (멈춤·오류면 아무것도 보내지 않는다) */
+        await flushHelper();
+        setProgress(100);
         started = false;
       }
       if (stopRef.current) {
-        setNotice("보내기를 멈췄어요.");
+        setNotice(m("ap.stopped"));
         return;
       }
-      setNotice(secure ? `${viaHelper ? "도우미로" : "USB로"} 보냈어요. 복사기 화면에서 PIN을 입력해야 출력돼요.` : viaHelper ? "PC 도우미로 보냈어요." : "USB로 보냈어요.");
+      diag(tr("ap.logSent", { via: viaHelper ? "Helper 9100" : "USB", route: effective, kind: docKind }));
+      if (viaHelper && selected?.host) {
+        rememberHost(selected.host, selected.title, true);
+        learnSubnetFromIp(selected.host);
+      }
+      recordHistory(viaHelper ? "helper9100" : effective === "usb-pdf" ? "usb-pdf" : "usb-pcl", jobPageCount);
+      const doneMsg = `${tr(secure ? (viaHelper ? "ap.secureHelper" : "ap.secureUsb") : viaHelper ? "ap.sentHelper" : "ap.sentUsb")}${jobCopies > 1 ? ` ${tr("ap.copiesN", { n: jobCopies })}` : ""}`;
+      setNotice(doneMsg);
+      if (!trial) setDoneText(doneMsg);
     } catch (error) {
-      if (started && !fatalUsb(error)) {
+      helperJob.length = 0;
+      if (started && !fatalUsb(error) && !viaHelper) {
         try {
           await write(pclAbortFooter(), undefined, () => false, true);
         } catch {
@@ -998,413 +1371,559 @@ export function AtlasApp() {
         }
       }
       if (fatalUsb(error) && selected?.usbKey) {
-        const mark = (item: Found) => (item.usbKey === selected.usbKey ? { ...item, live: false, subtitle: "USB 연결을 닫았어요" } : item);
+        const mark = (item: Found) => (item.usbKey === selected.usbKey ? { ...item, live: false, subtitle: tr("ap.usbClosed") } : item);
         setHits((prev) => prev.map(mark));
         setExtra((prev) => prev.map(mark));
       }
       if (stopRef.current) {
-        setNotice("보내기를 멈췄어요.");
+        setNotice(m("ap.stopped"));
         return;
       }
       if (!started) {
-        const message = humanError(error, "바로 넣지 못했어요.");
-        diag(`보내기 실패 ${message}`);
-        setNotice(`${message} 화면 미리보기나 PDF 저장을 눌러 주세요.`);
+        const message = humanError(error, tr("ap.sendFail"));
+        diag(tr("ap.logFail", { v: message }));
+        setNotice(m("ap.failHint", { msg: message }));
         return;
       }
-      setNotice(humanError(error, "보내는 중에 끊겼어요. 복사기에서 작업을 지운 뒤 다시 눌러 주세요."));
+      setNotice(humanError(error, tr("ap.cutOff")));
     } finally {
       setSending(false);
+      setPhase(null);
     }
+  }
+
+  /** 완료 배너: 다른 파일 바로 고르기 */
+  function pickAnother() {
+    setDoneText(null);
+    if (docKind === "memo") {
+      setMemo("");
+      setNotice(m("ap.newMemo"));
+      return;
+    }
+    if (docKind === "test") {
+      setDocKind("pdf");
+    }
+    const kind = docKind === "photo" ? "photo" : "pdf";
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = kind === "photo" ? "image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp" : "application/pdf,.pdf";
+    input.multiple = kind === "photo";
+    input.addEventListener("change", () => {
+      const files = [...(input.files ?? [])];
+      if (!files.length) return;
+      if (kind === "photo") {
+        for (const url of album) URL.revokeObjectURL(url);
+        setAlbum([]);
+        setPhotoUrl(null);
+        void choosePhotos(files);
+      } else choosePdf(files[0]);
+    });
+    input.click();
   }
 
   async function onColorPrint() {
     if (sending) return;
     await printSheet(await buildSystem(true));
-    setNotice(dialogNotice("이 화면에 미리보기를 띄웠어요. 프린터로는 보내지 않았어요."));
+    setNotice(dialogNotice(tr("ap.previewShown")));
   }
 
   function dialogNotice(base: string) {
     const count = docKind === "pdf" ? currentPages(pdfCount).pages.length : 0;
     const safari = typeof navigator !== "undefined" && /Safari/i.test(navigator.userAgent) && !/Chrome|CriOS|Edg|Android/i.test(navigator.userAgent);
     const notes = [base];
-    if (count > 30) notes.push("30쪽이 넘어 이 화면의 해상도를 낮췄어요. 더 선명하게 보려면 30쪽씩 나눠 주세요.");
-    if (safari && (paper === "A3" || paper === "B5")) notes.push("이 화면의 용지 크기를 한 번 더 확인해 주세요.");
+    if (count > 30) notes.push(tr("ap.over30"));
+    if (safari && (paper === "A3" || paper === "B5")) notes.push(tr("ap.checkPaper"));
     return notes.join(" ");
   }
 
   const chosenPages = currentPages(pdfCount).pages;
   const readyDoc = docKind === "test" || (docKind === "photo" ? Boolean(photoUrl || album.length) : docKind === "memo" ? memo.trim().length > 0 : Boolean(pdfBytes && chosenPages.length && !pdfNeedsKey));
 
+  /* 예상 출력 요약 바 */
+  const memoPages = useMemo(() => {
+    if (typeof document === "undefined" || !memo.trim()) return 1;
+    try {
+      const base = printPixelSize(paper);
+      const frame = orient === "landscape" ? { width: base.height, height: base.width } : base;
+      if (memoCustom) return Math.max(1, memoChunksStyled(memo.trim(), frame.width, frame.height, memoStyle, frame.width / paperMm(paper, orient === "landscape" ? "landscape" : "portrait").width).length);
+      return Math.max(1, sheetMemoChunks(memo.trim(), paper, frame).length);
+    } catch {
+      return 1;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memo, paper, orient, memoSize, memoHeader, memoTitle]);
+  const idLayout = docKind === "photo" && photoLayout !== "normal";
+  const pageCount = docKind === "pdf" ? chosenPages.length : docKind === "photo" ? (idLayout ? (photoUrl || album.length ? 1 : 0) : album.length || (photoUrl ? 1 : 0)) : docKind === "memo" ? memoPages : 1;
+  const effNup = docKind === "test" || idLayout ? 1 : nup;
+  const jobControls = route !== "preview-only" || Boolean(selected?.host);
+  const monoOut = gray || route === "usb-pcl";
+  const sheetFaces = Math.ceil(pageCount / effNup);
+  const sheetCopies = jobControls ? copies : 1;
+  const twoSided = jobControls && duplex !== "simplex";
+  const paperSheets = (twoSided ? Math.ceil(sheetFaces / 2) : sheetFaces) * sheetCopies;
+  const summaryParts = [
+    paper,
+    orient === "landscape" ? tr("ap.land") : "",
+    tr(monoOut ? "ap.gray" : "ap.color"),
+    tr(twoSided ? (duplex === "long" ? "ap.dupLong" : "ap.dupShort") : "ap.simplex"),
+    effNup > 1 ? tr("ap.nup", { n: effNup }) : "",
+    docKind === "pdf" && marginMm ? tr("ap.margin", { v: marginLabel(margin) }) : "",
+    tr("ap.copies", { n: sheetCopies }),
+  ].filter(Boolean);
+  const summaryText = readyDoc && pageCount > 0 ? tr("ap.summary", { parts: summaryParts.join(" · "), n: paperSheets }) : tr("ap.summaryEmpty");
+
+  /* 드래그 앤 드롭 · Ctrl+V: 최신 핸들러를 ref로 넘긴다 */
+  const dropRef = useRef<(files: File[], pasted: boolean) => void>(() => undefined);
+  dropRef.current = (files: File[], pasted: boolean) => {
+    if (sending) return;
+    const textFile = files.find((file) => /\.(txt|md|markdown)$/i.test(file.name) || file.type === "text/plain" || file.type === "text/markdown");
+    if (textFile && !pasted) {
+      void onTextFile(textFile);
+      return;
+    }
+    const pdf = files.find((file) => file.type === "application/pdf" || /\.pdf$/i.test(file.name));
+    const images = files.filter((file) => file.type.startsWith("image/") || /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(file.name));
+    if (pdf && !pasted) {
+      choosePdf(pdf);
+      setDocKind("pdf");
+      setStep("print");
+      setNotice(m("ap.opened", { name: pdf.name }));
+      return;
+    }
+    if (images.length) {
+      void choosePhotos(images);
+      setDocKind("photo");
+      setStep("print");
+      setNotice(pasted ? m("ap.pasted") : m("ap.addedPhotos", { n: images.length }));
+      return;
+    }
+    if (pdf) {
+      choosePdf(pdf);
+      setDocKind("pdf");
+      setStep("print");
+      return;
+    }
+    if (!pasted) setNotice(m("ap.onlyPdfImg"));
+  };
+
+  useFileDrop(dropRef, setDragOver);
+
+  /* 사진: 회전·보정이 반영된 주소로 미리보기 (procTick이 바뀌면 다시 계산) */
+  void procTick;
+  const shownAlbum = album.map((src) => procCache.current.get(procKey(src)) || src);
+  const shownPhoto = photoUrl ? shownAlbum[album.indexOf(photoUrl)] ?? photoUrl : null;
+
+  /* 프리셋 */
+  const presetCurrent: PresetSettings = { gray, duplex, nup, margin, secure: secureOn };
+  /* 프리셋 하이라이트 판정용: 프리셋이 안 건드리는 옵션까지 포함한 '지금 설정' 서명 */
+  const optionSig = JSON.stringify([gray, duplex, nup, margin, secureOn, pageMode, pageList, pageFrom, pageTo, reverse, pageNumber, watermarkText, orient, paper, photoLayout, photoFilter]);
+  const activePresetId = presetMark && presetMark.sig === optionSig ? presetMark.id : null;
+  useEffect(() => {
+    /* 적용 직후 한 번: 바뀐 상태로 서명을 찍어 둔다 */
+    if (presetMark && presetMark.sig === null) setPresetMark({ id: presetMark.id, sig: optionSig });
+  }, [presetMark, optionSig]);
+  function applyPreset(preset: Preset) {
+    setPresetMark({ id: preset.id, sig: null });
+    const p = preset.settings;
+    setGray(p.gray);
+    setDuplex(p.duplex);
+    setNup(p.nup);
+    setMargin(p.margin);
+    setSecureOn(p.secure);
+    setNotice(m("ap.presetApplied", { name: preset.label, hint: preset.hint }));
+    if (p.secure) {
+      setAdvancedOpen(true);
+      window.setTimeout(() => pinRef.current?.focus(), 80);
+    }
+  }
+
+  /* 쪽 범위 원터치 칩 */
+  function pickPages(chip: PageChip) {
+    setPageChip(chip);
+    setPreviewSheet(1);
+    if (chip === "all") {
+      setPageMode("all");
+      return;
+    }
+    const total = Math.max(1, pdfCount);
+    const all = Array.from({ length: total }, (_, index) => index + 1);
+    setPageMode("list");
+    if (chip === "current") {
+      const sheet = sheetsFor(total)[Math.max(0, previewSheet - 1)];
+      setPageList(String(sheet?.[0] ?? 1));
+    }
+    else if (chip === "odd") setPageList(all.filter((n) => n % 2 === 1).join(","));
+    else if (chip === "even") setPageList(all.filter((n) => n % 2 === 0).join(",") || "2");
+    else if (pageChip !== "custom") setPageList("");
+  }
+
+  /** 직접 입력: 쪽 번호 토글 (입력칸 문자열과 양방향 동기화, 1-3,5 형태로 압축) */
+  function togglePage(n: number) {
+    const total = Math.max(1, pdfCount);
+    const parsed = parsePageRange(pageList, total);
+    const set = new Set("pages" in parsed ? parsed.pages : []);
+    if (set.has(n)) set.delete(n);
+    else set.add(n);
+    const sorted = [...set].sort((a, b) => a - b);
+    const parts: string[] = [];
+    for (let i = 0; i < sorted.length; ) {
+      let j = i;
+      while (j + 1 < sorted.length && sorted[j + 1] === sorted[j] + 1) j++;
+      parts.push(j > i + 1 ? `${sorted[i]}-${sorted[j]}` : j === i + 1 ? `${sorted[i]},${sorted[j]}` : String(sorted[i]));
+      i = j + 1;
+    }
+    setPageMode("list");
+    setPageList(parts.join(","));
+  }
+
+  const printSheets = docKind === "pdf" && pdfCount ? sheetsFor(pdfCount) : [];
+  const currentPage = printSheets[Math.min(printSheets.length - 1, previewSheet - 1)]?.[0] ?? 1;
+  const onTogglePage = togglePage;
+  const onPresetSaved = (preset: Preset) => setPresetMark({ id: preset.id, sig: null });
+  const onPhotoFilter = setPhotoFilter;
+
+  /** 증명·여권사진으로 바꾸면 문서 필터를 원본으로 (얼굴이 하얗게 날아가는 사고 방지) */
+  function onPhotoLayout(value: PhotoLayout) {
+    setPhotoLayout(value);
+    if (value !== "normal" && photoFilter !== "none") {
+      setPhotoFilter("none");
+      setNotice(m("ap.idOriginal"));
+    }
+  }
+
+  /** .txt · .md → 메모 탭 본문 */
+  async function onTextFile(file: File) {
+    if (file.size > 1024 * 1024) {
+      setNotice(m("ap.text1mb"));
+      return;
+    }
+    const text = (await file.text()).replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+    setMemo(text);
+    setDocKind("memo");
+    setStep("print");
+    setNotice(m("ap.textLoaded", { name: file.name, n: text.length.toLocaleString() }));
+  }
+
+  function onLauncher(os: "win" | "mac") {
+    if (!appOrigin) return;
+    if (os === "win") downloadText(launcherFileName("win"), windowsLauncher(appOrigin), "application/bat");
+    else downloadText(launcherFileName("mac"), macLauncher(appOrigin), "application/x-sh");
+    setLanNote(m(os === "win" ? "ap.batHint" : "ap.cmdHint"));
+  }
+
+  /** 미리보기 확대: 실제 인쇄 해상도로 모든 시트를 만들어 크게 본다 */
+  async function openZoom() {
+    if (!readyDoc) return;
+    /* 확대 버튼 연타·만드는 중 닫기: 마지막 요청만 화면에 올리고 나머지 주소는 바로 해제 */
+    const seq = ++zoomSeq.current;
+    try {
+      const job = await buildSystem(false);
+      if (seq !== zoomSeq.current) {
+        if (job.kind === "pdf") for (const url of job.pages) URL.revokeObjectURL(url);
+        return;
+      }
+      if (job.kind === "pdf" && job.pages.length) setZoom({ pages: job.pages, index: docKind === "pdf" ? Math.max(0, previewSheet - 1) : 0 });
+    } catch (error) {
+      setNotice(humanError(error, tr("ap.zoomFail")));
+    }
+  }
+
+  function closeZoom() {
+    zoomSeq.current += 1;
+    for (const url of zoom?.pages ?? []) URL.revokeObjectURL(url);
+    setZoom(null);
+  }
+
+  /* 사전 점검용: 고른 사진의 실제 픽셀 크기(회전 반영) */
+  useEffect(() => {
+    if (!photoUrl) {
+      setPhotoDims(null);
+      return;
+    }
+    let stop = false;
+    const turn = photoTurns[photoUrl] || 0;
+    void loadImage(photoUrl)
+      .then((img) => {
+        const w = img.naturalWidth || img.width;
+        const h = img.naturalHeight || img.height;
+        if (!stop) setPhotoDims(turn === 90 || turn === 270 ? { w: h, h: w } : { w, h });
+      })
+      .catch(() => undefined);
+    return () => {
+      stop = true;
+    };
+  }, [photoUrl, photoTurns]);
+
+  /* 자가 복구: IPP가 막히면 살아 있는 PC 도우미(9100)로 바꿔 곧바로 다시 보낸다 */
+  useEffect(() => {
+    if (!healRetry || !helperLive || sending) return;
+    setHealRetry(false);
+    void onPrint();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [healRetry, helperLive, sending]);
+
+  function onPreflight(kind: PreflightAction) {
+    if (kind === "refresh-status") {
+      void printer.refresh();
+      return;
+    }
+    setNup(2);
+    if (kind === "save-paper" && jobControls) setDuplex("long");
+    setNotice(m(kind !== "nup2" && jobControls ? "ap.toSaver" : "ap.toNup2"));
+  }
+
+  function onDiagFix(action: DiagFix) {
+    if (action === "reload") return window.location.reload();
+    if (action === "open-chrome") return leaveInApp();
+    if (action === "refresh-status") return void printer.refresh();
+    setShowDiag(false);
+    if (action === "pcl-trial") return void onPrint(true);
+    setStep("connect");
+    setLinkOpen(true);
+    setLinkTab(action === "wifi-tab" ? "wifi" : "helper");
+    if (action === "launcher") setLanNote(m("ap.getLauncher"));
+  }
+
+  function evenReverse() {
+    pickPages("even");
+    setReverse(true);
+    setNotice(m("ap.evenRev"));
+  }
+
+  /* 최근 프린터 온라인 확인 */
+  async function checkPrinter(item: SavedPrinter) {
+    if (!item.host) return;
+    const host = item.host;
+    setProbes((prev) => ({ ...prev, [item.uid]: { state: "checking" } }));
+    try {
+      if (useHelper && helperUrl.trim()) {
+        const hit = await helperProbe(helperUrl, helperCode, host);
+        setProbes((prev) => ({ ...prev, [item.uid]: { state: hit.open ? "on" : "off", ms: hit.ms, via: "9100" } }));
+        if (hit.open) learnSubnetFromIp(host);
+        return;
+      }
+      /* 도우미 없이: 브라우저로 631 응답 시간만 잰다 */
+      const started = performance.now();
+      const ac = new AbortController();
+      const timer = window.setTimeout(() => ac.abort(), 1500);
+      let open = false;
+      try {
+        await fetch(`http://${host}:631/ipp/print`, { mode: "no-cors", cache: "no-store", signal: ac.signal, targetAddressSpace: "local" } as RequestInit);
+        open = true;
+      } catch {
+        open = false;
+      } finally {
+        window.clearTimeout(timer);
+      }
+      setProbes((prev) => ({ ...prev, [item.uid]: { state: open ? "on" : "off", ms: open ? Math.round(performance.now() - started) : null, via: "631" } }));
+    } catch (error) {
+      setProbes((prev) => ({ ...prev, [item.uid]: { state: "off", ms: null } }));
+      setNotice(humanError(error, tr("ap.checkFail")));
+    }
+  }
+
+  const helperShare = useHelper && helperUrl.trim() && helperCode ? { url: helperUrl.trim(), code: helperCode } : null;
+
+  const routeLabel = helperLive && route !== "preview-only" ? tr("ap.rHelper") : route === "usb-pdf" ? "USB PDF Direct" : route === "usb-pcl" ? tr("ap.rUsbPcl") : selected?.host ? tr("ap.routeIpp") : tr("ap.rSave");
+  const recentPrinters = saved.slice(0, 6);
+  const foundList = list.filter((item) => !item.id.startsWith("saved:"));
+
   async function onPdf() {
     if (!readyDoc || sending) return;
     try {
       if (docKind === "pdf" && pdfBytes) {
-        if (!gray) {
+        if (!gray && !marginMm && !stampActive && nup === 1 && !reverse) {
           const bytes = pageMode === "all" ? pdfBytes : await slicePdf(pdfBytes, chosenPages);
-          const copy = new Uint8Array(bytes.byteLength);
-          copy.set(bytes);
-          const file = new Blob([copy], { type: "application/pdf" });
-          const url = URL.createObjectURL(file);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = pdfName || "문서.pdf";
-          link.click();
-          URL.revokeObjectURL(url);
+          downloadBytes(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes), pdfName || tr("ap.docPdf"));
           return;
         }
         const opened = await openPdf(pdfBytes, pdfKey || undefined);
         try {
-          const size = oriented(osRasterSize(paper, chosenPages.length));
           const sheets: { jpeg: Uint8Array; width: number; height: number }[] = [];
-          for (const number of chosenPages) {
-            const canvas = await renderPdfPage(opened.doc, number, size.width, size.height, undefined, orient === "auto" ? "auto" : "fit");
-            if (!canvas) throw new Error("PDF로 만들지 못했어요.");
-            grayCanvas(canvas);
+          await forEachPdfSheet(opened.doc, async (canvas) => {
+            if (gray) grayCanvas(canvas);
+            const width = canvas.width;
+            const height = canvas.height;
             const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
-            canvas.width = 0;
-            canvas.height = 0;
-            if (!blob) throw new Error("PDF로 만들지 못했어요.");
-            sheets.push({ jpeg: new Uint8Array(await blob.arrayBuffer()), width: size.width, height: size.height });
-          }
+            if (!blob) throw new Error(tr("ap.pdfFail"));
+            sheets.push({ jpeg: new Uint8Array(await blob.arrayBuffer()), width, height });
+          });
           const bytes = await imagesToPdf(sheets, pageBox());
-          const copy = new Uint8Array(bytes.byteLength);
-          copy.set(bytes);
-          const url = URL.createObjectURL(new Blob([copy], { type: "application/pdf" }));
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = pdfName || "문서.pdf";
-          link.click();
-          URL.revokeObjectURL(url);
+          downloadBytes(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes), pdfName || tr("ap.docPdf"));
         } finally {
           await opened.destroy();
         }
         return;
       }
       if (docKind === "memo") {
-        const frame = oriented(printPixelSize(paper));
-        const chunks = sheetMemoChunks(memo.trim(), paper, frame);
+        const canvases = await systemMemoCanvases(memo.trim(), oriented(printPixelSize(paper)), gray);
         const sheets: { jpeg: Uint8Array; width: number; height: number }[] = [];
-        for (const chunk of chunks) {
-          const canvas = await renderSheetCanvas({
-            kind: "memo",
-            title: "",
-            note: chunk,
-            paper,
-            gray,
-            frame,
-          });
+        for (const canvas of canvases) {
           if (gray) grayCanvas(canvas);
           const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
           const width = canvas.width;
           const height = canvas.height;
           canvas.width = 0;
           canvas.height = 0;
-          if (!blob) throw new Error("PDF로 만들지 못했어요.");
+          if (!blob) throw new Error(tr("ap.pdfFail"));
           sheets.push({ jpeg: new Uint8Array(await blob.arrayBuffer()), width, height });
         }
         const bytes = await imagesToPdf(sheets, pageBox());
-        const copy = new Uint8Array(bytes.byteLength);
-        copy.set(bytes);
-        const url = URL.createObjectURL(new Blob([copy], { type: "application/pdf" }));
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "메모.pdf";
-        link.click();
-        URL.revokeObjectURL(url);
+        downloadBytes(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes), tr("ap.memoPdf"));
         return;
       }
       if (docKind === "photo") {
         const sheets = await photoSheetJpegs();
         const bytes = await imagesToPdf(sheets, pageBox());
-        const copy = new Uint8Array(bytes.byteLength);
-        copy.set(bytes);
-        const url = URL.createObjectURL(new Blob([copy], { type: "application/pdf" }));
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "사진.pdf";
-        link.click();
-        URL.revokeObjectURL(url);
+        downloadBytes(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes), tr("ap.photoPdf"));
         return;
       }
       const frame = oriented(printPixelSize(paper));
       const canvas = await renderSheetCanvas({
         kind: "test",
-        title: match ? `${match.printer.brand} ${match.printer.model}` : "인쇄",
-        note: "이 브라우저에서 만든 인쇄본입니다.",
+        title: match ? `${match.printer.brand} ${match.printer.model}` : tr("ap.print"),
+        note: tr("ap.browserCopy"),
         paper,
         gray,
         frame,
+        test: testInfo(),
       });
       if (gray) grayCanvas(canvas);
       const page = pageBox();
-      await downloadCanvasPdf(canvas, "인쇄", page);
+      await downloadCanvasPdf(canvas, tr("ap.testPdf"), page);
     } catch (error) {
-      setNotice(humanError(error, "PDF로 만들지 못했어요."));
+      setNotice(humanError(error, tr("ap.pdfFail")));
     }
   }
 
-  const linkKind = selected?.live && selected.usbKey ? "usb" : helperLive ? "helper" : selected?.host ? "wifi" : "idle";
-  const LinkIcon = linkKind === "usb" ? Usb : linkKind === "wifi" ? Wifi : linkKind === "helper" ? Laptop : Printer;
-  const linkLabel = linkKind === "usb" ? "USB 연결" : linkKind === "helper" ? "PC 도우미 연결" : linkKind === "wifi" ? "와이파이 연결" : "화면 미리보기 전용";
-  const linkDot = linkKind === "usb" ? "dot-usb" : linkKind === "idle" ? "dot-idle" : "dot-wifi";
-  const routeLabel = helperLive && route !== "preview-only" ? "PC 도우미 9100" : route === "usb-pdf" ? "USB PDF Direct" : route === "usb-pcl" ? "USB PCL5e 흑백" : selected?.host ? "와이파이 IPP" : "화면 저장 전용";
-  const advancedSummary = [nup !== 1 ? `모아찍기 ${nup}` : "", reverse ? "역순" : "", secureOn ? "보안 PIN" : "", pageMode === "list" ? "쪽 선택" : "", pageMode === "span" ? "쪽 범위" : "", orient === "landscape" ? "가로" : "", orient === "portrait" ? "세로" : ""].filter(Boolean).join(" · ");
-  const headerActions = (
-    <>
-      <IconButton label="진단 로그" onClick={() => setShowDiag(true)}>
-        <CircleHelp className="size-6" aria-hidden="true" />
-      </IconButton>
-      <IconButton label={theme === "dark" ? "밝게" : "어둡게"} onClick={toggleTheme}>
-        {theme === "dark" ? <Sun className="size-6" aria-hidden="true" /> : <Moon className="size-6" aria-hidden="true" />}
-      </IconButton>
-    </>
-  );
-  const docTiles = [
-    ["pdf", FileText, "PDF", "미리보기 · 쪽 범위 · 모아찍기"],
-    ["photo", ImageIcon, "사진", "여러 장 · 맞춤/채우기"],
-    ["memo", StickyNote, "메모", "글 입력 · 자동 쪽 나눔"],
-    ["test", Sheet, "테스트 페이지", "연결 확인 1장"],
-  ] as const;
+  const statusDot = selected?.live && selected.usbKey ? "dot-usb" : helperLive ? "dot-helper" : selected?.host ? "dot-wifi" : "dot-idle";
+  const statusText = tr(selected?.live && selected.usbKey ? "ap.stUsb" : helperLive ? "ap.stHelper" : selected?.host ? "ap.stWifi" : "ap.stPreview");
+  const selectedName = selected ? (saved.find((row) => (row.host && row.host === selected.host) || `saved:${row.uid}` === selected.id)?.alias || selected.title) : "";
 
   return (
-    <IconContext.Provider value={{ weight: "bold" }}>
-    <main className={`shell mx-auto flex w-full max-w-lg flex-col gap-3 px-5 ${step === "print" ? "has-cta" : ""}`}>
-      {step === "connect" ? (
-        <TopBar root title="누구나프린트" actions={headerActions} />
-      ) : (
-        <TopBar title={step === "confirm" ? "복사기 확인" : "인쇄하기"} onBack={backToConnect} backDisabled={sending} actions={headerActions} />
-      )}
+    <main data-lang={lang} className="shell mx-auto flex w-full max-w-lg flex-col gap-3 px-4 py-5 sm:py-8">
+      {dragOver ? (
+        <div className="drop-veil" aria-live="polite">
+          <div className="drop-card">
+            <Upload className="size-6" aria-hidden="true" />
+            <p className="mt-2 text-base font-semibold">{tr("ap.dropTitle")}</p>
+            <p className="mt-1 text-sm">{tr("ap.dropSub")}</p>
+          </div>
+        </div>
+      ) : null}
       {inApp ? (
-        <Callout tone="info">
-          <p>인앱 브라우저에서는 USB와 일부 인쇄가 막혀 있어요.</p>
-          <button type="button" onClick={leaveInApp} className="btn btn-m btn-primary mt-3 w-full">
-            {/iPad|iPhone|iPod/.test(navigator.userAgent) ? "주소 복사하기" : "Chrome으로 바로 열기"}
+        <div className="card px-4 py-3 text-sm leading-relaxed">
+          <p>{tr("ap.inApp")}</p>
+          <button type="button" onClick={leaveInApp} className="btn-solid mt-3 h-11 w-full rounded-2xl text-sm font-medium">
+            {tr(isIos ? "ap.copyUrl" : "ap.openChrome")}
           </button>
-        </Callout>
+        </div>
       ) : null}
-      {showDiag ? (
-        <BottomSheet
-          title="진단 로그"
-          onClose={() => setShowDiag(false)}
-          actions={
-            <IconButton label="로그 복사" onClick={() => void navigator.clipboard.writeText(diagText())}>
-              <Copy className="size-5" aria-hidden="true" />
-            </IconButton>
-          }
-        >
-          <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded-2xl bg-bg p-3 text-xs leading-relaxed text-muted">{diagText() || "아직 기록이 없어요."}</pre>
-        </BottomSheet>
-      ) : null}
-      {step === "connect" ? (
-        <>
-          <p className="t-body -mt-2 mb-1 px-1 text-muted">이 화면에서 바로 인쇄해요.</p>
-          <Section
-            title="프린터"
-            action={
-              <>
-                {saved.length > 0 ? (
-                  <IconButton label="전에 연결한 복사기 다시 보기" onClick={() => setScanId((value) => value + 1)}>
-                    <ArrowsClockwise className={`size-5 ${scanning ? "animate-spin" : ""}`} aria-hidden="true" />
-                  </IconButton>
-                ) : null}
-                <IconButton label={linkOpen ? "접기" : "연결 변경"} aria-expanded={linkOpen} onClick={() => setLinkOpen((value) => !value)}>
-                  {linkOpen ? <CaretUp className="size-5" aria-hidden="true" /> : <CaretDown className="size-5" aria-hidden="true" />}
-                </IconButton>
-              </>
-            }
-          >
-            <ListRow icon={<LinkIcon weight="duotone" className="size-6" aria-hidden="true" />} dot={linkDot} title={linkLabel} subtitle={selected?.title || "아직 복사기를 고르지 않았어요"} />
-            {linkOpen ? (
-              <div className="mt-3 space-y-3">
-                {saved[0] ? (
-                  <ListRow onClick={useRecent} icon={<History weight="duotone" className="size-6" aria-hidden="true" />} title="최근 복사기" subtitle={saved[0].title} right={<ChevronRight className="size-5 text-faint" aria-hidden="true" />} />
-                ) : null}
-                <button type="button" disabled={lanBusy || sending} onClick={() => void findOnWifi()} className="btn btn-l btn-primary w-full">
-                  <Wifi className="size-5" aria-hidden="true" />
-                  {lanBusy ? "IP 찾는 중…" : "같은 와이파이에서 IP 찾기"}
-                </button>
-                <button type="button" disabled={!usbOk} onClick={() => void connectUsb(false)} className="btn btn-l btn-secondary w-full">
-                  <Usb className="size-5" aria-hidden="true" />
-                  USB 선으로 연결
-                </button>
-                {usbOk ? null : <p className="t-body-s text-muted">Chrome(안드로이드/PC)에서만 USB 선 연결을 지원해요.</p>}
-                {usbMissed ? (
-                  <button type="button" onClick={() => void connectUsb(true)} className="btn btn-s btn-ghost -ml-2.5">
-                    USB 목록에 없으면 다른 기기도 보기
-                  </button>
-                ) : null}
-                <form
-                  className="pt-1"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    addTypedIp();
-                  }}
-                >
-                  <label className="t-caption mb-2 block text-muted" htmlFor="printer-ip">
-                    복사기 IP 직접 입력
-                  </label>
-                  <div className="ip-join">
-                    <input
-                      id="printer-ip"
-                      value={ipInput}
-                      onChange={(event) => setIpInput(event.target.value)}
-                      inputMode="decimal"
-                      placeholder="192.168.0.10"
-                      aria-label="복사기 IP 직접 입력"
-                      className="field h-12 min-w-0 flex-1 px-4 text-[15px] outline-none"
-                    />
-                    <button type="submit" aria-label="이 IP로 연결" title="이 IP로 연결">
-                      <ArrowRight className="size-5" aria-hidden="true" />
-                    </button>
-                  </div>
-                </form>
-                <Accordion title="다른 대역 검색" className="is-inset">
-                  <label className="t-caption mb-2 block text-muted" htmlFor="subnet-field">
-                    자동 검색 대역 (선택)
-                  </label>
-                  <input id="subnet-field" value={subnetInput} onChange={(event) => setSubnetInput(event.target.value)} placeholder="192.168.50" aria-label="자동 검색 대역" className="field h-12 w-full px-4 text-[15px] outline-none" />
-                </Accordion>
-                {lanNote ? <p className="t-body-s text-muted">{lanNote}</p> : null}
-                <p className="t-body-s text-muted" aria-live="polite">
-                  {scanning ? "전에 연결했던 복사기가 있나 보고 있어요." : selected?.live ? "연결되어 있어요. 삼성 기본 앱으로는 넘기지 않아요." : "선을 꽂으면 이 화면에서 바로 넣습니다. 삼성 기본 앱으로는 넘기지 않아요."}
-                </p>
-                {notice ? <Callout>{notice}</Callout> : null}
-                {list.length > 0 ? (
-                  <div>
-                    <p className="t-caption mb-1 mt-2 text-muted">찾은 프린터</p>
-                    <ul>
-                      {list.map((item) => {
-                        const on = item.id === selectedId;
-                        const ViaIcon = item.via === "usb" ? Usb : item.via === "wifi" ? Wifi : Bookmark;
-                        return (
-                          <li key={item.id}>
-                            <ListRow
-                              onClick={() => {
-                                setSelectedId(item.id);
-                                setOverrideQuery(null);
-                                setAskName("");
-                                setStep(item.host ? "print" : stageForQuery(item.query, item.cmd));
-                              }}
-                              active={on}
-                              icon={<ViaIcon weight="duotone" className="size-6" aria-hidden="true" />}
-                              title={item.title}
-                              subtitle={item.subtitle}
-                              right={
-                                <>
-                                  {on ? <Check className="size-5 text-accent" aria-hidden="true" /> : null}
-                                  <span className={`badge ${item.live ? "is-ok" : ""}`}>{item.live ? "연결됨" : VIA_LABEL[item.via]}</span>
-                                </>
-                              }
-                            />
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                ) : null}
-                <div className="border-t border-line pt-1">
-                  <SwitchRow icon={<Laptop weight="duotone" className="size-5" aria-hidden="true" />} label="PC 도우미(9100)로 보내기" description="와이파이 직접 인쇄가 막힐 때 같은 망의 PC로 보내요" checked={useHelper} onChange={setUseHelper} />
-                </div>
-                {useHelper ? (
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <input value={helperUrl} onChange={(event) => setHelperUrl(event.target.value)} aria-label="도우미 주소" placeholder="http://127.0.0.1:47631" className="field h-12 min-w-0 flex-1 px-3 text-sm outline-none" />
-                      <input value={helperCode} onChange={(event) => setHelperCode(event.target.value)} placeholder="코드" aria-label="도우미 코드" className="field h-12 w-24 px-3 text-sm outline-none" />
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-m btn-secondary w-full"
-                      onClick={() => void helperPing(helperUrl).then(() => setLanNote("도우미가 응답했어요.")).catch((error: unknown) => setLanNote(error instanceof Error ? error.message : "도우미가 없어요."))}
-                    >
-                      <Plug className="size-5" aria-hidden="true" />
-                      도우미 연결 확인
-                    </button>
-                    <a href="/raw-print-helper.mjs" download className="btn btn-s btn-ghost -ml-2.5">
-                      <Download className="size-4" aria-hidden="true" />
-                      PC 도우미 스크립트 받기
-                    </a>
-                    <p className="t-body-s text-muted">같은 컴퓨터에서는 http://127.0.0.1:47631 입니다. 폰에서는 그 PC의 사설 IP(예: http://192.168.0.20:47631)를 넣으세요. 터미널의 6자리 코드가 있어야 9100으로 PCL·PDF·보안 PIN이 나갑니다.</p>
-                  </div>
-                ) : null}
-                {selected?.usbKey && route === "preview-only" ? (
-                  <button type="button" className="btn btn-l btn-secondary h-auto min-h-12 w-full whitespace-normal py-3" onClick={() => void onPrint(true)}>
-                    언어를 못 읽었어요. PCL5e 흑백 시험 1쪽 보내기
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
-          </Section>
-          <Section title="무엇을 보낼까요">
-            {pdfName || photoUrl || album.length || memo.trim() ? (
-              <button type="button" onClick={openChooser} className="btn btn-l btn-primary mb-3 w-full">
-                <span className="min-w-0 truncate">이어서 인쇄 · {pdfName || (album.length ? `사진 ${album.length}장` : photoUrl ? "사진" : "메모")}</span>
-              </button>
-            ) : null}
-            <div className="grid grid-cols-2 gap-2">
-              {docTiles.map(([kind, Icon, name, desc]) => (
-                <button key={kind} type="button" onClick={() => startWith(kind)} className="grid-tile">
-                  <span className="avatar">
-                    <Icon weight="duotone" className="size-6" aria-hidden="true" />
-                  </span>
-                  <span className="t-label text-fg">{name}</span>
-                  <span className="t-caption text-muted">{desc}</span>
-                </button>
-              ))}
-            </div>
-          </Section>
-        </>
-      ) : (
-        <>
-          {step === "print" ? (
-            <section className="section p-2">
-              <ListRow
-                onClick={backToConnect}
-                disabled={sending}
-                icon={<LinkIcon weight="duotone" className="size-6" aria-hidden="true" />}
-                dot={linkDot}
-                title={selected?.title || "화면 미리보기 전용"}
-                subtitle={`프린터 · ${linkLabel}`}
-                right={
-                  <>
-                    <span className="sr-only">프린터 바꾸기</span>
-                    <ChevronRight className="size-5 text-faint" aria-hidden="true" />
-                  </>
-                }
-              />
-            </section>
+      <header className="app-header flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="whitespace-nowrap text-[1.35rem] font-medium leading-tight tracking-tight sm:text-2xl">{tr("app.title")}</h1>
+          <p className="mt-0.5 text-sm text-muted">{tr("ap.tagline")}</p>
+          {online === false ? (
+            <p className="offline-badge mt-1 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold" role="status">
+              {tr("ap.offline")}
+            </p>
           ) : null}
+        </div>
+        <div className="flex shrink-0 gap-1.5">
+          <LangSwitcher />
+          <button
+            type="button"
+            onClick={() => {
+              setSupportTab("help");
+              setShowDiag(true);
+            }}
+            className="icon-btn inline-flex size-10 items-center sm:size-11 justify-center rounded-full"
+            aria-label={tr("ap.helpAria")}
+          >
+            <CircleHelp className="size-4" />
+          </button>
+          <button type="button" onClick={toggleTheme} className="icon-btn inline-flex size-10 items-center sm:size-11 justify-center rounded-full" aria-label={tr(theme === "dark" ? "ap.light" : "ap.dark")}>
+            {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          </button>
+        </div>
+      </header>
+      {zoom ? <PreviewZoomModal pages={zoom.pages} start={zoom.index} onClose={closeZoom} /> : null}
+      {qrTarget ? <PrinterQrModal target={qrTarget} onClose={() => setQrTarget(null)} /> : null}
+      {showDiag ? (
+        <SupportCenter
+          tab={supportTab}
+          onTab={setSupportTab}
+          onClose={() => setShowDiag(false)}
+          history={history}
+          onClearHistory={() => {
+            clearHistory();
+            setHistory([]);
+          }}
+          route={routeLabel}
+          printer={selectedName}
+          onRestored={() => void usePrinterStore.persist.rehydrate()}
+          diag={
+            <DiagPanel
+              ctx={{
+                helperUrl,
+                helperCode,
+                helperConfigured: Boolean(helperUrl.trim()) && (useHelper || helperOk || Boolean(helperStatus)),
+                host: selected?.host || "",
+                usb: usbInfo,
+                canTrial: Boolean(selected?.usbKey || helperLive),
+                printerName: selectedName,
+                routeLabel,
+                getStatus: printer.refresh,
+                onFix: onDiagFix,
+              }}
+            />
+          }
+        />
+      ) : null}
+      {step === "print" ? (
+        <button type="button" onClick={backToConnect} disabled={sending} className="card flex w-full items-center justify-between px-4 py-3 text-left disabled:opacity-40">
+          <span className="min-w-0">
+            <span className="block text-xs font-medium text-muted">{tr("ap.printer")}</span>
+            <span className="mt-1 block truncate text-base font-medium text-fg">{selectedName || tr("ap.stPreview")}</span>
+          </span>
+          <span className="shrink-0 text-sm font-semibold text-accent">{tr("ap.change")}</span>
+        </button>
+      ) : null}
+      {step === "print" && (printer.status || printer.loading) ? <PrinterStatusCard status={printer.status} loading={printer.loading} error={printer.error} onRefresh={() => void printer.refresh()} compact /> : null}
+      {step === "connect" ? (
+        <PrinterPanel {...{ addTypedIp, album, aliasDraft, setAliasDraft, appOrigin, checkPrinter, connectUsb, editingUid, setEditingUid, findOnWifi, findViaHelper, forget, foundList, helperCode, setHelperCode, helperOk, setHelperOk, helperShare, helperUrl, setHelperUrl, history, ipInput, setIpInput, lanBusy, lanNote, setLanNote, linkOpen, setLinkOpen, linkTab, setLinkTab, memo, notice, onPrint, openChooser, pdfName, photoUrl, pickPreset, probes, recentPrinters, reconnect, rememberHost, route, saveAlias, scanMode, scanProg, scanning, selected, selectedId, selectedName, sending, setAskName, setOverrideQuery, setQrTarget, setSelectedId, setShowDiag, setShowIpGuide, showIpGuide, setStep, setSubnetInput, subnetInput, setSupportTab, setUseHelper, useHelper, startWith, statusDot, statusText, stopScan, usbMissed, usbOk, helperStatus, onLauncher }} statusCard={selected?.host || selected?.usbKey ? <PrinterStatusCard status={printer.status} loading={printer.loading} error={printer.error} onRefresh={() => void printer.refresh()} helperNeeded={!helperAlive && !selected?.usbKey} /> : null} />
+      ) : (
+        <section className="panel rounded-3xl p-4 sm:p-5">
           {step === "confirm" ? (
-            <Section>
-              <form
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  applyName(askName);
-                }}
-              >
-                <h2 className="t-h2 text-fg">{selected?.title}</h2>
-                <p className="t-body mt-2 text-muted">
-                  {result?.kind === "list" ? "이름이 여러 기종에 걸려요. 앞면에 적힌 글자를 조금 더 적어 주세요." : "앞면에 적힌 이름을 알면, 이 화면에서 바로 보낼지 미리보기만 볼지를 골라요."}
-                </p>
-                <label className="t-caption mb-2 mt-5 block text-muted" htmlFor="ask-name">
-                  앞면에 적힌 이름
-                </label>
-                <input id="ask-name" value={askName} onChange={(event) => setAskName(event.target.value)} placeholder="예: 신도리코 D450, 캐논 iR-ADV C3530, 후지필름 Apeos" className="field h-12 w-full px-4 text-[15px] outline-none" />
-                <div className="mt-4 flex flex-col gap-2">
-                  <button type="submit" className="btn btn-l btn-primary w-full">
-                    이 이름으로 볼게요
-                  </button>
-                  <button type="button" onClick={openChooser} className="btn btn-l btn-secondary w-full">
-                    이름은 모르겠고, 인쇄할 내용 고르기
-                  </button>
-                </div>
-              </form>
-            </Section>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                applyName(askName);
+              }}
+            >
+              <h2 className="text-2xl font-semibold">{selected?.title}</h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted">
+                {tr(result?.kind === "list" ? "ap.nameMany" : "ap.nameHelp")}
+              </p>
+              <input value={askName} onChange={(event) => setAskName(event.target.value)} placeholder={tr("ap.namePh")} className="field mt-4 h-12 w-full rounded-xl px-3 text-sm outline-none" />
+              <div className="mt-3 flex flex-col gap-2">
+                <button type="submit" className="btn-solid h-12 rounded-2xl text-sm font-medium">
+                  {tr("ap.useName")}
+                </button>
+                <button type="button" onClick={openChooser} className="chip h-12 rounded-2xl text-sm">
+                  {tr("ap.skipName")}
+                </button>
+              </div>
+            </form>
           ) : (
-            <Section>
-              {notice ? (
-                <div className="mb-4">
-                  <Callout>{notice}</Callout>
+            <>
+              {notice ? <p className="mb-3 text-sm text-warn">{msgText(notice)}</p> : null}
+              {ippFail && selected?.host && helperAlive && !helperLive && !sending ? (
+                <div className="heal-box mb-3 rounded-2xl px-3 py-2.5 text-sm" role="alert">
+                  <p className="font-medium text-fg">{tr("ap.ippBlocked")}</p>
+                  <button type="button" onClick={() => { setUseHelper(true); setIppFail(false); setHealRetry(true); }} className="btn-solid mt-2 h-10 w-full rounded-xl text-sm font-semibold">
+                    {tr("ap.retryHelper")}
+                  </button>
                 </div>
               ) : null}
               {match && sure && selected ? (
@@ -1413,18 +1932,22 @@ export function AtlasApp() {
                   saved={Boolean(remembered)}
                   direct={route !== "preview-only"}
                   route={route}
+                  viaHelper={helperLive && route !== "preview-only"}
                   onRemember={onRemember}
                   onForget={() => {
                     if (remembered) forget(remembered.uid);
                   }}
                 />
               ) : (
-                <h2 className="t-h2 text-fg">무엇을 인쇄할까요?</h2>
+                <h2 className="text-2xl font-semibold">{tr("ap.whatToPrint")}</h2>
               )}
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="badge is-accent">{routeLabel}</span>
-                {advancedSummary ? <span className="badge">고급 {advancedSummary}</span> : null}
-              </div>
+              <p className="mb-3 mt-2 inline-flex rounded-full border border-line bg-subtle px-3 py-1 text-xs font-medium text-fg">{routeLabel}</p>
+              {(effNup !== 1 || (reverse && docKind !== "test") || secureOn || pageMode !== "all" || orient !== "auto" || (docKind === "pdf" && marginMm > 0) || stampActive) ? (
+                <p className="mb-3 text-xs text-muted">
+                  {tr("ap.adv")}{" "}
+                  {[effNup !== 1 ? tr("ap.advNup", { n: effNup }) : "", reverse && docKind !== "test" ? tr("ap.advReverse") : "", secureOn ? tr("ap.advPin") : "", pageMode === "list" ? tr("ap.advList") : "", pageMode === "span" ? tr("ap.advSpan") : "", orient === "landscape" ? tr("ap.land") : "", orient === "portrait" ? tr("ap.port") : "", docKind === "pdf" && marginMm ? tr("ap.margin", { v: marginLabel(margin) }) : "", stampActive && pageNumber ? tr("ap.advNum") : "", stampActive && watermarkText ? tr("ap.advWm", { v: watermarkText }) : ""].filter(Boolean).join(" · ")}
+                </p>
+              ) : null}
               <PrintChooser
                 docKind={docKind}
                 memo={memo}
@@ -1441,91 +1964,57 @@ export function AtlasApp() {
                 progress={progress}
                 ready={readyDoc}
                 showPages={false}
-                label={route === "usb-pdf" ? "USB PDF로 인쇄" : route === "usb-pcl" ? (helperLive ? "도우미 9100으로 인쇄" : "USB PCL로 인쇄") : selected?.host ? `${selected.host}로 인쇄` : "연결 후 인쇄"}
+                label={route === "usb-pdf" ? tr("ap.btnUsbPdf") : route === "usb-pcl" ? tr(helperLive ? "ap.btnHelper" : "ap.btnUsbPcl") : selected?.host ? tr("ap.btnHost", { host: selected.host }) : tr("ap.btnConnect")}
                 canSend={Boolean((selected?.live && selected.usbKey) || helperLive || selected?.host)}
-                onConnect={backToConnect}
-                preview={<PaperPreview paper={paper} gray={gray || route === "usb-pcl"} docKind={docKind} title={match ? `${match.printer.brand} ${match.printer.model}` : "인쇄"} memo={memo} photoUrl={photoUrl} pdfPreview={pdfPreview} pdfCount={pdfCount} previewPage={previewPage} photoFit={photoFit} photoTurn={photoTurn} orient={orient} showTools={false} onFit={setPhotoFit} onTurn={() => setPhotoTurn((value) => (value + 90) % 360)} onPreview={setPreviewPage} />}
-                extras={
-                  <>
-                    <OfficeOptions paper={paper} gray={gray} duplex={duplex} copies={copies} route={route} locked={sending} controls={route !== "preview-only" || Boolean(selected?.host)} copyMax={99} onPaper={setPaper} onGray={setGray} onDuplex={setDuplex} onCopies={setCopies} />
-                    <Accordion title="고급 옵션" className="is-inset mt-4" open={advancedOpen} onToggle={setAdvancedOpen}>
-                      <div className="space-y-4 pt-1">
-                        {docKind === "pdf" ? (
-                          <div className="space-y-2">
-                            <OptionGroup label="복합 쪽 범위">
-                              <Chip disabled={sending} on={pageMode === "all"} onClick={() => setPageMode("all")}>
-                                전체
-                              </Chip>
-                              <Chip disabled={!pdfCount || sending} on={pageMode === "span"} onClick={() => setPageMode("span")}>
-                                시작~끝
-                              </Chip>
-                              <Chip disabled={!pdfCount || sending} on={pageMode === "list"} onClick={() => setPageMode("list")}>
-                                골라서
-                              </Chip>
-                            </OptionGroup>
-                            {pageMode === "list" ? <input value={pageList} onChange={(event) => setPageList(event.target.value)} placeholder="1, 3-5, 8" aria-label="쪽 범위" className="field h-11 w-full px-4 text-[15px] outline-none" /> : null}
-                            {pageMode === "span" ? (
-                              <div className="flex items-center gap-2 text-fg">
-                                <input type="number" min={1} max={pdfCount || 1} disabled={sending} value={pageFrom} onChange={(event) => setPageFrom(Number(event.target.value))} className="field tabular h-11 w-20 px-2 text-center disabled:opacity-40" aria-label="시작 페이지" />
-                                <span className="text-muted">~</span>
-                                <input type="number" min={1} max={pdfCount || 1} disabled={sending} value={pageTo} onChange={(event) => setPageTo(Number(event.target.value))} className="field tabular h-11 w-20 px-2 text-center disabled:opacity-40" aria-label="끝 페이지" />
-                              </div>
-                            ) : null}
-                          </div>
-                        ) : null}
-                        <OptionGroup label="모아찍기">
-                          {([1, 2, 4] as const).map((value) => (
-                            <Chip key={value} on={nup === value} onClick={() => setNup(value)}>
-                              {value === 1 ? "모아찍기 없음" : `${value}쪽`}
-                            </Chip>
-                          ))}
-                          <Chip on={reverse} onClick={() => setReverse((value) => !value)}>
-                            역순
-                          </Chip>
-                        </OptionGroup>
-                        {docKind === "pdf" || docKind === "photo" || docKind === "memo" ? (
-                          <OptionGroup label="방향">
-                            {([
-                              ["auto", "자동"],
-                              ["portrait", "세로"],
-                              ["landscape", "가로"],
-                            ] as const).map(([id, text]) => (
-                              <Chip key={id} on={orient === id} onClick={() => setOrient(id)}>
-                                {text}
-                              </Chip>
-                            ))}
-                          </OptionGroup>
-                        ) : null}
-                        {docKind === "photo" ? (
-                          <OptionGroup label="사진 맞춤">
-                            <Chip on={photoFit === "contain"} onClick={() => setPhotoFit("contain")}>
-                              맞추기
-                            </Chip>
-                            <Chip on={photoFit === "cover"} onClick={() => setPhotoFit("cover")}>
-                              채우기
-                            </Chip>
-                            <Chip onClick={() => setPhotoTurn((value) => (value + 90) % 360)}>
-                              <RotateCw className="size-4" aria-hidden="true" />
-                              90도 회전{photoTurn ? ` ${photoTurn}°` : ""}
-                            </Chip>
-                          </OptionGroup>
-                        ) : null}
-                        <SwitchRow icon={<ShieldCheck weight="duotone" className="size-5" aria-hidden="true" />} label="보안 인쇄" description="복사기 화면에서 PIN을 넣어야 출력돼요" checked={secureOn} onChange={setSecureOn} />
-                        {secureOn ? (
-                          <div className="flex gap-2">
-                            <input value={pin} onChange={(event) => setPin(event.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" placeholder="PIN 4자리" aria-label="보안 PIN" className="field tabular h-11 w-28 px-3 outline-none" />
-                            <input value={jobUser} onChange={(event) => setJobUser(event.target.value)} placeholder="사용자 영숫자" aria-label="사용자 이름" className="field h-11 min-w-0 flex-1 px-3 outline-none" />
-                          </div>
-                        ) : null}
-                      </div>
-                    </Accordion>
-                  </>
+                summary={summaryText}
+                preflight={
+                  <PreflightChips
+                    chips={preflight({ docKind, photo: photoDims, paper, landscape: orient === "landscape", nup: effNup, fit: photoFit, idLayout, paperSheets: readyDoc ? paperSheets : 0, duplexOn: twoSided, canDuplex: jobControls && printer.status?.capabilities.duplex !== false, status: printer.status, pdfDirectBlocked: pdfDirectBlocked && route !== "preview-only" })}
+                    onAction={onPreflight}
+                  />
                 }
+                onConnect={backToConnect}
+                preview={
+                  <PaperPreview
+                    paper={paper}
+                    gray={monoOut}
+                    docKind={docKind}
+                    title={match ? `${match.printer.brand} ${match.printer.model}` : tr("ap.print")}
+                    memo={memo}
+                    memoStyle={memoStyle}
+                    memoPages={memoPages}
+                    photoUrl={shownPhoto}
+                    album={shownAlbum}
+                    nup={effNup}
+                    reverse={reverse}
+                    pdfPreview={pdfPreview}
+                    pdfCount={pdfCount}
+                    sheets={printSheets}
+                    sheetIndex={Math.min(Math.max(0, printSheets.length - 1), previewSheet - 1)}
+                    onZoom={() => void openZoom()}
+                    photoFit={photoFit}
+                    photoTurn={photoTurn}
+                    orient={orient}
+                    testSheet={docKind === "test" ? { printer: match ? `${match.printer.brand} ${match.printer.model}` : selected?.title || "", link: linkText(), paper, orient: orient === "landscape" ? "landscape" : "portrait", gray: monoOut } : null}
+                    photoLayout={photoLayout}
+                    cutLines={cutLines}
+                    stamps={docKind === "test" ? { pageNumber: false, watermark: "" } : stamps}
+                    showTools={false}
+                    onFit={setPhotoFit}
+                    onTurn={() => setPhotoTurn((value) => (value + 90) % 360)}
+                    onSheet={(index) => setPreviewSheet(index + 1)}
+                  />
+                }
+                extras={<PrintOptions {...{ docKind, sending, route, jobControls, presetCurrent, activePresetId, applyPreset, onPresetSaved, setNotice, paper, setPaper, gray, setGray, duplex, setDuplex, copies, setCopies, pdfCount, chosenPages, currentPage, pageChip, pickPages, pageList, setPageList, onTogglePage, reverse, setReverse, evenReverse, photoFilter, onPhotoFilter, photoLayout, onPhotoLayout, idLayout, cutLines, setCutLines, memoSize, setMemoSize, memoHeader, setMemoHeader, memoTitle, setMemoTitle, onTextFile, advancedOpen, setAdvancedOpen, margin, setMargin, marginMm, pageNumber, setPageNumber, wmChoice, setWmChoice, wmCustom, setWmCustom, stampActive, nup, setNup, orient, setOrient, photoFit, setPhotoFit, photoTurn, setPhotoTurn, secureOn, setSecureOn, pin, setPin, pinRef, jobUser, setJobUser, }} />}
                 onKind={setDocKind}
                 onMemo={setMemo}
                 onPhotos={choosePhotos}
                 onRemovePhoto={removePhoto}
                 onMovePhoto={movePhoto}
+                photoTurns={photoTurns}
+                onRotatePhoto={(url) => setPhotoTurns((prev) => ({ ...prev, [url]: ((prev[url] || 0) + 90) % 360 }))}
+                busyBanner={phase ? <JobBanner phase={{ ...phase, percent: phase.stage === "send" ? progress : phase.percent }} onCancel={() => (stopRef.current = true)} /> : null}
+                doneBanner={doneText && !sending ? <DoneBanner text={doneText} onAgain={() => void onPrint(false, 1)} onAnother={pickAnother} onClose={() => setDoneText(null)} /> : null}
                 onFocusPhoto={setPhotoUrl}
                 onPdfFile={choosePdf}
                 pdfNeedsKey={pdfNeedsKey}
@@ -1540,495 +2029,29 @@ export function AtlasApp() {
                   stopRef.current = true;
                 }}
               />
-            </Section>
-          )}
-        </>
-      )}
-      <Accordion icon={<CircleHelp weight="duotone" className="size-5" aria-hidden="true" />} title="연결이 안 될 때" className="is-card">
-        <ul className="t-body-s list-disc space-y-2 pb-3 pl-4 text-muted">
-          <li>컴퓨터는 Chrome으로 여세요. 선을 꽂고 USB로 연결하면 목록이 나옵니다. 아이폰은 선을 잡을 수 없어요.</li>
-          <li>삼성 기본 인쇄 앱으로는 넘기지 않아요.</li>
-          <li>와이파이 직접 인쇄가 CORS로 막히면 같은 와이파이 PC에서 node raw-print-helper.mjs 를 켜고 PC 도우미(9100)를 켜세요. 아이폰·삼성 인터넷도 가능해요.</li>
-          <li>같은 와이파이 주소가 안 보이면 복사기 화면의 IP를 직접 넣으세요.</li>
-        </ul>
-      </Accordion>
-    </main>
-    </IconContext.Provider>
-  );
-}
-
-function ReadyCard({
-  match,
-  saved,
-  direct,
-  route,
-  onRemember,
-  onForget,
-}: {
-  match: Extract<MatchResult, { kind: "match" }>;
-  saved: boolean;
-  direct: boolean;
-  route: PrintRoute;
-  onRemember: () => void;
-  onForget: () => void;
-}) {
-  const printer = match.printer;
-  const inkjet = isInkjet(match);
-  const line = inkjet
-    ? "잉크젯은 이 브라우저에서 프린터로 바로 넣지 못해요. 아래에서 미리보기만 볼 수 있어요."
-    : route === "usb-pdf"
-      ? "전체 쪽을 컬러로 보낼 때 USB로 PDF를 바로 넣어요."
-      : route === "usb-pcl"
-        ? "USB로는 이 브라우저가 흑백으로 바로 넣어요."
-        : "삼성 기본 앱으로 넘기지 않고, 이 화면에 미리보기를 띄워요.";
-  return (
-    <div>
-      <div className="flex items-start justify-between gap-3">
-        <span className="badge is-ok mt-1 gap-1">
-          <Check className="size-3.5" aria-hidden="true" />
-          확인됨
-        </span>
-        <IconButton
-          label={saved ? "기억 지우기" : "이 복사기 기억하기"}
-          aria-pressed={saved}
-          tone={saved ? "accent" : undefined}
-          onClick={saved ? onForget : onRemember}
-          className="-mr-2 -mt-1"
-        >
-          <Bookmark weight={saved ? "fill" : "bold"} className="size-6" aria-hidden="true" />
-        </IconButton>
-      </div>
-      <h2 className="t-h2 mt-2 text-fg">
-        {printer.brand} {printer.model}
-      </h2>
-      <p className="t-body mt-2 text-fg">{line}</p>
-      {inkjet ? null : <p className="t-body-s mt-1 text-muted">{direct ? "USB로 이 브라우저에서 바로 넣습니다." : "이 화면에 미리보기를 띄웁니다."}</p>}
-      <p className="t-caption mt-3 text-faint">파일을 받지 않고, 이 브라우저에 복사기 종류만 기억합니다. {saved ? "기억해 뒀어요." : "책갈피를 누르면 다음에도 이 복사기가 나와요."}</p>
-    </div>
-  );
-}
-
-function OfficeOptions({
-  paper,
-  gray,
-  duplex,
-  copies,
-  route,
-  locked,
-  controls,
-  copyMax,
-  onPaper,
-  onGray,
-  onDuplex,
-  onCopies,
-}: {
-  paper: OfficePaper;
-  gray: boolean;
-  duplex: DuplexMode;
-  copies: number;
-  route: PrintRoute;
-  locked?: boolean;
-  controls: boolean;
-  copyMax: number;
-  onPaper: (value: OfficePaper) => void;
-  onGray: (value: boolean) => void;
-  onDuplex: (value: DuplexMode) => void;
-  onCopies: (value: number) => void;
-}) {
-  const liveJob = controls;
-  const monoUsb = route === "usb-pcl";
-  const sides = [
-    ["simplex", "단면"],
-    ["long", "긴 쪽 넘김"],
-    ["short", "짧은 쪽 넘김"],
-  ] as const;
-  const colorItems = [
-    ["color", "컬러"],
-    ["gray", "흑백"],
-  ] as const;
-  return (
-    <div className="mt-5 space-y-4">
-      <OptionGroup label="용지">
-        {(["A4", "A3", "B5"] as const).map((item) => (
-          <Chip key={item} disabled={locked} on={paper === item} onClick={() => onPaper(item)}>
-            {item}
-          </Chip>
-        ))}
-      </OptionGroup>
-      <div>
-        <p className="t-caption mb-2 text-muted">색상</p>
-        <Segmented label="색상" items={colorItems} value={monoUsb || gray ? "gray" : "color"} disabled={monoUsb || locked} onChange={(value) => onGray(value === "gray")} />
-        {monoUsb ? <p className="t-caption mt-2 text-muted">USB 직접 인쇄는 흑백만 지원해요.</p> : null}
-      </div>
-      <div className={`space-y-4 ${liveJob && !locked ? "" : "opacity-40"}`}>
-        <OptionGroup label="양면">
-          {sides.map(([id, text]) => (
-            <Chip key={id} disabled={!liveJob || locked} on={duplex === id && liveJob} onClick={() => onDuplex(id)} className="disabled:opacity-100">
-              {text}
-            </Chip>
-          ))}
-        </OptionGroup>
-        <div className="flex items-center justify-between gap-3">
-          <p className="t-label text-fg">장수</p>
-          <Stepper
-            value={liveJob ? copies : 1}
-            onMinus={() => onCopies(Math.max(1, copies - 1))}
-            onPlus={() => onCopies(Math.min(copyMax, copies + 1))}
-            minusDisabled={!liveJob || locked}
-            plusDisabled={!liveJob || locked || copies >= copyMax}
-            minusLabel="장수 줄이기"
-            plusLabel="장수 늘리기"
-          />
-        </div>
-      </div>
-      {liveJob ? null : <p className="t-caption text-muted">연결 전에는 장수와 양면을 복사기로 보내지 않아요. 화면 미리보기와 PDF 저장은 따로 있어요.</p>}
-    </div>
-  );
-}
-
-function PrintChooser({
-  docKind,
-  memo,
-  photoUrl,
-  album,
-  pdfName,
-  pdfCount,
-  pageMode,
-  pageList,
-  onPageList,
-  pageFrom,
-  pageTo,
-  sending,
-  progress,
-  ready,
-  showPages = true,
-  label,
-  canSend = true,
-  onConnect,
-  preview,
-  extras,
-  onKind,
-  onMemo,
-  onPhotos,
-  onRemovePhoto,
-  onMovePhoto,
-  onFocusPhoto,
-  onPdfFile,
-  pdfNeedsKey,
-  onPdfUnlock,
-  onPageMode,
-  onPageFrom,
-  onPageTo,
-  onPrint,
-  onColorPrint,
-  onPdf,
-  onCancel,
-}: {
-  docKind: DocKind;
-  memo: string;
-  photoUrl: string | null;
-  album: string[];
-  pdfName: string;
-  pdfCount: number;
-  pageMode: "all" | "span" | "list";
-  pageList: string;
-  onPageList: (value: string) => void;
-  pageFrom: number;
-  pageTo: number;
-  sending: boolean;
-  progress: number;
-  ready: boolean;
-  showPages?: boolean;
-  label: string;
-  canSend?: boolean;
-  onConnect?: () => void;
-  preview: ReactNode;
-  extras?: ReactNode;
-  onKind: (kind: DocKind) => void;
-  onMemo: (value: string) => void;
-  onPhotos: (files: File[]) => void;
-  onRemovePhoto: (url: string) => void;
-  onMovePhoto: (url: string, dir: -1 | 1) => void;
-  onFocusPhoto: (url: string) => void;
-  onPdfFile: (file: File | undefined) => void;
-  pdfNeedsKey: boolean;
-  onPdfUnlock: (password: string) => void;
-  onPageMode: (mode: "all" | "span" | "list") => void;
-  onPageFrom: (value: number) => void;
-  onPageTo: (value: number) => void;
-  onPrint: () => void;
-  onColorPrint?: () => void;
-  onPdf: () => void;
-  onCancel: () => void;
-}) {
-  const tabs = [
-    ["pdf", "PDF 문서"],
-    ["photo", "사진 인쇄"],
-    ["memo", "간단 메모"],
-    ["test", "테스트"],
-  ] as const;
-  const pickClass = `btn btn-l btn-secondary w-full ${sending ? "pointer-events-none opacity-30" : "cursor-pointer"}`;
-  return (
-    <div className="mt-5">
-      <Segmented label="인쇄할 내용" items={tabs} value={docKind} disabled={sending} onChange={onKind} />
-      {docKind === "pdf" ? (
-        <div className="mt-4 space-y-3">
-          <label className={pickClass}>
-            <FileUp className="size-5" aria-hidden="true" />
-            PDF 고르기
-            <input type="file" accept="application/pdf,.pdf" disabled={sending} className="sr-only" onChange={(event) => onPdfFile(event.target.files?.[0])} />
-          </label>
-          {pdfName ? <ListRow icon={<FileText weight="duotone" className="size-6" aria-hidden="true" />} title={pdfName} subtitle={`총 ${pdfCount}쪽`} /> : null}
-          {pdfNeedsKey ? (
-            <form
-              className="flex gap-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                const value = new FormData(event.currentTarget).get("pdf-key");
-                onPdfUnlock(typeof value === "string" ? value : "");
-              }}
-            >
-              <input name="pdf-key" type="password" placeholder="열기 비밀번호" className="field h-12 min-w-0 flex-1 px-4 text-[15px] outline-none" />
-              <button type="submit" className="btn btn-m btn-primary h-12">
-                열기
-              </button>
-            </form>
-          ) : null}
-          {showPages ? (
-            <>
-              <div className="flex flex-wrap gap-2">
-                <Chip disabled={sending} on={pageMode === "all"} onClick={() => onPageMode("all")}>
-                  전체
-                </Chip>
-                <Chip disabled={!pdfCount || sending} on={pageMode === "span"} onClick={() => onPageMode("span")}>
-                  시작~끝
-                </Chip>
-                <Chip disabled={!pdfCount || sending} on={pageMode === "list"} onClick={() => onPageMode("list")}>
-                  골라서
-                </Chip>
-              </div>
-              {pageMode === "list" ? <input value={pageList} onChange={(event) => onPageList(event.target.value)} placeholder="1, 3-5, 8" aria-label="쪽 범위" className="field h-11 w-full px-4 text-[15px] outline-none" /> : null}
-              {pageMode === "span" ? (
-                <div className="flex items-center gap-2 text-fg">
-                  <input type="number" min={1} max={pdfCount || 1} disabled={sending} value={pageFrom} onChange={(event) => onPageFrom(Number(event.target.value))} className="field tabular h-11 w-20 px-2 text-center disabled:opacity-40" aria-label="시작 페이지" />
-                  <span className="text-muted">~</span>
-                  <input type="number" min={1} max={pdfCount || 1} disabled={sending} value={pageTo} onChange={(event) => onPageTo(Number(event.target.value))} className="field tabular h-11 w-20 px-2 text-center disabled:opacity-40" aria-label="끝 페이지" />
-                </div>
-              ) : null}
             </>
-          ) : null}
-        </div>
-      ) : null}
-      {docKind === "photo" ? (
-        <div className="mt-4 space-y-3">
-          <label className={pickClass}>
-            <ImagePlus className="size-5" aria-hidden="true" />
-            사진 여러 장 고르기
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.heic,.heif"
-              multiple
-              disabled={sending}
-              className="sr-only"
-              onChange={(event) => {
-                const files = [...(event.target.files ?? [])];
-                event.target.value = "";
-                onPhotos(files);
-              }}
-            />
-          </label>
-          {album.length ? (
-            <ul className="flex gap-3 overflow-x-auto pb-1">
-              {album.map((src, index) => (
-                <li key={src} className="w-16 shrink-0">
-                  <button type="button" onClick={() => onFocusPhoto(src)} className={`thumb ${src === photoUrl ? "is-on" : ""}`}>
-                    <img src={src} alt="" className="h-16 w-16 object-cover" />
-                  </button>
-                  <div className="mt-1 flex items-center justify-between text-muted">
-                    <button type="button" disabled={index === 0} onClick={() => onMovePhoto(src, -1)} aria-label="앞으로" className="grid size-6 place-items-center rounded-md disabled:opacity-30">
-                      <ChevronLeft className="size-4" aria-hidden="true" />
-                    </button>
-                    <button type="button" onClick={() => onRemovePhoto(src)} aria-label="이 사진 삭제" className="grid size-6 place-items-center rounded-md">
-                      <Trash2 className="size-3.5" aria-hidden="true" />
-                    </button>
-                    <button type="button" disabled={index === album.length - 1} onClick={() => onMovePhoto(src, 1)} aria-label="뒤로" className="grid size-6 place-items-center rounded-md disabled:opacity-30">
-                      <ChevronRight className="size-4" aria-hidden="true" />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          <p className="t-caption text-muted">{album.length ? `${album.length}/20장. 순서를 바꿀 수 있어요.` : "JPG·PNG를 한 번에 여러 장 고를 수 있어요. HEIC는 변환이 필요해요."}</p>
-        </div>
-      ) : null}
-      {docKind === "memo" ? (
-        <textarea
-          value={memo}
-          onChange={(event) => onMemo(event.target.value)}
-          rows={5}
-          disabled={sending}
-          placeholder="적을 내용을 적어 주세요"
-          className="field mt-4 w-full px-4 py-3 text-[15px] leading-relaxed outline-none"
-        />
-      ) : null}
-      {docKind === "test" ? <p className="t-body-s mt-4 text-muted">연결이 되는지 확인하는 시험 페이지입니다.</p> : null}
-      {preview}
-      {extras}
-      {sending ? null : (
-        <div className="mt-5 grid grid-cols-2 gap-2">
-          <button type="button" onClick={onColorPrint} disabled={!ready || !onColorPrint} className="btn btn-l btn-secondary px-2 text-[15px]">
-            <Eye className="size-5" aria-hidden="true" />
-            화면 미리보기
-          </button>
-          <button type="button" onClick={onPdf} disabled={!ready} className="btn btn-l btn-secondary px-2 text-[15px]">
-            <Download className="size-5" aria-hidden="true" />
-            PDF 저장
-          </button>
-        </div>
-      )}
-      <BottomCTA>
-        {sending ? (
-          <>
-            <div className="mb-3 flex items-center gap-3">
-              <div className="flex-1">
-                <ProgressBar value={progress} />
-              </div>
-              <span className="t-label tabular text-fg">{progress}%</span>
-            </div>
-            <button type="button" onClick={onCancel} className="btn btn-xl btn-secondary w-full">
-              보내기 취소
-            </button>
-          </>
-        ) : canSend ? (
-          <button type="button" onClick={onPrint} disabled={!ready} className="btn-send btn btn-xl btn-primary w-full">
-            <Printer className="size-5" aria-hidden="true" />
-            <span className="min-w-0 truncate">{label}</span>
-          </button>
-        ) : (
-          <button type="button" onClick={onConnect} className="btn btn-xl btn-secondary w-full">
-            <Printer className="size-5" aria-hidden="true" />
-            프린터 연결하기
-          </button>
-        )}
-      </BottomCTA>
-    </div>
-  );
-}
-
-function PaperPreview({
-  paper,
-  gray,
-  docKind,
-  title,
-  memo,
-  photoUrl,
-  pdfPreview,
-  pdfCount,
-  previewPage,
-  photoFit,
-  photoTurn,
-  orient = "auto",
-  showTools = true,
-  onFit,
-  onTurn,
-  onPreview,
-}: {
-  paper: OfficePaper;
-  gray: boolean;
-  docKind: DocKind;
-  title: string;
-  memo: string;
-  photoUrl: string | null;
-  pdfPreview: string | null;
-  pdfCount: number;
-  previewPage: number;
-  photoFit: "contain" | "cover";
-  photoTurn: number;
-  orient?: "auto" | "portrait" | "landscape";
-  showTools?: boolean;
-  onFit: (fit: "contain" | "cover") => void;
-  onTurn: () => void;
-  onPreview: (page: number) => void;
-}) {
-  const pageRef = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    if (docKind !== "photo" || !photoUrl) return;
-    let stop = false;
-    const base = previewSize(paper);
-    const size = orient === "landscape" ? { width: base.height, height: base.width } : base;
-    void loadImage(photoUrl)
-      .then((image) => {
-        const canvas = pageRef.current;
-        if (stop || !canvas) return;
-        canvas.width = size.width;
-        canvas.height = size.height;
-        drawOfficePage(canvas, { kind: "photo", title, note: "", image, fit: photoFit, turn: photoTurn, gray });
-      })
-      .catch(() => undefined);
-    return () => {
-      stop = true;
-    };
-  }, [docKind, photoUrl, paper, photoFit, photoTurn, gray, title, orient]);
-
-  const emptyPhoto = docKind === "photo" && !photoUrl;
-  const emptyMemo = docKind === "memo" && memo.trim().length < 1;
-  const emptyPdf = docKind === "pdf" && !pdfPreview;
-  const paperClass = `${paper === "A3" ? "a3" : paper === "B5" ? "b5" : ""}${orient === "landscape" ? " is-land" : ""}`;
-
-  return (
-    <div className={`preview-stage ${gray ? "gray" : ""}`}>
-      <p className="preview-caption t-caption tabular text-center">
-        {paper} 미리보기{docKind === "pdf" && pdfCount ? ` · ${previewPage} / ${pdfCount}쪽` : ""}
-      </p>
-      {docKind === "photo" && photoUrl ? (
-        <canvas ref={pageRef} className={`sheet-a4 ${paperClass}`} style={{ height: "auto" }} />
-      ) : docKind === "pdf" && pdfPreview ? (
-        <img src={pdfPreview} alt="" className={`sheet-a4 ${paperClass}`} />
-      ) : (
-        <div className={`sheet-a4 relative ${paperClass}`}>
-          {emptyPhoto ? (
-            <p className="on-paper absolute inset-0 grid place-items-center px-4 text-center text-xs leading-relaxed">사진을 고르면 여기에 미리보기가 나타납니다</p>
-          ) : emptyMemo ? (
-            <p className="on-paper absolute inset-0 grid place-items-center px-4 text-center text-xs leading-relaxed">메모를 적으면 여기에 미리보기가 나타납니다</p>
-          ) : emptyPdf ? (
-            <p className="on-paper absolute inset-0 grid place-items-center px-4 text-center text-xs leading-relaxed">PDF를 고르면 여기에 미리보기가 나타납니다</p>
-          ) : docKind === "memo" ? (
-            <p className="absolute inset-0 overflow-hidden whitespace-pre-wrap p-3 text-left text-[11px] leading-snug">{memo}</p>
-          ) : (
-            <div className="absolute inset-0 p-3 text-left">
-              <p className="text-[10px] tracking-wide">인쇄 확인</p>
-              <p className="mt-1 text-sm">{title}</p>
-            </div>
           )}
-        </div>
+        </section>
       )}
-      {docKind === "pdf" && pdfCount > 1 ? (
-        <div className="preview-pager">
-          <button type="button" disabled={previewPage <= 1} onClick={() => onPreview(previewPage - 1)} aria-label="이전 쪽" title="이전 쪽" className="paper-btn inline-grid w-10 place-items-center p-0 disabled:opacity-40">
-            <ChevronLeft className="size-4" aria-hidden="true" />
-          </button>
-          <span className="preview-caption tabular min-w-16 text-center text-sm font-semibold">
-            {previewPage} / {pdfCount}
-          </span>
-          <button type="button" disabled={previewPage >= pdfCount} onClick={() => onPreview(Math.min(pdfCount, previewPage + 1))} aria-label="다음 쪽" title="다음 쪽" className="paper-btn inline-grid w-10 place-items-center p-0 disabled:opacity-40">
-            <ChevronRight className="size-4" aria-hidden="true" />
-          </button>
-        </div>
+      <button
+        type="button"
+        onClick={() => {
+          setSupportTab("help");
+          setShowDiag(true);
+        }}
+        className="help-card flex items-center justify-between rounded-3xl px-4 py-3 text-left text-sm"
+      >
+        <span>
+          <span className="block font-medium text-fg">{tr("ap.helpCard")}</span>
+          <span className="mt-0.5 block text-xs text-muted">{tr("ap.helpTopics")}</span>
+        </span>
+        <CircleHelp className="size-4 shrink-0 text-accent" aria-hidden="true" />
+      </button>
+      {saved.length > 0 ? (
+        <button type="button" onClick={() => setScanId((value) => value + 1)} className="self-center text-xs text-faint">
+          {tr("ap.reconnectPrev")}
+        </button>
       ) : null}
-      {docKind === "photo" && showTools ? (
-        <div className="flex flex-wrap justify-center gap-2">
-          <button type="button" disabled={emptyPhoto} onClick={() => onFit("contain")} className={`paper-btn disabled:opacity-40 ${photoFit === "contain" && !emptyPhoto ? "is-on" : ""}`}>
-            안 잘리게 맞추기
-          </button>
-          <button type="button" disabled={emptyPhoto} onClick={() => onFit("cover")} className={`paper-btn disabled:opacity-40 ${photoFit === "cover" && !emptyPhoto ? "is-on" : ""}`}>
-            꽉 채우기
-          </button>
-          <button type="button" disabled={emptyPhoto} onClick={onTurn} className="paper-btn disabled:opacity-40">
-            90도 회전
-          </button>
-        </div>
-      ) : null}
-    </div>
+    </main>
   );
 }

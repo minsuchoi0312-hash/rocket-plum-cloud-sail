@@ -4,7 +4,8 @@ export function maskSecrets(text: string) {
   return text
     .replace(/HOLDKEY=\S+/gi, "HOLDKEY=****")
     .replace(/PIN\s*[=:]\s*\S+/gi, "PIN=****")
-    .replace(/(비밀번호|password)\s*[:=]?\s*\S+/gi, "$1 ****");
+    .replace(/(비밀번호|password|パスワード|密码)\s*[:=]?\s*\S+/gi, "$1 ****")
+    .replace(/(X-Helper-Code|연결 코드|도우미 코드|接続コード|连接码|connection code)\s*[:=]?\s*\S+/gi, "$1 ****");
 }
 
 export function diag(line: string) {
@@ -15,4 +16,8 @@ export function diag(line: string) {
 
 export function diagText() {
   return lines.join("\n");
+}
+
+export function clearDiag() {
+  lines.length = 0;
 }
