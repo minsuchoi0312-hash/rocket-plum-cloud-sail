@@ -3,7 +3,7 @@
  * atlas-app.tsx에서 분리. 상태는 부모가 갖고 여기서는 그리기만 한다.
  */
 import { useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
-import { ChevronDown, ChevronUp, Copy, FileText, History, Image as ImageIcon, Monitor, Pencil, Printer, QrCode, Search, Sheet, StickyNote, Trash2, Upload, Usb, Wifi, X } from "@/components/icons";
+import { ChevronDown, ChevronRight, ChevronUp, Copy, FileText, History, Image as ImageIcon, Monitor, Pencil, Printer, QrCode, Search, Sheet, StickyNote, Trash2, Upload, Usb, Wifi, X } from "@/components/icons";
 import { helperPing } from "@/lib/helper-send";
 import { SUBNET_PRESETS, type ScanProgress } from "@/lib/lan-find";
 import { printerLabel, type SavedPrinter } from "@/lib/printer-store";
@@ -552,22 +552,30 @@ export function PrinterPanel(props: PrinterPanelProps) {
             {t("pp.continue", { v: pdfName || (album.length ? t("pp.photos", { n: album.length }) : photoUrl ? t("pp.photo") : t("pp.memo")) })}
           </button>
         ) : null}
-        <div className="mt-3 grid grid-cols-2 gap-2.5">
+        {/* 문서 종류 — 애플 설정 앱처럼 색 아이콘 + 한 줄 행 + 오른쪽 화살표 */}
+        <ul className="-mx-2 mt-2">
           {(
             [
-              ["pdf", <FileText key="p" className="size-6" />, "pp.hintPdf"],
-              ["photo", <ImageIcon key="i" className="size-6" />, "pp.hintPhoto"],
-              ["memo", <StickyNote key="s" className="size-6" />, "pp.hintMemo"],
-              ["test", <Sheet key="t" className="size-6" />, "pp.hintTest"],
+              ["pdf", FileText, "pp.hintPdf"],
+              ["photo", ImageIcon, "pp.hintPhoto"],
+              ["memo", StickyNote, "pp.hintMemo"],
+              ["test", Sheet, "pp.hintTest"],
             ] as const
-          ).map(([kind, icon, hint]) => (
-            <button key={kind} type="button" onClick={() => startWith(kind)} className="tile flex min-h-[124px] flex-col items-start justify-start p-4 text-left">
-              <span className="tile-icon" aria-hidden="true">{icon}</span>
-              <span className="mt-3 text-[16px] font-semibold text-fg">{docLabel(kind)}</span>
-              <span className="mt-0.5 text-xs leading-snug text-muted">{t(hint)}</span>
-            </button>
+          ).map(([kind, Icon, hint]) => (
+            <li key={kind}>
+              <button type="button" onClick={() => startWith(kind)} className="doc-row">
+                <span className={`doc-ico is-${kind}`} aria-hidden="true">
+                  <Icon weight="fill" className="size-[22px]" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[16px] font-semibold text-fg">{docLabel(kind)}</span>
+                  <span className="mt-0.5 block truncate text-[13px] text-muted">{t(hint)}</span>
+                </span>
+                <ChevronRight className="size-5 text-faint" aria-hidden="true" />
+              </button>
+            </li>
           ))}
-        </div>
+        </ul>
         <p className="mt-2 hidden text-xs text-faint sm:block">{t("pp.dropHint")}</p>
       </div>
 

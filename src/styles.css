@@ -312,6 +312,44 @@ html[data-theme="light"] .app-header .icon-btn:hover,
   border: 2.5px solid var(--surface);
 }
 
+/* 문서 종류 행 — 토스 list-row + 애플 설정 앱 색 아이콘 */
+.doc-row {
+  display: flex;
+  width: 100%;
+  min-height: 64px;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 8px;
+  border-radius: 16px;
+  text-align: left;
+  transition: background-color 120ms var(--ease), transform 120ms var(--ease);
+}
+
+.doc-row:hover {
+  background: var(--press);
+}
+
+.doc-row:active {
+  background: var(--press);
+  transform: scale(0.985);
+}
+
+.doc-ico {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  color: #ffffff;
+}
+
+/* 종류마다 다른 색 — 토스 레드 · 당근 그린 · 당근 주황 · 토스 블루 */
+.doc-ico.is-pdf { background: #f04452; }
+.doc-ico.is-photo { background: #10ab7d; }
+.doc-ico.is-memo { background: #ff8a1f; }
+.doc-ico.is-test { background: #3182f6; }
+
 /* 문서 타일 아이콘 칩 */
 .tile-icon {
   display: grid;

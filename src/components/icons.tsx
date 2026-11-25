@@ -12,6 +12,7 @@ import {
   BookmarkSimple,
   CaretDown,
   CaretLeft,
+  CaretRight,
   CaretUp,
   Check as PhCheck,
   CheckCircle,
@@ -62,6 +63,7 @@ export const Bookmark = round(BookmarkSimple);
 export const Check = round(PhCheck);
 export const ChevronDown = round(CaretDown);
 export const ChevronUp = round(CaretUp);
+export const ChevronRight = round(CaretRight);
 export const CircleCheck = round(CheckCircle, "fill");
 export const CircleHelp = round(Question);
 export const Copy = round(PhCopy);
