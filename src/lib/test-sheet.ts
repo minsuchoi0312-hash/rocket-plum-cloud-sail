@@ -4,7 +4,7 @@
  * 문구는 지금 화면 언어로 찍는다(언어별 글꼴 깨짐 점검에도 쓸 수 있어요).
  */
 import { currentLang, tr } from "./i18n/core.ts";
-import { paperMm as tableMm } from "./office-job.ts";
+import { paperLabel, paperMm as tableMm } from "./office-job.ts";
 
 /** 언어별 글꼴: 한국어·일본어·중국어 글자가 시스템 글꼴로 대체되도록 뒤에 일반 글꼴을 붙여요. */
 function fontStack() {
@@ -39,6 +39,24 @@ export function testSheetStamp(at = Date.now()) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/** 캔버스의 한 영역을 밝기(휘도) 기준 회색으로 바꾼다 */
+function toGray(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+  const sx = Math.max(0, Math.floor(x));
+  const sy = Math.max(0, Math.floor(y));
+  const sw = Math.min(ctx.canvas.width - sx, Math.ceil(w));
+  const sh = Math.min(ctx.canvas.height - sy, Math.ceil(h));
+  if (sw <= 0 || sh <= 0) return;
+  const image = ctx.getImageData(sx, sy, sw, sh);
+  const data = image.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const v = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+    data[i] = v;
+    data[i + 1] = v;
+    data[i + 2] = v;
+  }
+  ctx.putImageData(image, sx, sy);
+}
+
 export function drawTestSheet(canvas: HTMLCanvasElement, info: TestSheetInfo) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return canvas;
@@ -47,8 +65,12 @@ export function drawTestSheet(canvas: HTMLCanvasElement, info: TestSheetInfo) {
   const sheetMm = paperMm(info.paper, info.orient);
   /* 캔버스 가로가 용지 가로에 대응한다 */
   const k = W / sheetMm.width;
-  const mm = (value: number) => value * k;
-  const pt = (value: number) => value * PT_MM * k;
+  /* 본문 배율 — A4 세로 기준(약 190×200mm)으로 짜인 내용이 작은 용지(A5·A6·엽서)나 가로에서 넘치지 않게 줄인다.
+     테두리는 용지 가장자리 점검용이라 배율 없이(s=1) 그리고, 그 뒤 본문부터 s=fit 으로 바꾼다. */
+  const fit = Math.min(1, sheetMm.width / 190, (sheetMm.height - 20) / 200);
+  let s = 1;
+  const mm = (value: number) => value * k * s;
+  const pt = (value: number) => value * PT_MM * k * s;
   const ink = "#111111";
   const face = fontStack();
   ctx.save();
@@ -83,9 +105,11 @@ export function drawTestSheet(canvas: HTMLCanvasElement, info: TestSheetInfo) {
   ctx.fillText(tr("ts.solid"), mm(4.5), mm(7.6));
   ctx.fillText(tr("ts.dashed"), mm(12), mm(14.2));
 
-  const left = mm(18);
-  const usable = W - mm(36);
-  let y = mm(28);
+  s = fit;
+  const left = k * 18;
+  const usable = W - k * 36;
+  /* 본문은 10mm 점선 · 안내 글씨 아래(16mm)부터 — 배율이 작아도 겹치지 않게. A4에서는 예전처럼 28mm */
+  let y = k * 16 + mm(12);
 
   /* 2) 제목 + 작업 정보 */
   ctx.font = `600 ${pt(20)}px ${face}`;
@@ -96,7 +120,7 @@ export function drawTestSheet(canvas: HTMLCanvasElement, info: TestSheetInfo) {
     tr("ts.at", { v: testSheetStamp(info.at) }),
     tr("ts.printer", { v: info.printer || tr("ts.noName") }),
     tr("ts.link", { v: info.link || tr("ts.preview") }),
-    tr("ts.paper", { paper: info.paper, orient: tr(info.orient === "landscape" ? "ts.land" : "ts.port"), color: tr(info.gray ? "ts.gray" : "ts.color") }),
+    tr("ts.paper", { paper: paperLabel(info.paper), orient: tr(info.orient === "landscape" ? "ts.land" : "ts.port"), color: tr(info.gray ? "ts.gray" : "ts.color") }),
   ];
   for (const line of lines) {
     ctx.fillText(line, left, y, usable);
@@ -132,7 +156,53 @@ export function drawTestSheet(canvas: HTMLCanvasElement, info: TestSheetInfo) {
   });
   y += barH + mm(12);
 
-  /* 4) 한글·영문·숫자 크기별 샘플 */
+  /* 4) 컬러 점검 — C·M·Y·K·R·G·B 칸 + 무지개 띠.
+     컬러면 그대로, 흑백이면 이 영역을 회색으로 바꿔서 흑백 변환이 되는지 보이게 한다. */
+  ctx.fillStyle = ink;
+  ctx.font = `600 ${pt(11)}px ${face}`;
+  ctx.fillText(tr(info.gray ? "ts.grayCheck" : "ts.colorCheck"), left, y, usable);
+  y += mm(3.5);
+  const colorTop = y;
+  const patches: [string, string][] = [
+    ["C", "#00aeef"],
+    ["M", "#ec008c"],
+    ["Y", "#fff200"],
+    ["K", "#111111"],
+    ["R", "#ed1c24"],
+    ["G", "#00a651"],
+    ["B", "#2e3192"],
+  ];
+  const pGap = mm(1.6);
+  const pW = (usable - pGap * (patches.length - 1)) / patches.length;
+  const pH = mm(12);
+  patches.forEach(([name, color], index) => {
+    const x = left + index * (pW + pGap);
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, pW, pH);
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = Math.max(1, mm(0.2));
+    ctx.strokeRect(x, y, pW, pH);
+    ctx.fillStyle = ink;
+    ctx.font = `600 ${pt(9)}px ${face}`;
+    ctx.fillText(name, x + mm(1.5), y + pH + mm(4.5));
+  });
+  y += pH + mm(7.5);
+  const rainbow = ctx.createLinearGradient(left, 0, left + usable, 0);
+  ["#ff0000", "#ffff00", "#00ff00", "#00ffff", "#0000ff", "#ff00ff", "#ff0000"].forEach((color, index, all) => rainbow.addColorStop(index / (all.length - 1), color));
+  ctx.fillStyle = rainbow;
+  ctx.fillRect(left, y, usable, mm(6));
+  ctx.strokeStyle = ink;
+  ctx.lineWidth = Math.max(1, mm(0.2));
+  ctx.strokeRect(left, y, usable, mm(6));
+  const colorBottom = y + mm(6) + Math.max(1, mm(0.2));
+  if (info.gray) toGray(ctx, left - mm(0.5), colorTop - mm(0.5), usable + mm(1), colorBottom - colorTop + mm(1));
+  y += mm(6) + mm(5.5);
+  ctx.fillStyle = ink;
+  ctx.font = `${pt(9)}px ${face}`;
+  ctx.fillText(tr(info.gray ? "ts.grayNote" : "ts.colorNote"), left, y, usable);
+  y += mm(10);
+
+  /* 5) 한글·영문·숫자 크기별 샘플 */
   ctx.fillStyle = ink;
   ctx.font = `600 ${pt(11)}px ${face}`;
   ctx.fillText(tr("ts.textSample"), left, y, usable);
@@ -145,7 +215,7 @@ export function drawTestSheet(canvas: HTMLCanvasElement, info: TestSheetInfo) {
   }
   y += mm(6);
 
-  /* 5) 가는 선 해상도 패턴 */
+  /* 6) 가는 선 해상도 패턴 */
   ctx.font = `600 ${pt(11)}px ${face}`;
   ctx.fillText(tr("ts.lines"), left, y, usable);
   y += mm(3);
@@ -160,9 +230,9 @@ export function drawTestSheet(canvas: HTMLCanvasElement, info: TestSheetInfo) {
     ctx.fillText(`${width}mm`, left + usable * 0.6 + mm(3), lineY + mm(1));
   });
 
-  /* 6) 안내 */
+  /* 7) 안내 */
   ctx.font = `${pt(9)}px ${face}`;
-  ctx.fillText(tr("ts.footer"), left, H - mm(16), usable);
+  ctx.fillText(tr("ts.footer"), left, H - k * 16, usable);
   ctx.restore();
   return canvas;
 }

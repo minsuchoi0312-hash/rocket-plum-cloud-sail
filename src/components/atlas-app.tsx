@@ -1863,14 +1863,14 @@ function AtlasMain() {
           </button>
         </div>
       </header>
-      <div className="app-sub">
-        <p className="text-[15px] text-muted">{tr("ap.tagline")}</p>
-        {online === false ? (
-          <p className="offline-badge mt-1.5 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold" role="status">
+      {/* 앱으로 낼 거라 소개 문구는 없앰 — 오프라인일 때만 안내 */}
+      {online === false ? (
+        <div className="app-sub">
+          <p className="offline-badge inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold" role="status">
             {tr("ap.offline")}
           </p>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
       {zoom ? <PreviewZoomModal pages={zoom.pages} start={zoom.index} onClose={closeZoom} /> : null}
       {qrTarget ? <PrinterQrModal target={qrTarget} onClose={() => setQrTarget(null)} /> : null}
       {showDiag ? (
