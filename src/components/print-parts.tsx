@@ -2,10 +2,10 @@
  * 인쇄 화면 부품: 확인된 기종 카드 · 용지/양면/부수 옵션 · 문서 탭과 하단 버튼 묶음.
  * atlas-app.tsx에서 분리한 컴포넌트.
  */
-import type { ReactNode } from "react";
-import { ArrowLeft, ArrowRight, Bookmark, Minus, Plus, Printer, RotateCw, Trash2, Upload } from "@/components/icons";
+import { useState, type ReactNode } from "react";
+import { ArrowLeft, ArrowRight, Bookmark, ChevronDown, Minus, Plus, Printer, RotateCw, Trash2, Upload } from "@/components/icons";
 import type { MatchResult } from "@/lib/atlas";
-import type { DuplexMode, OfficePaper } from "@/lib/office-job";
+import { MAIN_PAPERS, MORE_PAPERS, paperHint, paperLabel, type DuplexMode, type OfficePaper } from "@/lib/office-job";
 import type { PrintRoute } from "@/lib/print-route";
 import type { DocKind } from "@/components/paper-preview";
 import { tr } from "@/lib/i18n";
@@ -98,6 +98,8 @@ export function OfficeOptions({
     ["long", tr("opt.long")],
     ["short", tr("opt.short")],
   ] as const;
+  const [moreOpen, setMoreOpen] = useState(false);
+  const morePicked = (MORE_PAPERS as readonly string[]).includes(paper);
   const colorOn = !(monoUsb || gray);
   const idle = !liveJob || locked;
   /* 토스 설정 화면처럼 줄마다 이름 + 분절 버튼, 장수는 − 값 + 캡슐 */
@@ -106,12 +108,49 @@ export function OfficeOptions({
       <div className="opt-row">
         <span className="opt-label">{tr("opt.paper")}</span>
         <div className="seg" role="radiogroup" aria-label={tr("opt.paper")}>
-          {(["A4", "A3", "B5"] as const).map((item) => (
-            <button key={item} type="button" role="radio" aria-checked={paper === item} disabled={locked} onClick={() => onPaper(item)} className={`seg-btn ${paper === item ? "is-on" : ""}`}>
+          {MAIN_PAPERS.map((item) => (
+            <button
+              key={item}
+              type="button"
+              role="radio"
+              aria-checked={paper === item}
+              disabled={locked}
+              onClick={() => {
+                onPaper(item);
+                setMoreOpen(false);
+              }}
+              className={`seg-btn ${paper === item ? "is-on" : ""}`}
+            >
               {item}
             </button>
           ))}
+          {/* 더보기 — 고른 용지가 여기 있으면 그 이름을 보여 준다 */}
+          <button type="button" aria-expanded={moreOpen} disabled={locked} onClick={() => setMoreOpen((value) => !value)} className={`seg-btn ${morePicked ? "is-on" : ""}`}>
+            <span className="truncate">{morePicked ? paperLabel(paper) : tr("opt.morePaper")}</span>
+            <ChevronDown className={`size-3.5 shrink-0 transition-transform ${moreOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+          </button>
         </div>
+        {moreOpen ? (
+          <div className="paper-more" role="radiogroup" aria-label={tr("opt.morePaper")}>
+            {MORE_PAPERS.map((item) => (
+              <button
+                key={item}
+                type="button"
+                role="radio"
+                aria-checked={paper === item}
+                disabled={locked}
+                onClick={() => {
+                  onPaper(item);
+                  setMoreOpen(false);
+                }}
+                className={`paper-opt ${paper === item ? "is-on" : ""}`}
+              >
+                <span className="paper-opt-name">{paperLabel(item)}</span>
+                <span className="paper-opt-size">{paperHint(item)}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
       <div className="opt-row">
         <span className="opt-label">{tr("opt.colorMode")}</span>

@@ -195,7 +195,7 @@ export function composeIdSheet(image: CanvasImageSource, size: { width: number; 
     }
   }
   ctx.fillStyle = "#555";
-  ctx.font = `${Math.round(2.8 * pxPerMm)}px "IBM Plex Sans KR", sans-serif`;
+  ctx.font = `${Math.round(2.8 * pxPerMm)}px "Pretendard Variable", sans-serif`;
   const spec = ID_SPECS[kind];
   ctx.fillText(tr("id.footer", { label: tr(spec.labelKey) }), 10 * pxPerMm, sheetH - 8 * pxPerMm);
   return canvas;

@@ -1,4 +1,5 @@
 import { tr } from "@/lib/i18n/core";
+import { ippMedia, type OfficePaper } from "@/lib/office-job";
 function concat(parts: Uint8Array[]) {
   const size = parts.reduce((sum, part) => sum + part.length, 0);
   const out = new Uint8Array(size);
@@ -35,13 +36,13 @@ function intAttr(name: string, value: number) {
   return out;
 }
 
-function printJobPacket(host: string, pdf: Uint8Array, options: { copies: number; duplex: "simplex" | "long" | "short"; paper: "A4" | "A3" | "B5"; gray: boolean }) {
+function printJobPacket(host: string, pdf: Uint8Array, options: { copies: number; duplex: "simplex" | "long" | "short"; paper: OfficePaper; gray: boolean }) {
   const header = new Uint8Array(8);
   const view = new DataView(header.buffer);
   header[0] = 2;
   view.setUint16(2, 0x0002);
   view.setUint32(4, 1);
-  const media = options.paper === "A3" ? "iso_a3_297x420mm" : options.paper === "B5" ? "jis_b5_182x257mm" : "iso_a4_210x297mm";
+  const media = ippMedia(options.paper);
   const sides = options.duplex === "long" ? "two-sided-long-edge" : options.duplex === "short" ? "two-sided-short-edge" : "one-sided";
   const attrs = concat([
     new Uint8Array([0x01]),
@@ -64,7 +65,7 @@ function printJobPacket(host: string, pdf: Uint8Array, options: { copies: number
 const corsHint = () => tr("ipp.cors");
 
 /** 같은 망의 IPP(631)로 PDF를 넣는다. 실패해도 기기 인쇄 창은 열지 않는다. */
-export async function sendIppPdf(host: string, pdf: Uint8Array, options: { copies: number; duplex: "simplex" | "long" | "short"; paper: "A4" | "A3" | "B5"; gray: boolean }) {
+export async function sendIppPdf(host: string, pdf: Uint8Array, options: { copies: number; duplex: "simplex" | "long" | "short"; paper: OfficePaper; gray: boolean }) {
   const body = printJobPacket(host, pdf, options);
   let response: Response;
   try {

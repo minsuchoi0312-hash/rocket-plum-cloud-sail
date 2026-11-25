@@ -5,7 +5,7 @@
 import { useEffect, useRef } from "react";
 import { Maximize2 } from "@/components/icons";
 import { composeSheet, stampSheet, stampsOn, type StampOptions } from "@/lib/compose-sheet";
-import { drawOfficePage, previewSize, printPixelSize, type OfficePaper } from "@/lib/office-job";
+import { drawOfficePage, paperLabel, previewSize, printPixelSize, type OfficePaper } from "@/lib/office-job";
 import { nupGroups } from "@/lib/pdf-doc";
 import { renderSheetCanvas, sheetMemoChunks } from "@/lib/pdf-page";
 import { drawTestSheet, paperMm, type TestSheetInfo } from "@/lib/test-sheet";
@@ -185,7 +185,10 @@ export function PaperPreview({
   const emptyPhoto = docKind === "photo" && !photoUrl;
   const emptyMemo = docKind === "memo" && memo.trim().length < 1;
   const emptyPdf = docKind === "pdf" && !pdfPreview;
-  const paperClass = `${paper === "A3" ? "a3" : paper === "B5" ? "b5" : ""}${orient === "landscape" ? " is-land" : ""}`;
+  const paperClass = orient === "landscape" ? "is-land" : "";
+  /* 용지 비율은 용지 표(mm)에서 — 가로 방향이면 뒤집는다 */
+  const mm = paperMm(paper);
+  const sheetRatio = orient === "landscape" ? `${mm.height} / ${mm.width}` : `${mm.width} / ${mm.height}`;
   const nupCaption = nup > 1 && !idMode ? ` · ${tr("pv.nup", { n: nup })}` : "";
   /* PDF: 실제 인쇄 시트 단위(쪽 범위·모아찍기·역순 반영)로 넘긴다 */
   const sheetGroup = sheets[sheetIndex] || [];
@@ -202,7 +205,7 @@ export function PaperPreview({
         </button>
       ) : null}
       <p className="preview-caption pl-3 pr-20 text-center text-xs">
-        {tr(orient === "landscape" ? "pv.captionLand" : "pv.caption", { paper })}
+        {tr(orient === "landscape" ? "pv.captionLand" : "pv.caption", { paper: paperLabel(paper) })}
         {gray ? ` · ${tr("pv.gray")}` : ""}
         {idMode ? ` · ${tr(photoLayout === "id" ? "pv.id" : "pv.passport")}` : ""}
         {nupCaption}
@@ -210,15 +213,15 @@ export function PaperPreview({
         {stampCaption ? ` · ${stampCaption}` : ""}
       </p>
       {docKind === "photo" && photoUrl ? (
-        <canvas ref={pageRef} onClick={onZoom} className={`sheet-a4 zoomable ${paperClass}`} style={{ height: "auto" }} aria-label={tr("pv.photoAria")} />
+        <canvas ref={pageRef} onClick={onZoom} className={`sheet-a4 zoomable ${paperClass}`} style={{ height: "auto", aspectRatio: sheetRatio }} aria-label={tr("pv.photoAria")} />
       ) : docKind === "pdf" && pdfPreview ? (
-        <img src={pdfPreview} alt="" onClick={onZoom} className={`sheet-a4 zoomable ${paperClass}`} />
+        <img src={pdfPreview} alt="" onClick={onZoom} className={`sheet-a4 zoomable ${paperClass}`} style={{ aspectRatio: sheetRatio }} />
       ) : docKind === "test" && testSheet ? (
-        <canvas ref={testRef} onClick={onZoom} className={`sheet-a4 zoomable ${paperClass}`} style={{ height: "auto" }} aria-label={tr("pv.testAria")} />
+        <canvas ref={testRef} onClick={onZoom} className={`sheet-a4 zoomable ${paperClass}`} style={{ height: "auto", aspectRatio: sheetRatio }} aria-label={tr("pv.testAria")} />
       ) : memoCanvas ? (
-        <canvas ref={memoRef} onClick={onZoom} className={`sheet-a4 zoomable ${paperClass}`} style={{ height: "auto" }} aria-label={tr("pv.memoAria")} />
+        <canvas ref={memoRef} onClick={onZoom} className={`sheet-a4 zoomable ${paperClass}`} style={{ height: "auto", aspectRatio: sheetRatio }} aria-label={tr("pv.memoAria")} />
       ) : (
-        <div className={`sheet-a4 relative ${paperClass}`}>
+        <div className={`sheet-a4 relative ${paperClass}`} style={{ aspectRatio: sheetRatio }}>
           {emptyPhoto ? (
             <p className="on-paper absolute inset-0 grid place-items-center px-4 text-center text-xs leading-relaxed">{tr("pv.emptyPhoto")}</p>
           ) : emptyMemo ? (

@@ -23,6 +23,7 @@ import {
   FilePlus,
   FileText as PhFileText,
   Globe as PhGlobe,
+  House as PhHouse,
   Image as PhImage,
   MagnifyingGlass,
   MagnifyingGlassMinus,
@@ -72,6 +73,7 @@ export const FilePlus2 = round(FilePlus);
 export const FileText = round(PhFileText);
 export const Globe = round(PhGlobe);
 export const History = round(ClockCounterClockwise);
+export const House = round(PhHouse);
 export const Image = round(PhImage);
 export const Mail = round(EnvelopeSimple);
 export const Maximize2 = round(ArrowsOutSimple);

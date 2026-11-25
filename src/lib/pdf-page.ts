@@ -1,5 +1,5 @@
 import { tr } from "@/lib/i18n/core";
-import { paginateLines, wrapMeasuredLines } from "@/lib/office-job";
+import { paginateLines, printPixelSize, wrapMeasuredLines } from "@/lib/office-job";
 import { drawTestSheet, type TestSheetInfo } from "@/lib/test-sheet";
 
 function concat(parts: Uint8Array[]) {
@@ -120,9 +120,9 @@ export async function renderSheetCanvas(options: {
   /** kind가 test일 때 점검용 테스트 시트로 그린다 */
   test?: TestSheetInfo;
 }) {
-  const fallback = options.paper === "A3" ? [1754, 2480] : options.paper === "B5" ? [1075, 1518] : options.paper === "Letter" ? [1275, 1650] : [1240, 1754];
-  const width = options.frame?.width || fallback[0];
-  const height = options.frame?.height || fallback[1];
+  const fallback = printPixelSize(options.paper);
+  const width = options.frame?.width || fallback.width;
+  const height = options.frame?.height || fallback.height;
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -138,7 +138,7 @@ export async function renderSheetCanvas(options: {
     return canvas;
   }
   const text = options.kind === "memo" ? options.note : `${options.title}\n${options.note}`;
-  ctx.font = '48px "IBM Plex Sans KR", sans-serif';
+  ctx.font = '48px "Pretendard Variable", sans-serif';
   let line = "";
   let y = 120;
   const maxWidth = width - 160;
@@ -162,12 +162,12 @@ export async function renderSheetCanvas(options: {
 }
 
 export function sheetMemoChunks(text: string, paper: string, frame?: { width: number; height: number }) {
-  const width = frame?.width || (paper === "A3" ? 1754 : paper === "B5" ? 1075 : 1240);
-  const height = frame?.height || (paper === "A3" ? 2480 : paper === "B5" ? 1518 : 1754);
+  const width = frame?.width || printPixelSize(paper).width;
+  const height = frame?.height || printPixelSize(paper).height;
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
   if (!ctx) return [text];
-  ctx.font = '48px "IBM Plex Sans KR", sans-serif';
+  ctx.font = '48px "Pretendard Variable", sans-serif';
   const lines = wrapMeasuredLines(text, (value) => ctx.measureText(value).width, Math.max(80, width - 160));
   return paginateLines(lines, Math.max(1, Math.floor((height - 120) / 68)));
 }

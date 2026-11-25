@@ -4,13 +4,14 @@
  * 문구는 지금 화면 언어로 찍는다(언어별 글꼴 깨짐 점검에도 쓸 수 있어요).
  */
 import { currentLang, tr } from "./i18n/core.ts";
+import { paperMm as tableMm } from "./office-job.ts";
 
 /** 언어별 글꼴: 한국어·일본어·중국어 글자가 시스템 글꼴로 대체되도록 뒤에 일반 글꼴을 붙여요. */
 function fontStack() {
   const lang = currentLang();
-  if (lang === "ja") return '"Hiragino Sans", "Noto Sans JP", "Yu Gothic", "IBM Plex Sans KR", sans-serif';
-  if (lang === "zh") return '"PingFang SC", "Noto Sans SC", "Microsoft YaHei", "IBM Plex Sans KR", sans-serif';
-  return '"IBM Plex Sans KR", sans-serif';
+  if (lang === "ja") return '"Hiragino Sans", "Noto Sans JP", "Yu Gothic", "Pretendard Variable", sans-serif';
+  if (lang === "zh") return '"PingFang SC", "Noto Sans SC", "Microsoft YaHei", "Pretendard Variable", sans-serif';
+  return '"Pretendard Variable", sans-serif';
 }
 
 export type TestSheetInfo = {
@@ -24,15 +25,9 @@ export type TestSheetInfo = {
   at?: number;
 };
 
-const PAPER_MM: Record<string, [number, number]> = {
-  A4: [210, 297],
-  A3: [297, 420],
-  B5: [182, 257],
-};
-
+/** 용지 크기는 office-job의 용지 표 하나만 쓴다 */
 export function paperMm(paper: string, orient: "portrait" | "landscape" = "portrait") {
-  const [w, h] = PAPER_MM[paper] ?? PAPER_MM.A4;
-  return orient === "landscape" ? { width: h, height: w } : { width: w, height: h };
+  return tableMm(paper, orient);
 }
 
 /** 1pt = 25.4/72 mm */

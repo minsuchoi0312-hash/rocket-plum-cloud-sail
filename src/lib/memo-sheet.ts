@@ -35,7 +35,7 @@ function metrics(width: number, height: number, style: MemoStyle, pxPerMm: numbe
 }
 
 function fontCss(px: number, weight = 400) {
-  return `${weight} ${Math.round(px)}px "IBM Plex Sans KR", sans-serif`;
+  return `${weight} ${Math.round(px)}px "Pretendard Variable", sans-serif`;
 }
 
 export function memoChunksStyled(text: string, width: number, height: number, style: MemoStyle, pxPerMm: number) {

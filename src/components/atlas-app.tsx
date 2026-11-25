@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight as ChevronRightIcon, CircleHelp, Monitor as MonitorIcon, Moon, Printer as PrinterIcon, Sun, Upload, Usb as UsbIcon, Wifi as WifiIcon } from "@/components/icons";
+import { ChevronRight as ChevronRightIcon, CircleHelp, House as HouseIcon, Monitor as MonitorIcon, Moon, Printer as PrinterIcon, Sun, Upload, Usb as UsbIcon, Wifi as WifiIcon } from "@/components/icons";
 import { I18nProvider, m, msgText, tr, useI18n, type Msg } from "@/lib/i18n";
 import { LangSwitcher } from "@/components/lang-switcher";
 import { AppErrorBoundary } from "@/components/error-boundary";
@@ -1432,7 +1432,7 @@ function AtlasMain() {
     const safari = typeof navigator !== "undefined" && /Safari/i.test(navigator.userAgent) && !/Chrome|CriOS|Edg|Android/i.test(navigator.userAgent);
     const notes = [base];
     if (count > 30) notes.push(tr("ap.over30"));
-    if (safari && (paper === "A3" || paper === "B5")) notes.push(tr("ap.checkPaper"));
+    if (safari && paper !== "A4") notes.push(tr("ap.checkPaper"));
     return notes.join(" ");
   }
 
@@ -1821,7 +1821,23 @@ function AtlasMain() {
       ) : null}
       {/* 상단바 — 큰 제목 + 테두리 없는 아이콘 버튼, 스크롤하면 반투명 유리 */}
       <header className="app-header">
-        <h1 className="min-w-0 flex-1 truncate">{tr("app.title")}</h1>
+        {/* 제목을 누르면 홈(프린터 · 인쇄하기)으로 — 홈이 아니면 집 아이콘으로 알려 준다 */}
+        <h1 className="min-w-0 flex-1">
+          <button
+            type="button"
+            onClick={() => {
+              if (step === "connect") window.scrollTo({ top: 0, behavior: "smooth" });
+              else backToConnect();
+            }}
+            disabled={sending}
+            className="home-link"
+            aria-label={step === "connect" ? tr("app.title") : `${tr("app.title")} · ${tr("ap.home")}`}
+            title={tr("ap.home")}
+          >
+            {step === "connect" ? null : <HouseIcon className="home-link-icon" aria-hidden="true" />}
+            <span className="truncate">{tr("app.title")}</span>
+          </button>
+        </h1>
         <div className="-mr-2 flex shrink-0 items-center">
           <LangSwitcher />
           <button

@@ -3,12 +3,12 @@
  * 저해상도 사진 · 30장 이상 대용량 · 복사기 오류(용지 없음/걸림/덮개) · PDF Direct 미지원 안내.
  */
 import { currentLang, tr } from "./i18n/core.ts";
+import { paperMm } from "./office-job.ts";
 import { reasonLabel } from "./printer-status.ts";
 
 export type PreflightAction = "nup2" | "save-paper" | "refresh-status";
 export type PreflightChip = { id: "lowres" | "bigjob" | "printer" | "pcl-fallback"; tone: "info" | "warn" | "bad"; text: string; action?: { label: string; kind: PreflightAction } };
 
-const PAPER_MM: Record<string, [number, number]> = { A4: [210, 297], A3: [297, 420], B5: [182, 257] };
 export const LOW_DPI = 120;
 export const BIG_JOB = 30;
 
@@ -25,7 +25,7 @@ export function josa(word: string, withFinal: string, withoutFinal: string) {
  * contain(맞추기)은 칸 안에 다 들어가게, cover(채우기)는 칸을 꽉 채우게 커진다. 증명사진은 30×40mm 칸.
  */
 export function photoDpi(img: { w: number; h: number }, opts: { paper: string; landscape: boolean; nup: 1 | 2 | 4; fit: "contain" | "cover"; id?: boolean }) {
-  const [pw, ph] = PAPER_MM[opts.paper] ?? PAPER_MM.A4;
+  const { width: pw, height: ph } = paperMm(opts.paper);
   let cw = opts.landscape ? ph : pw;
   let ch = opts.landscape ? pw : ph;
   if (opts.id) {

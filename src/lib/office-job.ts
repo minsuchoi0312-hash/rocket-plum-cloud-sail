@@ -1,36 +1,77 @@
-export type OfficePaper = "A4" | "A3" | "B5";
+import { tr } from "./i18n/core.ts";
+
+export type OfficePaper = "A4" | "A3" | "B5" | "A5" | "B4" | "Letter" | "Legal" | "A6" | "Postcard";
 export type DuplexMode = "simplex" | "long" | "short";
 
-export const OFFICE_PAPERS: OfficePaper[] = ["A4", "A3", "B5"];
+/** 자주 쓰는 용지 (분절 버튼에 바로 보임) */
+export const MAIN_PAPERS = ["A4", "A3", "B5"] as const satisfies readonly OfficePaper[];
+/** 더보기에 들어가는 용지 */
+export const MORE_PAPERS = ["A5", "B4", "Letter", "Legal", "A6", "Postcard"] as const satisfies readonly OfficePaper[];
+export const OFFICE_PAPERS: OfficePaper[] = [...MAIN_PAPERS, ...MORE_PAPERS];
 
-const PAPER = {
-  A4: { mm: [210, 297], pcl: 26, pjl: "A4", pt: [595.28, 841.89] },
-  A3: { mm: [297, 420], pcl: 27, pjl: "A3", pt: [841.89, 1190.55] },
-  B5: { mm: [182, 257], pcl: 45, pjl: "JISB5", pt: [515.91, 728.5] },
-} as const;
+/**
+ * 용지 표 — 크기 계산 · 복사기 명령은 모두 여기서 나온다.
+ * pcl: PCL5 ESC&l#A 용지 번호 · pjl: @PJL SET PAPER 이름(JIS 계열은 기종마다 이름이 달라 생략) · ipp: IPP media 이름
+ */
+const PAPER: Record<OfficePaper, { mm: readonly [number, number]; pcl: number; pjl: string | null; ipp: string; hint: string }> = {
+  A4: { mm: [210, 297], pcl: 26, pjl: "A4", ipp: "iso_a4_210x297mm", hint: "210×297mm" },
+  A3: { mm: [297, 420], pcl: 27, pjl: "A3", ipp: "iso_a3_297x420mm", hint: "297×420mm" },
+  B5: { mm: [182, 257], pcl: 45, pjl: null, ipp: "jis_b5_182x257mm", hint: "182×257mm" },
+  A5: { mm: [148, 210], pcl: 25, pjl: "A5", ipp: "iso_a5_148x210mm", hint: "148×210mm" },
+  B4: { mm: [257, 364], pcl: 46, pjl: null, ipp: "jis_b4_257x364mm", hint: "257×364mm" },
+  Letter: { mm: [215.9, 279.4], pcl: 2, pjl: "LETTER", ipp: "na_letter_8.5x11in", hint: "8.5×11in" },
+  Legal: { mm: [215.9, 355.6], pcl: 3, pjl: "LEGAL", ipp: "na_legal_8.5x14in", hint: "8.5×14in" },
+  A6: { mm: [105, 148], pcl: 24, pjl: "A6", ipp: "iso_a6_105x148mm", hint: "105×148mm" },
+  Postcard: { mm: [100, 148], pcl: 71, pjl: null, ipp: "jpn_hagaki_100x148mm", hint: "100×148mm" },
+};
 
 const encoder = new TextEncoder();
 
+function spec(paper: string) {
+  return PAPER[paper as OfficePaper] ?? PAPER.A4;
+}
+
+/** mm 를 지정 해상도(dpi)의 픽셀로 */
+function px(mm: number, dpi: number) {
+  return Math.round((mm / 25.4) * dpi);
+}
+
+export function paperMm(paper: string, orient: "portrait" | "landscape" = "portrait") {
+  const [width, height] = spec(paper).mm;
+  return orient === "landscape" ? { width: height, height: width } : { width, height };
+}
+
+/** 화면에 보일 용지 이름 — 엽서만 언어별로, 나머지는 규격 이름 그대로 */
+export function paperLabel(paper: string) {
+  return paper === "Postcard" ? tr("opt.postcard") : paper;
+}
+
+export function paperHint(paper: string) {
+  return spec(paper).hint;
+}
+
+export function ippMedia(paper: string) {
+  return spec(paper).ipp;
+}
+
 export function paperPoints(paper: string) {
-  const spec = PAPER[(paper === "A3" || paper === "B5" ? paper : "A4") as OfficePaper];
-  return { width: spec.pt[0], height: spec.pt[1] };
+  const [mmW, mmH] = spec(paper).mm;
+  return { width: Math.round((mmW / 25.4) * 72 * 100) / 100, height: Math.round((mmH / 25.4) * 72 * 100) / 100 };
 }
 
 export function rasterSize(paper: OfficePaper) {
-  const [mmW, mmH] = PAPER[paper].mm;
-  const raw = Math.round((mmW / 25.4) * 300);
-  return { width: Math.ceil(raw / 8) * 8, height: Math.round((mmH / 25.4) * 300) };
+  const [mmW, mmH] = spec(paper).mm;
+  return { width: Math.ceil(px(mmW, 300) / 8) * 8, height: px(mmH, 300) };
 }
 
+/** 300dpi 래스터에서 가장자리 6mm(72px씩)를 뺀 인쇄 가능 영역 */
 export function printableSize(paper: OfficePaper) {
-  if (paper === "A3") return { width: 3368, height: 4817 };
-  if (paper === "B5") return { width: 2008, height: 2891 };
-  return { width: 2336, height: 3364 };
+  const full = rasterSize(paper);
+  return { width: full.width - 144, height: full.height - 144 };
 }
 
 export function previewSize(paper: string) {
-  const key = (paper === "A3" || paper === "B5" ? paper : "A4") as OfficePaper;
-  const full = rasterSize(key);
+  const full = rasterSize((PAPER[paper as OfficePaper] ? paper : "A4") as OfficePaper);
   const width = 620;
   return { width, height: Math.max(1, Math.round((full.height / full.width) * width)) };
 }
@@ -49,7 +90,8 @@ function concat(parts: Uint8Array[]) {
 function pjl(options: { copies: number; duplex: DuplexMode; paper: OfficePaper; language: "PDF" | "PCL"; pages: number; secure?: { pin: string; user: string } }) {
   const count = Math.min(99, Math.max(1, options.copies));
   const lines = ["\x1b%-12345X@PJL JOB", options.pages > 1 ? `@PJL SET QTY=${count}` : `@PJL SET COPIES=${count}`];
-  if (options.paper !== "B5") lines.push(`@PJL SET PAPER=${PAPER[options.paper].pjl}`);
+  const pjlPaper = spec(options.paper).pjl;
+  if (pjlPaper) lines.push(`@PJL SET PAPER=${pjlPaper}`);
   if (options.duplex === "simplex") lines.push("@PJL SET DUPLEX=OFF");
   else {
     lines.push("@PJL SET DUPLEX=ON");
@@ -71,19 +113,20 @@ export function wrapPdfJob(pdf: Uint8Array, options: { copies: number; duplex: D
   ]);
 }
 
+/** 화면 · PDF용 150dpi 크기 */
 export function printPixelSize(paper: string) {
-  if (paper === "A3") return { width: 1754, height: 2480 };
-  if (paper === "B5") return { width: 1075, height: 1518 };
-  return { width: 1240, height: 1754 };
+  const [mmW, mmH] = spec(paper).mm;
+  return { width: px(mmW, 150), height: px(mmH, 150) };
 }
 
 export function osRasterSize(paper: string, pageCount: number) {
   const base = printPixelSize(paper);
   if (pageCount <= 30) return base;
   const scale = pageCount > 60 ? 0.5 : 0.72;
+  // 최소 크기는 원래 용지보다 커지지 않게 (엽서 · A6 같은 작은 용지의 비율 유지)
   return {
-    width: Math.max(620, Math.round(base.width * scale)),
-    height: Math.max(877, Math.round(base.height * scale)),
+    width: Math.min(base.width, Math.max(620, Math.round(base.width * scale))),
+    height: Math.min(base.height, Math.max(877, Math.round(base.height * scale))),
   };
 }
 
@@ -119,19 +162,19 @@ export function officeMemoChunks(text: string, width: number, height: number) {
   const ctx = canvas.getContext("2d");
   const font = Math.max(18, Math.round(width / 28));
   if (!ctx) return [text];
-  ctx.font = `${font}px "IBM Plex Sans KR", sans-serif`;
+  ctx.font = `${font}px "Pretendard Variable", sans-serif`;
   const lines = wrapMeasuredLines(text, (value) => ctx.measureText(value).width, Math.max(40, width - font * 2));
   const perPage = Math.max(1, Math.floor((height - font * 2) / (font * 1.4)));
   return paginateLines(lines, perPage);
 }
 
 export function pclJobHeader(options: { copies: number; duplex: DuplexMode; paper: OfficePaper; pages: number; secure?: { pin: string; user: string }; orient?: "portrait" | "landscape" }) {
-  const spec = PAPER[options.paper];
+  const pclPaper = spec(options.paper).pcl;
   const side = options.duplex === "long" ? 1 : options.duplex === "short" ? 2 : 0;
   const face = options.orient === "landscape" ? 1 : 0;
   // ESC * r 0 F는 래스터 방향이다. 장수는 PJL QTY/COPIES 한 곳만 쓴다.
   return encoder.encode(
-    `${pjl({ ...options, language: "PCL" })}\x1bE\x1b&l${spec.pcl}A\x1b&l${face}O\x1b&l${side}S\x1b&u300D\x1b&l0E\x1b&l0L\x1b&a0L\x1b*t300R\x1b*r0F`,
+    `${pjl({ ...options, language: "PCL" })}\x1bE\x1b&l${pclPaper}A\x1b&l${face}O\x1b&l${side}S\x1b&u300D\x1b&l0E\x1b&l0L\x1b&a0L\x1b*t300R\x1b*r0F`,
   );
 }
 
@@ -321,7 +364,7 @@ export function drawOfficePage(
   }
   const text = options.kind === "memo" ? options.note : options.kind === "test" ? `${options.title}\n${options.note}` : options.note;
   const font = Math.max(18, Math.round(canvas.width / 28));
-  ctx.font = `${font}px "IBM Plex Sans KR", sans-serif`;
+  ctx.font = `${font}px "Pretendard Variable", sans-serif`;
   let line = "";
   let y = font * 2;
   const maxWidth = canvas.width - font * 2;
