@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Bookmark, CircleHelp, FileText, Image as ImageIcon, Moon, Printer, Sheet, StickyNote, Sun, Trash2, Usb } from "lucide-react";
+import { Bookmark, Check, ChevronLeft, ChevronRight, CircleHelp, Copy, Download, Eye, FileText, FileUp, History, Image as ImageIcon, ImagePlus, Laptop, Moon, Printer, RotateCw, Sheet, StickyNote, Sun, Trash2, Usb, Wifi } from "lucide-react";
+import { Accordion, BottomCTA, BottomSheet, Callout, Chip, IconButton, ListRow, OptionGroup, ProgressBar, Section, Segmented, Stepper, SwitchRow, TopBar } from "@/components/ui-kit";
 import { matchQuery, type MatchResult } from "@/lib/atlas";
 import { grantedUsb, identifyUsb, pickUsb, sendUsbBytes, watchUsbConnect, watchUsbDisconnect } from "@/lib/discover";
 import { canvasObjectUrl, clearPrintRoot, printSheet, type PrintJob } from "@/lib/print-sheet";
@@ -270,6 +271,11 @@ export function AtlasApp() {
   useEffect(() => {
     albumRef.current = album;
   }, [album]);
+
+  // 단계가 바뀌면 새 화면처럼 맨 위에서 시작한다
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [step]);
 
   useEffect(() => {
     return () => {
@@ -1108,228 +1114,249 @@ export function AtlasApp() {
     }
   }
 
+  const linkKind = selected?.live && selected.usbKey ? "usb" : helperLive ? "helper" : selected?.host ? "wifi" : "idle";
+  const LinkIcon = linkKind === "usb" ? Usb : linkKind === "wifi" ? Wifi : linkKind === "helper" ? Laptop : Printer;
+  const linkLabel = linkKind === "usb" ? "USB 연결" : linkKind === "helper" ? "PC 도우미 연결" : linkKind === "wifi" ? "와이파이 연결" : "화면 미리보기 전용";
+  const linkDot = linkKind === "usb" ? "dot-usb" : linkKind === "idle" ? "dot-idle" : "dot-wifi";
+  const routeLabel = helperLive && route !== "preview-only" ? "PC 도우미 9100" : route === "usb-pdf" ? "USB PDF Direct" : route === "usb-pcl" ? "USB PCL5e 흑백" : selected?.host ? "와이파이 IPP" : "화면 저장 전용";
+  const advancedSummary = [nup !== 1 ? `모아찍기 ${nup}` : "", reverse ? "역순" : "", secureOn ? "보안 PIN" : "", pageMode === "list" ? "쪽 선택" : "", pageMode === "span" ? "쪽 범위" : "", orient === "landscape" ? "가로" : "", orient === "portrait" ? "세로" : ""].filter(Boolean).join(" · ");
+  const headerActions = (
+    <>
+      <IconButton label="진단 로그" onClick={() => setShowDiag(true)}>
+        <CircleHelp className="size-6" aria-hidden="true" />
+      </IconButton>
+      <IconButton label={theme === "dark" ? "밝게" : "어둡게"} onClick={toggleTheme}>
+        {theme === "dark" ? <Sun className="size-6" aria-hidden="true" /> : <Moon className="size-6" aria-hidden="true" />}
+      </IconButton>
+    </>
+  );
+  const docTiles = [
+    ["pdf", FileText, "PDF", "미리보기 · 쪽 범위 · 모아찍기"],
+    ["photo", ImageIcon, "사진", "여러 장 · 맞춤/채우기"],
+    ["memo", StickyNote, "메모", "글 입력 · 자동 쪽 나눔"],
+    ["test", Sheet, "테스트 페이지", "연결 확인 1장"],
+  ] as const;
+
   return (
-    <main className="shell mx-auto flex w-full max-w-lg flex-col gap-4 px-4 py-6 sm:py-10">
+    <main className={`shell mx-auto flex w-full max-w-lg flex-col gap-3 px-5 ${step === "print" ? "has-cta" : ""}`}>
+      {step === "connect" ? (
+        <TopBar root title="누구나프린트" actions={headerActions} />
+      ) : (
+        <TopBar title={step === "confirm" ? "복사기 확인" : "인쇄하기"} onBack={backToConnect} backDisabled={sending} actions={headerActions} />
+      )}
       {inApp ? (
-        <div className="card px-4 py-3 text-sm leading-relaxed">
+        <Callout tone="info">
           <p>인앱 브라우저에서는 USB와 일부 인쇄가 막혀 있어요.</p>
-          <button type="button" onClick={leaveInApp} className="mt-3 h-11 w-full rounded-2xl bg-accent text-sm font-medium text-accent-fg">
+          <button type="button" onClick={leaveInApp} className="btn btn-m btn-primary mt-3 w-full">
             {/iPad|iPhone|iPod/.test(navigator.userAgent) ? "주소 복사하기" : "Chrome으로 바로 열기"}
           </button>
-        </div>
+        </Callout>
       ) : null}
-      <header className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-medium tracking-tight">누구나프린트</h1>
-          <p className="mt-1 text-sm text-muted">이 화면에서 인쇄합니다.</p>
-        </div>
-        <div className="flex shrink-0 gap-2">
-          <button type="button" onClick={() => setShowDiag(true)} className="inline-flex size-11 items-center justify-center rounded-full border border-line" aria-label="진단 로그">
-            <CircleHelp className="size-4" />
-          </button>
-          <button type="button" onClick={toggleTheme} className="inline-flex size-11 items-center justify-center rounded-full border border-line" aria-label={theme === "dark" ? "밝게" : "어둡게"}>
-            {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-          </button>
-        </div>
-      </header>
       {showDiag ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" onClick={() => setShowDiag(false)}>
-          <div className="card w-full max-w-lg p-4 text-sm" onClick={(event) => event.stopPropagation()} role="dialog" aria-label="진단 로그">
-            <div className="flex items-center justify-between">
-              <p className="font-medium text-fg">진단 로그</p>
-              <button type="button" onClick={() => setShowDiag(false)} className="text-sm font-medium text-accent">닫기</button>
-            </div>
-            <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap text-xs text-muted">{diagText() || "아직 기록이 없어요."}</pre>
-            <button type="button" onClick={() => void navigator.clipboard.writeText(diagText())} className="mt-3 h-10 rounded-xl border border-line px-3 text-sm text-fg">복사</button>
-          </div>
-        </div>
-      ) : null}
-      {step === "print" ? (
-        <button type="button" onClick={backToConnect} disabled={sending} className="card flex w-full items-center justify-between px-4 py-3 text-left disabled:opacity-40">
-          <span className="min-w-0">
-            <span className="block text-xs font-medium text-muted">프린터</span>
-            <span className="mt-1 block truncate text-base font-medium text-fg">{selected?.title || "화면 미리보기 전용"}</span>
-          </span>
-          <span className="shrink-0 text-sm font-semibold text-accent">프린터 바꾸기</span>
-        </button>
+        <BottomSheet title="진단 로그" onClose={() => setShowDiag(false)}>
+          <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded-2xl bg-bg p-3 text-xs leading-relaxed text-muted">{diagText() || "아직 기록이 없어요."}</pre>
+          <button type="button" onClick={() => void navigator.clipboard.writeText(diagText())} className="btn btn-l btn-secondary mt-3 w-full">
+            <Copy className="size-5" aria-hidden="true" />
+            복사
+          </button>
+        </BottomSheet>
       ) : null}
       {step === "connect" ? (
-        <section className="flex flex-col gap-4">
-          <div className="card p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-medium text-muted">1. 연결된 프린터</p>
-                <p className="mt-1 flex items-center gap-2 text-base font-medium text-fg">
-                  <span className={`inline-block size-2.5 rounded-full ${selected?.live && selected.usbKey ? "dot-usb" : selected?.host || helperLive ? "dot-wifi" : "dot-idle"}`} />
-                  {selected?.live && selected.usbKey ? "USB 연결" : helperLive ? "PC 도우미 연결" : selected?.host ? "와이파이 연결" : "화면 미리보기 전용"}
-                </p>
-                <p className="mt-0.5 truncate text-sm text-muted">{selected?.title || "아직 복사기를 고르지 않았어요"}</p>
-              </div>
-              <button type="button" onClick={() => setLinkOpen((value) => !value)} className="rounded-full border border-line px-3 py-2 text-sm font-semibold text-accent">
+        <>
+          <p className="t-body -mt-2 mb-1 px-1 text-muted">이 화면에서 바로 인쇄해요.</p>
+          <Section
+            title="프린터"
+            action={
+              <button type="button" onClick={() => setLinkOpen((value) => !value)} className="btn btn-s btn-ghost">
                 {linkOpen ? "접기" : "연결 변경"}
               </button>
-            </div>
+            }
+          >
+            <ListRow icon={<LinkIcon className="size-5" aria-hidden="true" />} dot={linkDot} title={linkLabel} subtitle={selected?.title || "아직 복사기를 고르지 않았어요"} />
             {linkOpen ? (
-              <div className="mt-4 space-y-3">
-            {saved[0] ? (
-              <button type="button" onClick={useRecent} className="flex w-full items-center justify-between gap-3 border-b border-line py-3 text-left">
-                <span>
-                  <span className="block text-sm font-medium">최근 복사기</span>
-                  <span className="mt-0.5 block text-xs text-muted">{saved[0].title}</span>
-                </span>
-              </button>
-            ) : null}
-            <button type="button" disabled={lanBusy || sending} onClick={() => void findOnWifi()} className="flex h-12 w-full items-center justify-center rounded-2xl bg-accent text-sm font-medium text-accent-fg disabled:opacity-40">
-              {lanBusy ? "IP 찾는 중…" : "같은 와이파이에서 IP 찾기"}
-            </button>
-            <details className="rounded-2xl border border-line px-3 py-2">
-              <summary className="text-sm font-medium text-fg">다른 대역 검색</summary>
-              <label className="mt-3 block text-xs font-medium text-muted" htmlFor="subnet-field">자동 검색 대역 (선택)</label>
-              <input id="subnet-field" value={subnetInput} onChange={(event) => setSubnetInput(event.target.value)} placeholder="192.168.50" aria-label="자동 검색 대역" className="field mt-1 h-11 w-full rounded-xl px-3 text-sm outline-none" />
-            </details>
-            <form
-              className="space-y-1"
-              onSubmit={(event) => {
-                event.preventDefault();
-                addTypedIp();
-              }}
-            >
-              <label className="block text-xs font-medium text-muted" htmlFor="printer-ip">복사기 IP 직접 입력</label>
-              <div className="ip-join">
-              <input
-                id="printer-ip"
-                value={ipInput}
-                onChange={(event) => setIpInput(event.target.value)}
-                inputMode="decimal"
-                placeholder="192.168.0.10"
-                aria-label="복사기 IP 직접 입력"
-                className="field h-12 min-w-0 flex-1 px-3 text-sm outline-none"
-              />
-              <button type="submit">이 IP로</button>
-              </div>
-            </form>
-            {lanNote ? <p className="text-sm text-muted">{lanNote}</p> : null}
-            <button type="button" disabled={!usbOk} onClick={() => void connectUsb(false)} className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-line text-sm disabled:opacity-40">
-              <Usb className="size-4" aria-hidden="true" />
-              USB 선으로 연결
-            </button>
-            {usbOk ? null : <p className="text-xs text-muted">Chrome(안드로이드/PC)에서만 USB 선 연결을 지원해요.</p>}
-            {usbMissed ? (
-              <button type="button" onClick={() => void connectUsb(true)} className="mt-2 text-xs text-muted underline-offset-2 hover:underline">
-                USB 목록에 없으면 다른 기기도 보기
-              </button>
-            ) : null}
-            <p className="text-sm leading-relaxed text-muted" aria-live="polite">
-              {scanning ? "전에 연결했던 복사기가 있나 보고 있어요." : selected?.live ? "연결되어 있어요. 삼성 기본 앱으로는 넘기지 않아요." : "선을 꽂으면 이 화면에서 바로 넣습니다. 삼성 기본 앱으로는 넘기지 않아요."}
-            </p>
-            {notice ? <p className="mt-2 text-sm text-warn">{notice}</p> : null}
-            {list.length > 0 ? (
-              <ul className="mt-2">
-                {list.map((item) => {
-                  const on = item.id === selectedId;
-                  return (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedId(item.id);
-                          setOverrideQuery(null);
-                          setAskName("");
-                          setStep(item.host ? "print" : stageForQuery(item.query, item.cmd));
-                        }}
-                        className={`flex w-full items-center gap-3 border-b border-line py-3 text-left ${on ? "text-accent" : ""}`}
-                      >
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate font-medium">{item.title}</span>
-                          <span className="mt-0.5 block text-xs text-muted">{item.subtitle}</span>
-                        </span>
-                        <span className={`text-xs ${item.live ? "text-ok" : "text-faint"}`}>{item.live ? "연결됨" : VIA_LABEL[item.via]}</span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : null}
-            <label className="mt-3 flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={useHelper} onChange={(event) => setUseHelper(event.target.checked)} />
-              PC 도우미(9100)로 보내기
-            </label>
-            {useHelper ? (
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <input value={helperUrl} onChange={(event) => setHelperUrl(event.target.value)} aria-label="도우미 주소" placeholder="http://127.0.0.1:47631" className="field h-11 min-w-0 flex-1 rounded-xl px-3 text-sm outline-none" />
-                  <input value={helperCode} onChange={(event) => setHelperCode(event.target.value)} placeholder="코드" aria-label="도우미 코드" className="field h-11 w-24 rounded-xl px-3 text-sm outline-none" />
-                  <button type="button" className="h-11 rounded-xl border border-line px-3 text-sm text-fg" onClick={() => void helperPing(helperUrl).then(() => setLanNote("도우미가 응답했어요.")).catch((error: unknown) => setLanNote(error instanceof Error ? error.message : "도우미가 없어요."))}>확인</button>
+              <div className="mt-3 space-y-3">
+                {saved[0] ? (
+                  <ListRow onClick={useRecent} icon={<History className="size-5" aria-hidden="true" />} title="최근 복사기" subtitle={saved[0].title} right={<ChevronRight className="size-5 text-faint" aria-hidden="true" />} />
+                ) : null}
+                <button type="button" disabled={lanBusy || sending} onClick={() => void findOnWifi()} className="btn btn-l btn-primary w-full">
+                  <Wifi className="size-5" aria-hidden="true" />
+                  {lanBusy ? "IP 찾는 중…" : "같은 와이파이에서 IP 찾기"}
+                </button>
+                <button type="button" disabled={!usbOk} onClick={() => void connectUsb(false)} className="btn btn-l btn-secondary w-full">
+                  <Usb className="size-5" aria-hidden="true" />
+                  USB 선으로 연결
+                </button>
+                {usbOk ? null : <p className="t-body-s text-muted">Chrome(안드로이드/PC)에서만 USB 선 연결을 지원해요.</p>}
+                {usbMissed ? (
+                  <button type="button" onClick={() => void connectUsb(true)} className="btn btn-s btn-ghost -ml-2.5">
+                    USB 목록에 없으면 다른 기기도 보기
+                  </button>
+                ) : null}
+                <form
+                  className="pt-1"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    addTypedIp();
+                  }}
+                >
+                  <label className="t-caption mb-2 block text-muted" htmlFor="printer-ip">
+                    복사기 IP 직접 입력
+                  </label>
+                  <div className="ip-join">
+                    <input
+                      id="printer-ip"
+                      value={ipInput}
+                      onChange={(event) => setIpInput(event.target.value)}
+                      inputMode="decimal"
+                      placeholder="192.168.0.10"
+                      aria-label="복사기 IP 직접 입력"
+                      className="field h-12 min-w-0 flex-1 px-4 text-[15px] outline-none"
+                    />
+                    <button type="submit">이 IP로</button>
+                  </div>
+                </form>
+                <Accordion title="다른 대역 검색" className="is-inset">
+                  <label className="t-caption mb-2 block text-muted" htmlFor="subnet-field">
+                    자동 검색 대역 (선택)
+                  </label>
+                  <input id="subnet-field" value={subnetInput} onChange={(event) => setSubnetInput(event.target.value)} placeholder="192.168.50" aria-label="자동 검색 대역" className="field h-12 w-full px-4 text-[15px] outline-none" />
+                </Accordion>
+                {lanNote ? <p className="t-body-s text-muted">{lanNote}</p> : null}
+                <p className="t-body-s text-muted" aria-live="polite">
+                  {scanning ? "전에 연결했던 복사기가 있나 보고 있어요." : selected?.live ? "연결되어 있어요. 삼성 기본 앱으로는 넘기지 않아요." : "선을 꽂으면 이 화면에서 바로 넣습니다. 삼성 기본 앱으로는 넘기지 않아요."}
+                </p>
+                {notice ? <Callout>{notice}</Callout> : null}
+                {list.length > 0 ? (
+                  <div>
+                    <p className="t-caption mb-1 mt-2 text-muted">찾은 프린터</p>
+                    <ul>
+                      {list.map((item) => {
+                        const on = item.id === selectedId;
+                        const ViaIcon = item.via === "usb" ? Usb : item.via === "wifi" ? Wifi : Bookmark;
+                        return (
+                          <li key={item.id}>
+                            <ListRow
+                              onClick={() => {
+                                setSelectedId(item.id);
+                                setOverrideQuery(null);
+                                setAskName("");
+                                setStep(item.host ? "print" : stageForQuery(item.query, item.cmd));
+                              }}
+                              active={on}
+                              icon={<ViaIcon className="size-5" aria-hidden="true" />}
+                              title={item.title}
+                              subtitle={item.subtitle}
+                              right={
+                                <>
+                                  {on ? <Check className="size-5 text-accent" aria-hidden="true" /> : null}
+                                  <span className={`badge ${item.live ? "is-ok" : ""}`}>{item.live ? "연결됨" : VIA_LABEL[item.via]}</span>
+                                </>
+                              }
+                            />
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ) : null}
+                <div className="border-t border-line pt-1">
+                  <SwitchRow label="PC 도우미(9100)로 보내기" description="와이파이 직접 인쇄가 막힐 때 같은 망의 PC로 보내요" checked={useHelper} onChange={setUseHelper} />
                 </div>
-                <a href="/raw-print-helper.mjs" download className="text-xs font-medium text-accent">PC 도우미 스크립트 받기</a>
-                <p className="text-xs leading-relaxed text-muted">같은 컴퓨터에서는 http://127.0.0.1:47631 입니다. 폰에서는 그 PC의 사설 IP(예: http://192.168.0.20:47631)를 넣으세요. 터미널의 6자리 코드가 있어야 9100으로 PCL·PDF·보안 PIN이 나갑니다.</p>
+                {useHelper ? (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <input value={helperUrl} onChange={(event) => setHelperUrl(event.target.value)} aria-label="도우미 주소" placeholder="http://127.0.0.1:47631" className="field h-12 min-w-0 flex-1 px-3 text-sm outline-none" />
+                      <input value={helperCode} onChange={(event) => setHelperCode(event.target.value)} placeholder="코드" aria-label="도우미 코드" className="field h-12 w-24 px-3 text-sm outline-none" />
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-m btn-secondary w-full"
+                      onClick={() => void helperPing(helperUrl).then(() => setLanNote("도우미가 응답했어요.")).catch((error: unknown) => setLanNote(error instanceof Error ? error.message : "도우미가 없어요."))}
+                    >
+                      도우미 연결 확인
+                    </button>
+                    <a href="/raw-print-helper.mjs" download className="btn btn-s btn-ghost -ml-2.5">
+                      <Download className="size-4" aria-hidden="true" />
+                      PC 도우미 스크립트 받기
+                    </a>
+                    <p className="t-body-s text-muted">같은 컴퓨터에서는 http://127.0.0.1:47631 입니다. 폰에서는 그 PC의 사설 IP(예: http://192.168.0.20:47631)를 넣으세요. 터미널의 6자리 코드가 있어야 9100으로 PCL·PDF·보안 PIN이 나갑니다.</p>
+                  </div>
+                ) : null}
+                {selected?.usbKey && route === "preview-only" ? (
+                  <button type="button" className="btn btn-l btn-secondary h-auto min-h-12 w-full whitespace-normal py-3" onClick={() => void onPrint(true)}>
+                    언어를 못 읽었어요. PCL5e 흑백 시험 1쪽 보내기
+                  </button>
+                ) : null}
               </div>
             ) : null}
-            {selected?.usbKey && route === "preview-only" ? (
-              <button type="button" className="h-11 w-full rounded-2xl border border-line text-sm" onClick={() => void onPrint(true)}>
-                언어를 못 읽었어요. PCL5e 흑백 시험 1쪽 보내기
-              </button>
-            ) : null}
-              </div>
-            ) : null}
-          </div>
-          <div className="card p-4">
-            <p className="text-xs font-medium text-muted">2. 무엇을 보낼까요</p>
+          </Section>
+          <Section title="무엇을 보낼까요">
             {pdfName || photoUrl || album.length || memo.trim() ? (
-              <button type="button" onClick={openChooser} className="mt-3 h-12 w-full rounded-2xl bg-accent text-sm font-medium text-accent-fg">
-                이어서 인쇄 · {pdfName || (album.length ? `사진 ${album.length}장` : photoUrl ? "사진" : "메모")}
+              <button type="button" onClick={openChooser} className="btn btn-l btn-primary mb-3 w-full">
+                <span className="min-w-0 truncate">이어서 인쇄 · {pdfName || (album.length ? `사진 ${album.length}장` : photoUrl ? "사진" : "메모")}</span>
               </button>
             ) : null}
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => startWith("pdf")} className="tile flex min-h-24 flex-col items-start justify-center px-3 py-3 text-left">
-                <FileText className="size-5 text-accent" />
-                <span className="mt-2 font-medium text-fg">PDF</span>
-                <span className="text-xs text-muted">미리보기 · 쪽 범위 · 모아찍기</span>
-              </button>
-              <button type="button" onClick={() => startWith("photo")} className="tile flex min-h-24 flex-col items-start justify-center px-3 py-3 text-left">
-                <ImageIcon className="size-5 text-accent" />
-                <span className="mt-2 font-medium text-fg">사진</span>
-                <span className="text-xs text-muted">여러 장 · 맞춤/채우기</span>
-              </button>
-              <button type="button" onClick={() => startWith("memo")} className="tile flex min-h-24 flex-col items-start justify-center px-3 py-3 text-left">
-                <StickyNote className="size-5 text-accent" />
-                <span className="mt-2 font-medium text-fg">메모</span>
-                <span className="text-xs text-muted">글 입력 · 자동 쪽 나눔</span>
-              </button>
-              <button type="button" onClick={() => startWith("test")} className="tile flex min-h-24 flex-col items-start justify-center px-3 py-3 text-left">
-                <Sheet className="size-5 text-accent" />
-                <span className="mt-2 font-medium text-fg">테스트 페이지</span>
-                <span className="text-xs text-muted">연결 확인 1장</span>
-              </button>
+            <div className="grid grid-cols-2 gap-2">
+              {docTiles.map(([kind, Icon, name, desc]) => (
+                <button key={kind} type="button" onClick={() => startWith(kind)} className="grid-tile">
+                  <span className="avatar">
+                    <Icon className="size-5" aria-hidden="true" />
+                  </span>
+                  <span className="t-label text-fg">{name}</span>
+                  <span className="t-caption text-muted">{desc}</span>
+                </button>
+              ))}
             </div>
-          </div>
-        </section>
+          </Section>
+        </>
       ) : (
-        <section className="panel rounded-3xl p-4 sm:p-5">
+        <>
+          {step === "print" ? (
+            <section className="section p-2">
+              <ListRow
+                onClick={backToConnect}
+                disabled={sending}
+                icon={<LinkIcon className="size-5" aria-hidden="true" />}
+                dot={linkDot}
+                title={selected?.title || "화면 미리보기 전용"}
+                subtitle={`프린터 · ${linkLabel}`}
+                right={<span className="t-label text-accent">바꾸기</span>}
+              />
+            </section>
+          ) : null}
           {step === "confirm" ? (
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                applyName(askName);
-              }}
-            >
-              <h2 className="text-2xl font-semibold">{selected?.title}</h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted">
-                {result?.kind === "list" ? "이름이 여러 기종에 걸려요. 앞면에 적힌 글자를 조금 더 적어 주세요." : "앞면에 적힌 이름을 알면, 이 화면에서 바로 보낼지 미리보기만 볼지를 골라요."}
-              </p>
-              <input value={askName} onChange={(event) => setAskName(event.target.value)} placeholder="예: 신도리코 D450, 캐논 iR-ADV C3530, 후지필름 Apeos" className="field mt-4 h-12 w-full rounded-xl px-3 text-sm outline-none" />
-              <div className="mt-3 flex flex-col gap-2">
-                <button type="submit" className="h-12 rounded-2xl bg-accent text-sm font-medium text-accent-fg">
-                  이 이름으로 볼게요
-                </button>
-                <button type="button" onClick={openChooser} className="h-12 rounded-2xl border border-line text-sm">
-                  이름은 모르겠고, 인쇄할 내용 고르기
-                </button>
-              </div>
-            </form>
+            <Section>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  applyName(askName);
+                }}
+              >
+                <h2 className="t-h2 text-fg">{selected?.title}</h2>
+                <p className="t-body mt-2 text-muted">
+                  {result?.kind === "list" ? "이름이 여러 기종에 걸려요. 앞면에 적힌 글자를 조금 더 적어 주세요." : "앞면에 적힌 이름을 알면, 이 화면에서 바로 보낼지 미리보기만 볼지를 골라요."}
+                </p>
+                <label className="t-caption mb-2 mt-5 block text-muted" htmlFor="ask-name">
+                  앞면에 적힌 이름
+                </label>
+                <input id="ask-name" value={askName} onChange={(event) => setAskName(event.target.value)} placeholder="예: 신도리코 D450, 캐논 iR-ADV C3530, 후지필름 Apeos" className="field h-12 w-full px-4 text-[15px] outline-none" />
+                <div className="mt-4 flex flex-col gap-2">
+                  <button type="submit" className="btn btn-l btn-primary w-full">
+                    이 이름으로 볼게요
+                  </button>
+                  <button type="button" onClick={openChooser} className="btn btn-l btn-secondary w-full">
+                    이름은 모르겠고, 인쇄할 내용 고르기
+                  </button>
+                </div>
+              </form>
+            </Section>
           ) : (
-            <>
-              {notice ? <p className="mb-3 text-sm text-warn">{notice}</p> : null}
+            <Section>
+              {notice ? (
+                <div className="mb-4">
+                  <Callout>{notice}</Callout>
+                </div>
+              ) : null}
               {match && sure && selected ? (
                 <ReadyCard
                   match={match}
@@ -1342,16 +1369,12 @@ export function AtlasApp() {
                   }}
                 />
               ) : (
-                <h2 className="text-2xl font-semibold">무엇을 인쇄할까요?</h2>
+                <h2 className="t-h2 text-fg">무엇을 인쇄할까요?</h2>
               )}
-              <p className="mb-3 inline-flex rounded-full border border-line bg-subtle px-3 py-1 text-xs font-medium text-fg">
-                {helperLive && route !== "preview-only" ? "PC 도우미 9100" : route === "usb-pdf" ? "USB PDF Direct" : route === "usb-pcl" ? "USB PCL5e 흑백" : selected?.host ? "와이파이 IPP" : "화면 저장 전용"}
-              </p>
-              {nup !== 1 || reverse || secureOn || pageMode !== "all" || orient !== "auto" ? (
-                <p className="mb-3 text-xs text-muted">
-                  고급 {[nup !== 1 ? `모아찍기 ${nup}` : "", reverse ? "역순" : "", secureOn ? "보안 PIN" : "", pageMode === "list" ? "쪽 선택" : "", pageMode === "span" ? "쪽 범위" : "", orient === "landscape" ? "가로" : "", orient === "portrait" ? "세로" : ""].filter(Boolean).join(" · ")}
-                </p>
-              ) : null}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="badge is-accent">{routeLabel}</span>
+                {advancedSummary ? <span className="badge">고급 {advancedSummary}</span> : null}
+              </div>
               <PrintChooser
                 docKind={docKind}
                 memo={memo}
@@ -1375,72 +1398,77 @@ export function AtlasApp() {
                 extras={
                   <>
                     <OfficeOptions paper={paper} gray={gray} duplex={duplex} copies={copies} route={route} locked={sending} controls={route !== "preview-only" || Boolean(selected?.host)} copyMax={99} onPaper={setPaper} onGray={setGray} onDuplex={setDuplex} onCopies={setCopies} />
-                    <details className="mt-3 rounded-2xl border border-line px-3 py-2" open={advancedOpen} onToggle={(event) => setAdvancedOpen((event.target as HTMLDetailsElement).open)}>
-                      <summary className="text-sm font-medium text-fg">고급 옵션</summary>
-                      <div className="mt-3 space-y-3 text-sm">
+                    <Accordion title="고급 옵션" className="is-inset mt-4" open={advancedOpen} onToggle={setAdvancedOpen}>
+                      <div className="space-y-4 pt-1">
                         {docKind === "pdf" ? (
                           <div className="space-y-2">
-                            <p className="text-xs text-muted">복합 쪽 범위</p>
-                            <div className="flex flex-wrap gap-2">
-                              <button type="button" disabled={sending} onClick={() => setPageMode("all")} className={`h-10 rounded-full px-3 text-sm disabled:opacity-40 ${pageMode === "all" ? "bg-accent text-accent-fg" : "border border-line text-fg"}`}>전체</button>
-                              <button type="button" disabled={!pdfCount || sending} onClick={() => setPageMode("span")} className={`h-10 rounded-full px-3 text-sm disabled:opacity-40 ${pageMode === "span" ? "bg-accent text-accent-fg" : "border border-line text-fg"}`}>시작~끝</button>
-                              <button type="button" disabled={!pdfCount || sending} onClick={() => setPageMode("list")} className={`h-10 rounded-full px-3 text-sm disabled:opacity-40 ${pageMode === "list" ? "bg-accent text-accent-fg" : "border border-line text-fg"}`}>골라서</button>
-                            </div>
-                            {pageMode === "list" ? <input value={pageList} onChange={(event) => setPageList(event.target.value)} placeholder="1, 3-5, 8" aria-label="쪽 범위" className="field h-10 w-full rounded-xl px-3 text-sm outline-none" /> : null}
+                            <OptionGroup label="복합 쪽 범위">
+                              <Chip disabled={sending} on={pageMode === "all"} onClick={() => setPageMode("all")}>
+                                전체
+                              </Chip>
+                              <Chip disabled={!pdfCount || sending} on={pageMode === "span"} onClick={() => setPageMode("span")}>
+                                시작~끝
+                              </Chip>
+                              <Chip disabled={!pdfCount || sending} on={pageMode === "list"} onClick={() => setPageMode("list")}>
+                                골라서
+                              </Chip>
+                            </OptionGroup>
+                            {pageMode === "list" ? <input value={pageList} onChange={(event) => setPageList(event.target.value)} placeholder="1, 3-5, 8" aria-label="쪽 범위" className="field h-11 w-full px-4 text-[15px] outline-none" /> : null}
                             {pageMode === "span" ? (
-                              <div className="flex items-center gap-2 text-sm text-fg">
-                                <input type="number" min={1} max={pdfCount || 1} disabled={sending} value={pageFrom} onChange={(event) => setPageFrom(Number(event.target.value))} className="field h-10 w-16 rounded-xl px-2 text-center disabled:opacity-40" aria-label="시작 페이지" />
-                                <span>~</span>
-                                <input type="number" min={1} max={pdfCount || 1} disabled={sending} value={pageTo} onChange={(event) => setPageTo(Number(event.target.value))} className="field h-10 w-16 rounded-xl px-2 text-center disabled:opacity-40" aria-label="끝 페이지" />
+                              <div className="flex items-center gap-2 text-fg">
+                                <input type="number" min={1} max={pdfCount || 1} disabled={sending} value={pageFrom} onChange={(event) => setPageFrom(Number(event.target.value))} className="field tabular h-11 w-20 px-2 text-center disabled:opacity-40" aria-label="시작 페이지" />
+                                <span className="text-muted">~</span>
+                                <input type="number" min={1} max={pdfCount || 1} disabled={sending} value={pageTo} onChange={(event) => setPageTo(Number(event.target.value))} className="field tabular h-11 w-20 px-2 text-center disabled:opacity-40" aria-label="끝 페이지" />
                               </div>
                             ) : null}
                           </div>
                         ) : null}
-                        <div className="flex flex-wrap gap-2">
+                        <OptionGroup label="모아찍기">
                           {([1, 2, 4] as const).map((value) => (
-                            <button key={value} type="button" onClick={() => setNup(value)} className={`h-10 rounded-full px-3 ${nup === value ? "bg-accent text-accent-fg" : "border border-line text-fg"}`}>
+                            <Chip key={value} on={nup === value} onClick={() => setNup(value)}>
                               {value === 1 ? "모아찍기 없음" : `${value}쪽`}
-                            </button>
+                            </Chip>
                           ))}
-                          <button type="button" onClick={() => setReverse((value) => !value)} className={`h-10 rounded-full px-3 ${reverse ? "bg-accent text-accent-fg" : "border border-line text-fg"}`}>
+                          <Chip on={reverse} onClick={() => setReverse((value) => !value)}>
                             역순
-                          </button>
-                        </div>
+                          </Chip>
+                        </OptionGroup>
                         {docKind === "pdf" || docKind === "photo" || docKind === "memo" ? (
-                          <div className="space-y-2">
-                            <p className="text-xs text-muted">방향</p>
-                            <div className="flex flex-wrap gap-2">
-                              {([
-                                ["auto", "자동"],
-                                ["portrait", "세로"],
-                                ["landscape", "가로"],
-                              ] as const).map(([id, text]) => (
-                                <button key={id} type="button" onClick={() => setOrient(id)} className={`h-10 rounded-full px-3 ${orient === id ? "bg-accent text-accent-fg" : "border border-line text-fg"}`}>
-                                  {text}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
+                          <OptionGroup label="방향">
+                            {([
+                              ["auto", "자동"],
+                              ["portrait", "세로"],
+                              ["landscape", "가로"],
+                            ] as const).map(([id, text]) => (
+                              <Chip key={id} on={orient === id} onClick={() => setOrient(id)}>
+                                {text}
+                              </Chip>
+                            ))}
+                          </OptionGroup>
                         ) : null}
                         {docKind === "photo" ? (
-                          <div className="flex flex-wrap gap-2">
-                            <button type="button" onClick={() => setPhotoFit("contain")} className={`h-10 rounded-full px-3 ${photoFit === "contain" ? "bg-accent text-accent-fg" : "border border-line text-fg"}`}>맞추기</button>
-                            <button type="button" onClick={() => setPhotoFit("cover")} className={`h-10 rounded-full px-3 ${photoFit === "cover" ? "bg-accent text-accent-fg" : "border border-line text-fg"}`}>채우기</button>
-                            <button type="button" onClick={() => setPhotoTurn((value) => (value + 90) % 360)} className="h-10 rounded-full border border-line px-3 text-fg">90도 회전{photoTurn ? ` ${photoTurn}°` : ""}</button>
-                          </div>
+                          <OptionGroup label="사진 맞춤">
+                            <Chip on={photoFit === "contain"} onClick={() => setPhotoFit("contain")}>
+                              맞추기
+                            </Chip>
+                            <Chip on={photoFit === "cover"} onClick={() => setPhotoFit("cover")}>
+                              채우기
+                            </Chip>
+                            <Chip onClick={() => setPhotoTurn((value) => (value + 90) % 360)}>
+                              <RotateCw className="size-4" aria-hidden="true" />
+                              90도 회전{photoTurn ? ` ${photoTurn}°` : ""}
+                            </Chip>
+                          </OptionGroup>
                         ) : null}
-                        <label className="flex items-center gap-2 text-fg">
-                          <input type="checkbox" checked={secureOn} onChange={(event) => setSecureOn(event.target.checked)} />
-                          보안 인쇄
-                        </label>
+                        <SwitchRow label="보안 인쇄" description="복사기 화면에서 PIN을 넣어야 출력돼요" checked={secureOn} onChange={setSecureOn} />
                         {secureOn ? (
                           <div className="flex gap-2">
-                            <input value={pin} onChange={(event) => setPin(event.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" placeholder="PIN 4자리" aria-label="보안 PIN" className="field h-10 w-28 rounded-xl px-3 outline-none" />
-                            <input value={jobUser} onChange={(event) => setJobUser(event.target.value)} placeholder="사용자 영숫자" aria-label="사용자 이름" className="field h-10 min-w-0 flex-1 rounded-xl px-3 outline-none" />
+                            <input value={pin} onChange={(event) => setPin(event.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" placeholder="PIN 4자리" aria-label="보안 PIN" className="field tabular h-11 w-28 px-3 outline-none" />
+                            <input value={jobUser} onChange={(event) => setJobUser(event.target.value)} placeholder="사용자 영숫자" aria-label="사용자 이름" className="field h-11 min-w-0 flex-1 px-3 outline-none" />
                           </div>
                         ) : null}
                       </div>
-                    </details>
+                    </Accordion>
                   </>
                 }
                 onKind={setDocKind}
@@ -1462,21 +1490,20 @@ export function AtlasApp() {
                   stopRef.current = true;
                 }}
               />
-            </>
+            </Section>
           )}
-        </section>
+        </>
       )}
-      <details className="help-card rounded-3xl px-4 py-3 text-sm">
-        <summary className="cursor-pointer font-medium">연결이 안 될 때</summary>
-        <ul className="mt-3 space-y-2 leading-relaxed">
+      <Accordion title="연결이 안 될 때" className="is-card">
+        <ul className="t-body-s list-disc space-y-2 pb-3 pl-4 text-muted">
           <li>컴퓨터는 Chrome으로 여세요. 선을 꽂고 USB로 연결하면 목록이 나옵니다. 아이폰은 선을 잡을 수 없어요.</li>
           <li>삼성 기본 인쇄 앱으로는 넘기지 않아요.</li>
-          <li>와이파이 직접 인쇄가 CORS로 막히면 같은 와이파이 PC에서 node raw-print-helper.mjs 를 켜고 PC 도우미(9100)를 체크하세요. 아이폰·삼성 인터넷도 가능해요.</li>
+          <li>와이파이 직접 인쇄가 CORS로 막히면 같은 와이파이 PC에서 node raw-print-helper.mjs 를 켜고 PC 도우미(9100)를 켜세요. 아이폰·삼성 인터넷도 가능해요.</li>
           <li>같은 와이파이 주소가 안 보이면 복사기 화면의 IP를 직접 넣으세요.</li>
         </ul>
-      </details>
+      </Accordion>
       {saved.length > 0 ? (
-        <button type="button" onClick={() => setScanId((value) => value + 1)} className="self-center text-xs text-faint">
+        <button type="button" onClick={() => setScanId((value) => value + 1)} className="btn btn-s btn-ghost self-center">
           전에 연결한 복사기 다시 보기
         </button>
       ) : null}
@@ -1510,21 +1537,24 @@ function ReadyCard({
         : "삼성 기본 앱으로 넘기지 않고, 이 화면에 미리보기를 띄워요.";
   return (
     <div>
-      <p className="text-xs text-muted">확인됨</p>
-      <h2 className="mt-1 text-2xl font-semibold leading-tight">
+      <span className="badge is-ok gap-1">
+        <Check className="size-3.5" aria-hidden="true" />
+        확인됨
+      </span>
+      <h2 className="t-h2 mt-2 text-fg">
         {printer.brand} {printer.model}
       </h2>
-      <p className="mt-3 text-sm leading-relaxed text-fg">{line}</p>
-      {inkjet ? null : <p className="mt-2 text-sm text-muted">{direct ? "USB로 이 브라우저에서 바로 넣습니다." : "이 화면에 미리보기를 띄웁니다."}</p>}
-      <p className="mt-3 text-xs leading-relaxed text-faint">파일을 받지 않고, 이 브라우저에 복사기 종류만 기억합니다.</p>
+      <p className="t-body mt-2 text-fg">{line}</p>
+      {inkjet ? null : <p className="t-body-s mt-1 text-muted">{direct ? "USB로 이 브라우저에서 바로 넣습니다." : "이 화면에 미리보기를 띄웁니다."}</p>}
+      <p className="t-caption mt-3 text-faint">파일을 받지 않고, 이 브라우저에 복사기 종류만 기억합니다.</p>
       {saved ? (
-        <button type="button" onClick={onForget} className="mt-3 flex h-11 w-full items-center justify-center gap-1 rounded-2xl border border-line text-sm">
-          <Trash2 className="size-3.5" aria-hidden="true" />
+        <button type="button" onClick={onForget} className="btn btn-m btn-secondary mt-3 w-full">
+          <Trash2 className="size-4" aria-hidden="true" />
           기억 지우기
         </button>
       ) : (
-        <button type="button" onClick={onRemember} className="mt-3 flex h-11 w-full items-center justify-center gap-1 rounded-2xl border border-line text-sm">
-          <Bookmark className="size-3.5" aria-hidden="true" />
+        <button type="button" onClick={onRemember} className="btn btn-m btn-secondary mt-3 w-full">
+          <Bookmark className="size-4" aria-hidden="true" />
           이 복사기 기억하기
         </button>
       )}
@@ -1566,34 +1596,46 @@ function OfficeOptions({
     ["long", "긴 쪽 넘김"],
     ["short", "짧은 쪽 넘김"],
   ] as const;
+  const colorItems = [
+    ["color", "컬러"],
+    ["gray", "흑백"],
+  ] as const;
   return (
-    <div className="mt-4 space-y-3">
-      <div className="flex flex-wrap gap-2">
+    <div className="mt-5 space-y-4">
+      <OptionGroup label="용지">
         {(["A4", "A3", "B5"] as const).map((item) => (
-          <button key={item} type="button" disabled={locked} onClick={() => onPaper(item)} className={`h-10 rounded-full px-3 text-sm disabled:opacity-40 ${paper === item ? "bg-accent text-accent-fg" : "border border-line"}`}>
+          <Chip key={item} disabled={locked} on={paper === item} onClick={() => onPaper(item)}>
             {item}
-          </button>
+          </Chip>
         ))}
-        <button type="button" disabled={monoUsb || locked} onClick={() => onGray(!gray)} className={`h-10 rounded-full px-3 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${monoUsb || gray ? "bg-accent text-accent-fg" : "border border-line"}`}>
-          {monoUsb || gray ? "흑백" : "컬러"}
-        </button>
+      </OptionGroup>
+      <div>
+        <p className="t-caption mb-2 text-muted">색상</p>
+        <Segmented label="색상" items={colorItems} value={monoUsb || gray ? "gray" : "color"} disabled={monoUsb || locked} onChange={(value) => onGray(value === "gray")} />
+        {monoUsb ? <p className="t-caption mt-2 text-muted">USB 직접 인쇄는 흑백만 지원해요.</p> : null}
       </div>
-      <div className={`flex flex-wrap items-center gap-2 ${liveJob && !locked ? "" : "opacity-40"}`}>
-        {sides.map(([id, text]) => (
-          <button key={id} type="button" disabled={!liveJob || locked} onClick={() => onDuplex(id)} className={`h-10 rounded-full px-3 text-sm disabled:cursor-not-allowed ${duplex === id && liveJob ? "bg-accent text-accent-fg" : "border border-line"}`}>
-            {text}
-          </button>
-        ))}
-        <button type="button" disabled={!liveJob || locked} className="size-10 rounded-full border border-line disabled:cursor-not-allowed" onClick={() => onCopies(Math.max(1, copies - 1))} aria-label="장수 줄이기">
-          −
-        </button>
-        <span className="w-8 text-center text-sm tabular-nums">{liveJob ? copies : 1}</span>
-        <button type="button" disabled={!liveJob || locked || copies >= copyMax} className="size-10 rounded-full border border-line disabled:cursor-not-allowed" onClick={() => onCopies(Math.min(copyMax, copies + 1))} aria-label="장수 늘리기">
-          +
-        </button>
+      <div className={`space-y-4 ${liveJob && !locked ? "" : "opacity-40"}`}>
+        <OptionGroup label="양면">
+          {sides.map(([id, text]) => (
+            <Chip key={id} disabled={!liveJob || locked} on={duplex === id && liveJob} onClick={() => onDuplex(id)} className="disabled:opacity-100">
+              {text}
+            </Chip>
+          ))}
+        </OptionGroup>
+        <div className="flex items-center justify-between gap-3">
+          <p className="t-label text-fg">장수</p>
+          <Stepper
+            value={liveJob ? copies : 1}
+            onMinus={() => onCopies(Math.max(1, copies - 1))}
+            onPlus={() => onCopies(Math.min(copyMax, copies + 1))}
+            minusDisabled={!liveJob || locked}
+            plusDisabled={!liveJob || locked || copies >= copyMax}
+            minusLabel="장수 줄이기"
+            plusLabel="장수 늘리기"
+          />
+        </div>
       </div>
-      {monoUsb ? <p className="text-xs leading-relaxed text-muted">USB 직접 인쇄는 흑백만 지원해요.</p> : null}
-      {liveJob ? null : <p className="text-xs text-muted">연결 전에는 장수와 양면을 복사기로 보내지 않아요. 화면 미리보기와 PDF 저장은 따로 있어요.</p>}
+      {liveJob ? null : <p className="t-caption text-muted">연결 전에는 장수와 양면을 복사기로 보내지 않아요. 화면 미리보기와 PDF 저장은 따로 있어요.</p>}
     </div>
   );
 }
@@ -1679,32 +1721,18 @@ function PrintChooser({
     ["memo", "간단 메모"],
     ["test", "테스트"],
   ] as const;
+  const pickClass = `btn btn-l btn-secondary w-full ${sending ? "pointer-events-none opacity-30" : "cursor-pointer"}`;
   return (
-    <div className="mt-4">
-      <div className="grid grid-cols-4 gap-1 rounded-2xl bg-subtle p-1" role="tablist">
-        {tabs.map(([id, text]) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={docKind === id}
-            onClick={() => {
-              if (!sending) onKind(id);
-            }}
-            disabled={sending}
-            className={`min-h-10 rounded-xl px-1 py-2 text-xs disabled:opacity-40 ${docKind === id ? "bg-accent font-medium text-accent-fg" : "text-muted"}`}
-          >
-            {text}
-          </button>
-        ))}
-      </div>
+    <div className="mt-5">
+      <Segmented label="인쇄할 내용" items={tabs} value={docKind} disabled={sending} onChange={onKind} />
       {docKind === "pdf" ? (
-        <div className="mt-3 space-y-2">
-          <label className="flex h-12 cursor-pointer items-center justify-center rounded-xl border border-line text-sm">
+        <div className="mt-4 space-y-3">
+          <label className={pickClass}>
+            <FileUp className="size-5" aria-hidden="true" />
             PDF 고르기
             <input type="file" accept="application/pdf,.pdf" disabled={sending} className="sr-only" onChange={(event) => onPdfFile(event.target.files?.[0])} />
           </label>
-          {pdfName ? <p className="text-sm text-muted">{pdfName} · 총 {pdfCount}쪽</p> : null}
+          {pdfName ? <ListRow icon={<FileText className="size-5" aria-hidden="true" />} title={pdfName} subtitle={`총 ${pdfCount}쪽`} /> : null}
           {pdfNeedsKey ? (
             <form
               className="flex gap-2"
@@ -1714,111 +1742,130 @@ function PrintChooser({
                 onPdfUnlock(typeof value === "string" ? value : "");
               }}
             >
-              <input name="pdf-key" type="password" placeholder="열기 비밀번호" className="field h-10 min-w-0 flex-1 rounded-xl px-3 text-sm outline-none" />
-              <button type="submit" className="h-10 rounded-xl bg-accent px-3 text-sm text-accent-fg">
+              <input name="pdf-key" type="password" placeholder="열기 비밀번호" className="field h-12 min-w-0 flex-1 px-4 text-[15px] outline-none" />
+              <button type="submit" className="btn btn-m btn-primary h-12">
                 열기
               </button>
             </form>
           ) : null}
           {showPages ? (
             <>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" disabled={sending} onClick={() => onPageMode("all")} className={`h-10 rounded-full px-3 text-sm disabled:opacity-40 ${pageMode === "all" ? "bg-accent text-accent-fg" : "border border-line text-fg"}`}>
-              전체
-            </button>
-            <button type="button" disabled={!pdfCount || sending} onClick={() => onPageMode("span")} className={`h-10 rounded-full px-3 text-sm disabled:opacity-40 ${pageMode === "span" ? "bg-accent text-accent-fg" : "border border-line text-fg"}`}>
-              시작~끝
-            </button>
-            <button type="button" disabled={!pdfCount || sending} onClick={() => onPageMode("list")} className={`h-10 rounded-full px-3 text-sm disabled:opacity-40 ${pageMode === "list" ? "bg-accent text-accent-fg" : "border border-line text-fg"}`}>
-              골라서
-            </button>
-          </div>
-          {pageMode === "list" ? (
-            <input value={pageList} onChange={(event) => onPageList(event.target.value)} placeholder="1, 3-5, 8" aria-label="쪽 범위" className="field h-10 w-full rounded-xl px-3 text-sm outline-none" />
-          ) : null}
-          {pageMode === "span" ? (
-            <div className="flex items-center gap-2 text-sm text-fg">
-              <input type="number" min={1} max={pdfCount || 1} disabled={sending} value={pageFrom} onChange={(event) => onPageFrom(Number(event.target.value))} className="field h-10 w-16 rounded-xl px-2 text-center disabled:opacity-40" aria-label="시작 페이지" />
-              <span>~</span>
-              <input type="number" min={1} max={pdfCount || 1} disabled={sending} value={pageTo} onChange={(event) => onPageTo(Number(event.target.value))} className="field h-10 w-16 rounded-xl px-2 text-center disabled:opacity-40" aria-label="끝 페이지" />
-            </div>
-          ) : null}
+              <div className="flex flex-wrap gap-2">
+                <Chip disabled={sending} on={pageMode === "all"} onClick={() => onPageMode("all")}>
+                  전체
+                </Chip>
+                <Chip disabled={!pdfCount || sending} on={pageMode === "span"} onClick={() => onPageMode("span")}>
+                  시작~끝
+                </Chip>
+                <Chip disabled={!pdfCount || sending} on={pageMode === "list"} onClick={() => onPageMode("list")}>
+                  골라서
+                </Chip>
+              </div>
+              {pageMode === "list" ? <input value={pageList} onChange={(event) => onPageList(event.target.value)} placeholder="1, 3-5, 8" aria-label="쪽 범위" className="field h-11 w-full px-4 text-[15px] outline-none" /> : null}
+              {pageMode === "span" ? (
+                <div className="flex items-center gap-2 text-fg">
+                  <input type="number" min={1} max={pdfCount || 1} disabled={sending} value={pageFrom} onChange={(event) => onPageFrom(Number(event.target.value))} className="field tabular h-11 w-20 px-2 text-center disabled:opacity-40" aria-label="시작 페이지" />
+                  <span className="text-muted">~</span>
+                  <input type="number" min={1} max={pdfCount || 1} disabled={sending} value={pageTo} onChange={(event) => onPageTo(Number(event.target.value))} className="field tabular h-11 w-20 px-2 text-center disabled:opacity-40" aria-label="끝 페이지" />
+                </div>
+              ) : null}
             </>
           ) : null}
         </div>
       ) : null}
       {docKind === "photo" ? (
-        <div className="mt-3 space-y-2">
-          <label className="flex h-12 cursor-pointer items-center justify-center rounded-xl border border-line text-sm text-fg">
+        <div className="mt-4 space-y-3">
+          <label className={pickClass}>
+            <ImagePlus className="size-5" aria-hidden="true" />
             사진 여러 장 고르기
-            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.heic,.heif" multiple disabled={sending} className="sr-only" onChange={(event) => {
-              const files = [...(event.target.files ?? [])];
-              event.target.value = "";
-              onPhotos(files);
-            }} />
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.heic,.heif"
+              multiple
+              disabled={sending}
+              className="sr-only"
+              onChange={(event) => {
+                const files = [...(event.target.files ?? [])];
+                event.target.value = "";
+                onPhotos(files);
+              }}
+            />
           </label>
           {album.length ? (
-            <ul className="flex gap-2 overflow-x-auto pb-1">
+            <ul className="flex gap-3 overflow-x-auto pb-1">
               {album.map((src, index) => (
                 <li key={src} className="w-16 shrink-0">
-                  <button type="button" onClick={() => onFocusPhoto(src)} className={`block overflow-hidden rounded-lg border-2 ${src === photoUrl ? "border-accent" : "border-line"}`}>
+                  <button type="button" onClick={() => onFocusPhoto(src)} className={`thumb ${src === photoUrl ? "is-on" : ""}`}>
                     <img src={src} alt="" className="h-16 w-16 object-cover" />
                   </button>
-                  <div className="mt-1 flex items-center justify-between text-xs text-fg">
-                    <button type="button" disabled={index === 0} onClick={() => onMovePhoto(src, -1)} aria-label="앞으로">←</button>
-                    <button type="button" onClick={() => onRemovePhoto(src)} aria-label="이 사진 삭제"><Trash2 className="size-3.5" /></button>
-                    <button type="button" disabled={index === album.length - 1} onClick={() => onMovePhoto(src, 1)} aria-label="뒤로">→</button>
+                  <div className="mt-1 flex items-center justify-between text-muted">
+                    <button type="button" disabled={index === 0} onClick={() => onMovePhoto(src, -1)} aria-label="앞으로" className="grid size-6 place-items-center rounded-md disabled:opacity-30">
+                      <ChevronLeft className="size-4" aria-hidden="true" />
+                    </button>
+                    <button type="button" onClick={() => onRemovePhoto(src)} aria-label="이 사진 삭제" className="grid size-6 place-items-center rounded-md">
+                      <Trash2 className="size-3.5" aria-hidden="true" />
+                    </button>
+                    <button type="button" disabled={index === album.length - 1} onClick={() => onMovePhoto(src, 1)} aria-label="뒤로" className="grid size-6 place-items-center rounded-md disabled:opacity-30">
+                      <ChevronRight className="size-4" aria-hidden="true" />
+                    </button>
                   </div>
                 </li>
               ))}
             </ul>
           ) : null}
-          <p className="text-xs text-muted">{album.length ? `${album.length}/20장. 순서를 바꿀 수 있어요.` : "JPG·PNG를 한 번에 여러 장 고를 수 있어요. HEIC는 변환이 필요해요."}</p>
+          <p className="t-caption text-muted">{album.length ? `${album.length}/20장. 순서를 바꿀 수 있어요.` : "JPG·PNG를 한 번에 여러 장 고를 수 있어요. HEIC는 변환이 필요해요."}</p>
         </div>
       ) : null}
       {docKind === "memo" ? (
         <textarea
           value={memo}
           onChange={(event) => onMemo(event.target.value)}
-          rows={4}
+          rows={5}
           disabled={sending}
           placeholder="적을 내용을 적어 주세요"
-          className="field mt-3 w-full rounded-xl px-3 py-2 text-sm outline-none"
+          className="field mt-4 w-full px-4 py-3 text-[15px] leading-relaxed outline-none"
         />
       ) : null}
-      {docKind === "test" ? <p className="mt-3 text-sm text-muted">연결이 되는지 확인하는 시험 페이지입니다.</p> : null}
+      {docKind === "test" ? <p className="t-body-s mt-4 text-muted">연결이 되는지 확인하는 시험 페이지입니다.</p> : null}
       {preview}
       {extras}
-      {sending ? (
-        <button type="button" onClick={onCancel} className="mt-3 h-12 w-full rounded-2xl border border-line text-sm">
-          취소 · {progress}%
-        </button>
-      ) : (
-        <div className="mt-3 flex flex-col gap-2">
-          {canSend ? (
-            <button
-              type="button"
-              onClick={onPrint}
-              disabled={!ready}
-              className="btn-send flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-accent text-base font-medium text-accent-fg"
-            >
-              <Printer className="size-5" aria-hidden="true" />
-              {label}
-            </button>
-          ) : (
-            <button type="button" onClick={onConnect} className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-line text-base font-medium text-fg">
-              <Printer className="size-5" aria-hidden="true" />
-              프린터 연결하기
-            </button>
-          )}
-          <button type="button" onClick={onColorPrint} disabled={!ready || !onColorPrint} className="h-12 w-full rounded-2xl border border-line text-sm disabled:opacity-40">
+      {sending ? null : (
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          <button type="button" onClick={onColorPrint} disabled={!ready || !onColorPrint} className="btn btn-l btn-secondary px-2 text-[15px]">
+            <Eye className="size-5" aria-hidden="true" />
             화면 미리보기
           </button>
-          <button type="button" onClick={onPdf} disabled={!ready} className="h-12 w-full rounded-2xl border border-line text-sm disabled:opacity-40">
+          <button type="button" onClick={onPdf} disabled={!ready} className="btn btn-l btn-secondary px-2 text-[15px]">
+            <Download className="size-5" aria-hidden="true" />
             PDF 저장
           </button>
         </div>
       )}
+      <BottomCTA>
+        {sending ? (
+          <>
+            <div className="mb-3 flex items-center gap-3">
+              <div className="flex-1">
+                <ProgressBar value={progress} />
+              </div>
+              <span className="t-label tabular text-fg">{progress}%</span>
+            </div>
+            <button type="button" onClick={onCancel} className="btn btn-xl btn-secondary w-full">
+              보내기 취소
+            </button>
+          </>
+        ) : canSend ? (
+          <button type="button" onClick={onPrint} disabled={!ready} className="btn-send btn btn-xl btn-primary w-full">
+            <Printer className="size-5" aria-hidden="true" />
+            <span className="min-w-0 truncate">{label}</span>
+          </button>
+        ) : (
+          <button type="button" onClick={onConnect} className="btn btn-xl btn-secondary w-full">
+            <Printer className="size-5" aria-hidden="true" />
+            프린터 연결하기
+          </button>
+        )}
+      </BottomCTA>
     </div>
   );
 }
@@ -1885,7 +1932,9 @@ function PaperPreview({
 
   return (
     <div className={`preview-stage ${gray ? "gray" : ""}`}>
-      <p className="preview-caption text-center text-xs">{paper} 미리보기{docKind === "pdf" && pdfCount ? ` · ${previewPage} / ${pdfCount}쪽` : ""}</p>
+      <p className="preview-caption t-caption tabular text-center">
+        {paper} 미리보기{docKind === "pdf" && pdfCount ? ` · ${previewPage} / ${pdfCount}쪽` : ""}
+      </p>
       {docKind === "photo" && photoUrl ? (
         <canvas ref={pageRef} className={`sheet-a4 ${paperClass}`} style={{ height: "auto" }} />
       ) : docKind === "pdf" && pdfPreview ? (
@@ -1910,14 +1959,16 @@ function PaperPreview({
       )}
       {docKind === "pdf" && pdfCount > 1 ? (
         <div className="preview-pager">
-          <button type="button" disabled={previewPage <= 1} onClick={() => onPreview(previewPage - 1)} className="paper-btn disabled:opacity-40">
-            {"< 이전"}
+          <button type="button" disabled={previewPage <= 1} onClick={() => onPreview(previewPage - 1)} className="paper-btn inline-flex items-center gap-1 disabled:opacity-40">
+            <ChevronLeft className="size-4" aria-hidden="true" />
+            이전
           </button>
-          <span className="preview-caption min-w-16 text-center text-sm tabular-nums">
+          <span className="preview-caption tabular min-w-16 text-center text-sm font-semibold">
             {previewPage} / {pdfCount}
           </span>
-          <button type="button" disabled={previewPage >= pdfCount} onClick={() => onPreview(Math.min(pdfCount, previewPage + 1))} className="paper-btn disabled:opacity-40">
-            {"다음 >"}
+          <button type="button" disabled={previewPage >= pdfCount} onClick={() => onPreview(Math.min(pdfCount, previewPage + 1))} className="paper-btn inline-flex items-center gap-1 disabled:opacity-40">
+            다음
+            <ChevronRight className="size-4" aria-hidden="true" />
           </button>
         </div>
       ) : null}
