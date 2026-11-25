@@ -22,9 +22,10 @@ export function clearPrintRoot() {
     });
     root.replaceChildren();
   }
+  document.getElementById("copy-bar")?.remove();
   for (const url of heldUrls) URL.revokeObjectURL(url);
   heldUrls.clear();
-  document.body.classList.remove("is-printing", "print-gray");
+  document.body.classList.remove("is-printing", "is-copying", "print-gray");
   delete document.body.dataset.printPaper;
 }
 
@@ -63,13 +64,20 @@ async function bake(src: string, gray: boolean) {
 }
 
 function finishPrint(root: HTMLElement) {
-  const cleanup = () => {
-    window.removeEventListener("afterprint", cleanup);
-    clearPrintRoot();
-  };
-  window.addEventListener("afterprint", cleanup);
-  document.body.classList.add("is-printing");
-  window.print();
+  document.body.classList.add("is-copying");
+  if (!document.getElementById("copy-bar")) {
+    const bar = document.createElement("div");
+    bar.id = "copy-bar";
+    const text = document.createElement("p");
+    text.textContent = "이 브라우저에서 만든 미리보기예요. 삼성 기본 앱은 열지 않아요.";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = "닫기";
+    button.addEventListener("click", () => clearPrintRoot());
+    bar.append(text, button);
+    document.body.append(bar);
+  }
+  root.hidden = false;
 }
 
 async function appendCanvas(root: HTMLElement, canvas: HTMLCanvasElement, paper: string, last: boolean) {

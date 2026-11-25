@@ -17,6 +17,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.provider.Settings
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
 import io.flutter.embedding.android.FlutterActivity
@@ -149,6 +150,22 @@ class MainActivity : FlutterActivity() {
                     closeQuietly()
                     result.success(null)
                 }
+                "guardStart" -> {
+                    tryStartPrintGuard()
+                    result.success(null)
+                }
+                "guardStop" -> {
+                    tryStopPrintGuard()
+                    result.success(null)
+                }
+                "openSettings" -> {
+                    try {
+                        startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                        result.success(true)
+                    } catch (_: Exception) {
+                        result.success(false)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
@@ -279,6 +296,7 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        tryStopPrintGuard()
         pipeBroken = true
         cancelledGeneration = writeGeneration
         closeQuietly()
@@ -337,6 +355,21 @@ class MainActivity : FlutterActivity() {
                 result.error(code, message, null)
             } catch (_: Exception) {
             }
+        }
+    }
+
+    private fun tryStartPrintGuard() {
+        try {
+            val intent = Intent(this, PrintForegroundService::class.java)
+            ContextCompat.startForegroundService(this, intent)
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun tryStopPrintGuard() {
+        try {
+            startService(Intent(this, PrintForegroundService::class.java).setAction(PrintForegroundService.ACTION_STOP))
+        } catch (_: Exception) {
         }
     }
 
@@ -500,7 +533,10 @@ class MainActivity : FlutterActivity() {
                         return@execute
                     }
                     val elapsed = SystemClock.elapsedRealtime() - started
-                    if (elapsed < slice / 2 || SystemClock.elapsedRealtime() >= deadline) {
+                    if (elapsed < slice / 2) {
+                        throw IllegalStateException("USB 연결이 불안정하거나 끊겼어요.")
+                    }
+                    if (SystemClock.elapsedRealtime() >= deadline) {
                         throw IllegalStateException("복사기가 15초 안에 받지 않았어요. 용지가 없거나 걸린 것 같아요.")
                     }
                 }

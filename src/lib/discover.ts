@@ -208,7 +208,7 @@ async function readDeviceId(device: UsbSession) {
     } catch {
       /* already closed */
     }
-    throw new Error("다른 앱이나 OS 드라이버가 USB를 사용 중이라 이 앱에서 바로 보낼 수 없어요. 인쇄 창으로 진행해 주세요.");
+    throw new Error("다른 앱이나 OS 드라이버가 USB를 사용 중이라 이 앱에서 바로 보낼 수 없어요.");
   }
   const setting = alt.alternateSetting ?? 0;
   if (device.selectAlternateInterface && setting !== 0) {
@@ -394,7 +394,7 @@ export async function sendUsbBytes(
 ) {
   const device = sessions.get(usbKey);
   if (!device?.transferOut || device.atlasOut == null) {
-    throw new Error("USB로 바로 넣지는 못해요. 인쇄 창에서 복사기를 고르세요.");
+    throw new Error("USB로 바로 넣지는 못해요. 선을 다시 확인한 뒤 이 화면에서 다시 눌러 주세요.");
   }
   const total = Math.max(1, bytes.length);
   let sent = 0;

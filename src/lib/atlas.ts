@@ -148,7 +148,7 @@ function profileFor(name: string, family: DriverFamily) {
       year: 2009,
       family: "spl",
       fallback: "",
-      reason: `${name}은 SpliX 목록입니다. 컴퓨터가 점을 만들어 보내는 SPL 기종이라 휴대폰 인쇄창만으로는 부족합니다.`,
+      reason: `${name}은 SpliX 목록입니다. 컴퓨터가 점을 만들어 보내는 SPL 기종이라 이 화면에서는 미리보기만 볼 수 있어요.`,
     };
   }
   if (family === "hplip") {

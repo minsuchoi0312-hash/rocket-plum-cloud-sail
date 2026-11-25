@@ -1,9 +1,9 @@
 import { i as __toESM, n as __exportAll } from "../_runtime.mjs";
 import { K as require_react, _ as createFileRoute, b as require_jsx_runtime, d as Scripts, f as HeadContent, g as lazyRouteComponent, h as Outlet, m as createRouter, v as createRootRoute, y as useRouter } from "../_libs/@tanstack/react-router+[...].mjs";
-import { r as TriangleAlert } from "../_libs/lucide-react.mjs";
+import { n as TriangleAlert } from "../_libs/lucide-react.mjs";
 import { a as union, i as string, n as number, r as object, t as literal } from "../_libs/zod.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-DjQYoEBm.js
-var router_DjQYoEBm_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
+//#region node_modules/.nitro/vite/services/ssr/assets/router-Caf7Jtz8.js
+var router_Caf7Jtz8_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var FALLBACK_MESSAGE = "An unexpected error occurred. Try reloading the page.";
@@ -331,7 +331,7 @@ function PreviewHostBridge() {
 	}, [router]);
 	return null;
 }
-var styles_default = "/assets/styles-Cts8j0D7.css";
+var styles_default = "/assets/styles-DwCA2iHE.css";
 var Route$1 = createRootRoute({
 	head: () => ({
 		meta: [
@@ -340,10 +340,10 @@ var Route$1 = createRootRoute({
 				name: "viewport",
 				content: "width=device-width, initial-scale=1"
 			},
-			{ title: "인쇄" },
+			{ title: "누구나프린트" },
 			{
 				name: "description",
-				content: "USB·블루투스로 바로 찾거나, 와이파이는 인쇄 창에서 고릅니다."
+				content: "사진이나 PDF를 고른 뒤 이 화면에서 인쇄합니다. 삼성 기본 인쇄 앱으로 넘기지 않아요."
 			},
 			{
 				name: "theme-color",
@@ -351,7 +351,7 @@ var Route$1 = createRootRoute({
 			},
 			{
 				name: "apple-mobile-web-app-title",
-				content: "인쇄"
+				content: "누구나프린트"
 			}
 		],
 		links: [
@@ -406,7 +406,7 @@ var Route$1 = createRootRoute({
 		] })]
 	})
 });
-var $$splitComponentImporter = () => import("./routes-C5I254ht.mjs");
+var $$splitComponentImporter = () => import("./routes-fBXez2sF.mjs");
 var rootRouteChildren = { IndexRoute: createFileRoute("/")({ component: lazyRouteComponent($$splitComponentImporter, "component") }).update({
 	id: "/",
 	path: "/",
@@ -421,4 +421,4 @@ function getRouter() {
 	});
 }
 //#endregion
-export { getRouter, router_DjQYoEBm_exports as t };
+export { getRouter, router_Caf7Jtz8_exports as t };

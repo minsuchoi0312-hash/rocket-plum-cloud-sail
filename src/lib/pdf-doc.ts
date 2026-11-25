@@ -67,8 +67,8 @@ export function rasterTurn(displayedWidth: number, displayedHeight: number) {
   return displayedWidth > displayedHeight ? 90 : 0;
 }
 
-export function pageDrawPlan(pageWidth: number, pageHeight: number, canvasWidth: number, canvasHeight: number) {
-  const rotation = rasterTurn(pageWidth, pageHeight);
+export function pageDrawPlan(pageWidth: number, pageHeight: number, canvasWidth: number, canvasHeight: number, mode: "auto" | "fit" = "auto") {
+  const rotation = mode === "fit" ? 0 : rasterTurn(pageWidth, pageHeight);
   const landscape = rotation === 90;
   const srcW = landscape ? pageHeight : pageWidth;
   const srcH = landscape ? pageWidth : pageHeight;
@@ -92,6 +92,7 @@ export async function renderPdfPage(
   width: number,
   height: number,
   slot?: { current: { cancel: () => void } | null },
+  mode: "auto" | "fit" = "auto",
 ) {
   const page = await doc.getPage(pageNumber);
   const canvas = document.createElement("canvas");
@@ -105,7 +106,7 @@ export async function renderPdfPage(
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, width, height);
   const base = page.getViewport({ scale: 1 });
-  const plan = pageDrawPlan(base.width, base.height, width, height);
+  const plan = pageDrawPlan(base.width, base.height, width, height, mode);
   const viewport = page.getViewport({ scale: plan.scale });
   const shot = document.createElement("canvas");
   shot.width = Math.max(1, Math.ceil(viewport.width));
@@ -200,4 +201,45 @@ export async function imagesToPdf(
     added.drawImage(image, { x: 0, y: 0, width: page.width, height: page.height });
   }
   return pdf.save();
+}
+
+export function parsePageRange(input: string, total: number): { pages: number[] } | { error: string } {
+  const compact = input.replace(/\s+/g, "");
+  if (!compact) return { error: "쪽 범위를 입력해 주세요." };
+  if (!total) return { error: "PDF를 먼저 열어 주세요." };
+  if (compact.startsWith(",") || compact.endsWith(",") || compact.includes(",,")) return { error: "빈 콤마는 쓸 수 없어요." };
+  const pages: number[] = [];
+  const seen = new Set<number>();
+  for (const part of compact.split(",")) {
+    const range = part.match(/^(\d+)-(\d+)$/);
+    if (range) {
+      const start = Number(range[1]);
+      const end = Number(range[2]);
+      if (start < 1 || end < 1) return { error: "0이나 음수 쪽은 없어요." };
+      if (start > end) return { error: "시작 쪽이 끝 쪽보다 커요." };
+      if (end > total) return { error: `총 ${total}쪽을 넘었어요.` };
+      for (let page = start; page <= end; page += 1) {
+        if (seen.has(page)) continue;
+        seen.add(page);
+        pages.push(page);
+      }
+      continue;
+    }
+    if (!/^\d+$/.test(part)) return { error: "1, 3-5, 8 처럼 적어 주세요." };
+    const page = Number(part);
+    if (page < 1) return { error: "0이나 음수 쪽은 없어요." };
+    if (page > total) return { error: `총 ${total}쪽을 넘었어요.` };
+    if (!seen.has(page)) {
+      seen.add(page);
+      pages.push(page);
+    }
+  }
+  return pages.length ? { pages } : { error: "보낼 쪽이 없어요." };
+}
+
+export function nupGroups(pages: number[], per: number, reverse = false) {
+  const size = per === 4 ? 4 : per === 2 ? 2 : 1;
+  const groups: number[][] = [];
+  for (let index = 0; index < pages.length; index += size) groups.push(pages.slice(index, index + size));
+  return reverse ? groups.reverse() : groups;
 }

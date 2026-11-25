@@ -1,8 +1,8 @@
 import { i as __toESM } from "../_runtime.mjs";
 import { K as require_react, b as require_jsx_runtime } from "../_libs/@tanstack/react-router+[...].mjs";
-import { a as Sun, c as Globe, i as Trash2, l as Bookmark, n as Usb, o as Printer, s as Moon, t as Wifi } from "../_libs/lucide-react.mjs";
+import { a as StickyNote, c as Moon, d as CircleHelp, f as Bookmark, i as Sun, l as Image$1, o as Sheet, r as Trash2, s as Printer, t as Usb, u as FileText } from "../_libs/lucide-react.mjs";
 import { n as create, t as persist } from "../_libs/zustand.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-C5I254ht.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-fBXez2sF.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var Atlas = (function() {
@@ -5726,7 +5726,7 @@ function profileFor(name, family) {
 		year: 2009,
 		family: "spl",
 		fallback: "",
-		reason: `${name}은 SpliX 목록입니다. 컴퓨터가 점을 만들어 보내는 SPL 기종이라 휴대폰 인쇄창만으로는 부족합니다.`
+		reason: `${name}은 SpliX 목록입니다. 컴퓨터가 점을 만들어 보내는 SPL 기종이라 이 화면에서는 미리보기만 볼 수 있어요.`
 	};
 	if (family === "hplip") {
 		const host = /1020|1018|1005|1006|1007|1008|1102|1505|1606/.test(n);
@@ -5966,7 +5966,7 @@ async function readDeviceId(device) {
 		try {
 			if (device.opened && device.close) await device.close();
 		} catch {}
-		throw new Error("다른 앱이나 OS 드라이버가 USB를 사용 중이라 이 앱에서 바로 보낼 수 없어요. 인쇄 창으로 진행해 주세요.");
+		throw new Error("다른 앱이나 OS 드라이버가 USB를 사용 중이라 이 앱에서 바로 보낼 수 없어요.");
 	}
 	const setting = alt.alternateSetting ?? 0;
 	if (device.selectAlternateInterface && setting !== 0) try {
@@ -6115,7 +6115,7 @@ async function transferChunk(device, endpoint, bytes) {
 }
 async function sendUsbBytes(usbKey, bytes, onProgress, shouldStop, atomic = false) {
 	const device = sessions.get(usbKey);
-	if (!device?.transferOut || device.atlasOut == null) throw new Error("USB로 바로 넣지는 못해요. 인쇄 창에서 복사기를 고르세요.");
+	if (!device?.transferOut || device.atlasOut == null) throw new Error("USB로 바로 넣지는 못해요. 선을 다시 확인한 뒤 이 화면에서 다시 눌러 주세요.");
 	const total = Math.max(1, bytes.length);
 	let sent = 0;
 	const pieces = atomic || bytes.length <= 4096 ? [bytes] : Array.from({ length: Math.ceil(bytes.length / 4096) }, (_, index) => bytes.subarray(index * 4096, Math.min(bytes.length, (index + 1) * 4096)));
@@ -6184,7 +6184,7 @@ function previewSize(paper) {
 		height: Math.max(1, Math.round(full.height / full.width * width))
 	};
 }
-function concat$1(parts) {
+function concat$2(parts) {
 	const size = parts.reduce((sum, part) => sum + part.length, 0);
 	const out = new Uint8Array(size);
 	let offset = 0;
@@ -6195,7 +6195,7 @@ function concat$1(parts) {
 	return out;
 }
 function pjl(options) {
-	const count = Math.min(9, Math.max(1, options.copies));
+	const count = Math.min(99, Math.max(1, options.copies));
 	const lines = ["\x1B%-12345X@PJL JOB", options.pages > 1 ? `@PJL SET QTY=${count}` : `@PJL SET COPIES=${count}`];
 	if (options.paper !== "B5") lines.push(`@PJL SET PAPER=${PAPER[options.paper].pjl}`);
 	if (options.duplex === "simplex") lines.push("@PJL SET DUPLEX=OFF");
@@ -6203,11 +6203,15 @@ function pjl(options) {
 		lines.push("@PJL SET DUPLEX=ON");
 		lines.push(`@PJL SET BINDING=${options.duplex === "long" ? "LONGEDGE" : "SHORTEDGE"}`);
 	}
+	if (options.secure?.pin) {
+		const user = options.secure.user.replace(/[^A-Za-z0-9]/g, "").slice(0, 16) || "USER";
+		lines.push("@PJL SET HOLD=ON", "@PJL SET HOLDTYPE=PRIVATE", `@PJL SET HOLDKEY=${options.secure.pin}`, `@PJL SET USERNAME=${user}`);
+	}
 	lines.push(`@PJL ENTER LANGUAGE=${options.language}`);
 	return `${lines.join("\r\n")}\r\n`;
 }
 function wrapPdfJob(pdf, options) {
-	return concat$1([
+	return concat$2([
 		encoder.encode(pjl({
 			...options,
 			language: "PDF"
@@ -6274,10 +6278,11 @@ function officeMemoChunks(text, width, height) {
 function pclJobHeader(options) {
 	const spec = PAPER[options.paper];
 	const side = options.duplex === "long" ? 1 : options.duplex === "short" ? 2 : 0;
+	const face = options.orient === "landscape" ? 1 : 0;
 	return encoder.encode(`${pjl({
 		...options,
 		language: "PCL"
-	})}\x1bE\x1b&l${spec.pcl}A\x1b&l0O\x1b&l${side}S\x1b&u300D\x1b&l0E\x1b&l0L\x1b&a0L\x1b*t300R\x1b*r0F`);
+	})}\x1bE\x1b&l${spec.pcl}A\x1b&l${face}O\x1b&l${side}S\x1b&u300D\x1b&l0E\x1b&l0L\x1b&a0L\x1b*t300R\x1b*r0F`);
 }
 function pclJobFooter() {
 	return encoder.encode("\x1BE\x1B%-12345X@PJL EOJ\r\n\x1B%-12345X");
@@ -6385,7 +6390,7 @@ function bundleCommands(commands, limit = 4096) {
 	let size = 0;
 	const flush = () => {
 		if (!bucket.length) return;
-		packets.push(concat$1(bucket));
+		packets.push(concat$2(bucket));
 		bucket = [];
 		size = 0;
 	};
@@ -6468,7 +6473,7 @@ function drawFittedLocal(ctx, image, width, height, fit, turn) {
 	ctx.drawImage(image, -sourceWidth * scale / 2, -sourceHeight * scale / 2, sourceWidth * scale, sourceHeight * scale);
 	ctx.restore();
 }
-function concat(parts) {
+function concat$1(parts) {
 	const size = parts.reduce((sum, part) => sum + part.length, 0);
 	const out = new Uint8Array(size);
 	let offset = 0;
@@ -6532,7 +6537,7 @@ function jpegToPdf(jpeg, imgW, imgH, pageW, pageH) {
 	let xref = "xref\n0 6\n0000000000 65535 f \n";
 	for (let index = 1; index <= 5; index += 1) xref += `${String(offsets[index]).padStart(10, "0")} 00000 n \n`;
 	pushText(`${xref}trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefAt}\n%%EOF`);
-	return concat(chunks);
+	return concat$1(chunks);
 }
 async function downloadCanvasPdf(canvas, filename, page) {
 	const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", .86));
@@ -6564,9 +6569,9 @@ function drawFitted(ctx, image, width, height, fit, turn) {
 	ctx.restore();
 }
 async function renderSheetCanvas(options) {
-	const size = options.paper === "A3" ? [1754, 2480] : options.paper === "B5" ? [1075, 1518] : options.paper === "Letter" ? [1275, 1650] : [1240, 1754];
-	const width = size[0];
-	const height = size[1];
+	const fallback = options.paper === "A3" ? [1754, 2480] : options.paper === "B5" ? [1075, 1518] : options.paper === "Letter" ? [1275, 1650] : [1240, 1754];
+	const width = options.frame?.width || fallback[0];
+	const height = options.frame?.height || fallback[1];
 	const canvas = document.createElement("canvas");
 	canvas.width = width;
 	canvas.height = height;
@@ -6603,9 +6608,9 @@ async function renderSheetCanvas(options) {
 	}
 	return canvas;
 }
-function sheetMemoChunks(text, paper) {
-	const width = paper === "A3" ? 1754 : paper === "B5" ? 1075 : 1240;
-	const height = paper === "A3" ? 2480 : paper === "B5" ? 1518 : 1754;
+function sheetMemoChunks(text, paper, frame) {
+	const width = frame?.width || (paper === "A3" ? 1754 : paper === "B5" ? 1075 : 1240);
+	const height = frame?.height || (paper === "A3" ? 2480 : paper === "B5" ? 1518 : 1754);
 	const ctx = document.createElement("canvas").getContext("2d");
 	if (!ctx) return [text];
 	ctx.font = "48px \"IBM Plex Sans KR\", sans-serif";
@@ -6625,9 +6630,10 @@ function clearPrintRoot() {
 		});
 		root.replaceChildren();
 	}
+	document.getElementById("copy-bar")?.remove();
 	for (const url of heldUrls) URL.revokeObjectURL(url);
 	heldUrls.clear();
-	document.body.classList.remove("is-printing", "print-gray");
+	document.body.classList.remove("is-printing", "is-copying", "print-gray");
 	delete document.body.dataset.printPaper;
 }
 function canvasObjectUrl(canvas, quality = .92) {
@@ -6662,13 +6668,20 @@ async function bake(src, gray) {
 	return next;
 }
 function finishPrint(root) {
-	const cleanup = () => {
-		window.removeEventListener("afterprint", cleanup);
-		clearPrintRoot();
-	};
-	window.addEventListener("afterprint", cleanup);
-	document.body.classList.add("is-printing");
-	window.print();
+	document.body.classList.add("is-copying");
+	if (!document.getElementById("copy-bar")) {
+		const bar = document.createElement("div");
+		bar.id = "copy-bar";
+		const text = document.createElement("p");
+		text.textContent = "이 브라우저에서 만든 미리보기예요. 삼성 기본 앱은 열지 않아요.";
+		const button = document.createElement("button");
+		button.type = "button";
+		button.textContent = "닫기";
+		button.addEventListener("click", () => clearPrintRoot());
+		bar.append(text, button);
+		document.body.append(bar);
+	}
+	root.hidden = false;
 }
 async function appendCanvas(root, canvas, paper, last) {
 	const sheet = document.createElement("section");
@@ -6805,8 +6818,8 @@ async function openPdf(data, password) {
 function rasterTurn(displayedWidth, displayedHeight) {
 	return displayedWidth > displayedHeight ? 90 : 0;
 }
-function pageDrawPlan(pageWidth, pageHeight, canvasWidth, canvasHeight) {
-	const rotation = rasterTurn(pageWidth, pageHeight);
+function pageDrawPlan(pageWidth, pageHeight, canvasWidth, canvasHeight, mode = "auto") {
+	const rotation = mode === "fit" ? 0 : rasterTurn(pageWidth, pageHeight);
 	const landscape = rotation === 90;
 	const srcW = landscape ? pageHeight : pageWidth;
 	const srcH = landscape ? pageWidth : pageHeight;
@@ -6823,7 +6836,7 @@ function pageDrawPlan(pageWidth, pageHeight, canvasWidth, canvasHeight) {
 		offsetY: (canvasHeight - drawHeight) / 2
 	};
 }
-async function renderPdfPage(doc, pageNumber, width, height, slot) {
+async function renderPdfPage(doc, pageNumber, width, height, slot, mode = "auto") {
 	const page = await doc.getPage(pageNumber);
 	const canvas = document.createElement("canvas");
 	canvas.width = width;
@@ -6836,7 +6849,7 @@ async function renderPdfPage(doc, pageNumber, width, height, slot) {
 	ctx.fillStyle = "#ffffff";
 	ctx.fillRect(0, 0, width, height);
 	const base = page.getViewport({ scale: 1 });
-	const plan = pageDrawPlan(base.width, base.height, width, height);
+	const plan = pageDrawPlan(base.width, base.height, width, height, mode);
 	const viewport = page.getViewport({ scale: plan.scale });
 	const shot = document.createElement("canvas");
 	shot.width = Math.max(1, Math.ceil(viewport.width));
@@ -6931,6 +6944,45 @@ async function imagesToPdf(pages, page) {
 	}
 	return pdf.save();
 }
+function parsePageRange(input, total) {
+	const compact = input.replace(/\s+/g, "");
+	if (!compact) return { error: "쪽 범위를 입력해 주세요." };
+	if (!total) return { error: "PDF를 먼저 열어 주세요." };
+	if (compact.startsWith(",") || compact.endsWith(",") || compact.includes(",,")) return { error: "빈 콤마는 쓸 수 없어요." };
+	const pages = [];
+	const seen = /* @__PURE__ */ new Set();
+	for (const part of compact.split(",")) {
+		const range = part.match(/^(\d+)-(\d+)$/);
+		if (range) {
+			const start = Number(range[1]);
+			const end = Number(range[2]);
+			if (start < 1 || end < 1) return { error: "0이나 음수 쪽은 없어요." };
+			if (start > end) return { error: "시작 쪽이 끝 쪽보다 커요." };
+			if (end > total) return { error: `총 ${total}쪽을 넘었어요.` };
+			for (let page = start; page <= end; page += 1) {
+				if (seen.has(page)) continue;
+				seen.add(page);
+				pages.push(page);
+			}
+			continue;
+		}
+		if (!/^\d+$/.test(part)) return { error: "1, 3-5, 8 처럼 적어 주세요." };
+		const page = Number(part);
+		if (page < 1) return { error: "0이나 음수 쪽은 없어요." };
+		if (page > total) return { error: `총 ${total}쪽을 넘었어요.` };
+		if (!seen.has(page)) {
+			seen.add(page);
+			pages.push(page);
+		}
+	}
+	return pages.length ? { pages } : { error: "보낼 쪽이 없어요." };
+}
+function nupGroups(pages, per, reverse = false) {
+	const size = per === 4 ? 4 : per === 2 ? 2 : 1;
+	const groups = [];
+	for (let index = 0; index < pages.length; index += size) groups.push(pages.slice(index, index + size));
+	return reverse ? groups.reverse() : groups;
+}
 /** PCL5, PCL5e, or PCL5c only. A bare PCL, PCL 6, PCLXL, or PCL 3 does not count. */
 function commandHasPcl5(cmd) {
 	return /\bPCL\s*5\s*[ce]?\b/i.test(cmd);
@@ -6944,7 +6996,7 @@ function languageIsPcl5(languages) {
 	return commandHasPcl5(languages);
 }
 function resolvePrintRoute(input) {
-	if (!input.liveUsb) return "os-print";
+	if (!input.liveUsb) return "preview-only";
 	const cmd = input.cmd.trim();
 	let pcl5 = false;
 	if (cmd && commandHasPcl5(cmd)) pcl5 = true;
@@ -6952,7 +7004,275 @@ function resolvePrintRoute(input) {
 	const pdfLang = /\bPDF\b/i.test(cmd);
 	if (input.docKind === "pdf" && input.pdfBytes && input.pdfDirect && pdfLang && !input.gray && input.pageMode === "all") return "usb-pdf";
 	if (pcl5) return "usb-pcl";
-	return "os-print";
+	return "preview-only";
+}
+var PRIVATE = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/;
+var OCTETS = [
+	2,
+	3,
+	4,
+	10,
+	11,
+	12,
+	15,
+	16,
+	20,
+	21,
+	22,
+	25,
+	30,
+	40,
+	50,
+	51,
+	60,
+	80,
+	100,
+	101,
+	110,
+	150,
+	200,
+	254
+];
+var IPV4 = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
+function isValidIPv4(value) {
+	return IPV4.test(value.trim());
+}
+function isPrivateIPv4(ip) {
+	return PRIVATE.test(ip) && !ip.startsWith("127.");
+}
+function subnetOf(ip) {
+	const parts = ip.split(".");
+	if (parts.length !== 4) return null;
+	return `${parts[0]}.${parts[1]}.${parts[2]}`;
+}
+function wait(ms) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+/** 브라우저가 알려 주는 사설 IPv4. 막혀 있으면 빈 목록이다. */
+async function guessLocalIPv4s(timeoutMs = 700) {
+	if (typeof RTCPeerConnection === "undefined") return [];
+	const ips = /* @__PURE__ */ new Set();
+	const pc = new RTCPeerConnection({ iceServers: [] });
+	try {
+		pc.createDataChannel("p");
+		pc.onicecandidate = (ev) => {
+			const found = (ev.candidate?.candidate ?? "").match(/(\d{1,3}(?:\.\d{1,3}){3})/);
+			if (found && isPrivateIPv4(found[1])) ips.add(found[1]);
+		};
+		const offer = await pc.createOffer();
+		await pc.setLocalDescription(offer);
+		const text = pc.localDescription?.sdp ?? "";
+		for (const found of text.matchAll(/(\d{1,3}(?:\.\d{1,3}){3})/g)) if (isPrivateIPv4(found[1])) ips.add(found[1]);
+		await wait(timeoutMs);
+	} catch {} finally {
+		try {
+			pc.close();
+		} catch {}
+	}
+	return [...ips];
+}
+async function probeIpp(host, ms = 700) {
+	const ac = new AbortController();
+	const timer = setTimeout(() => ac.abort(), ms);
+	try {
+		await fetch(`http://${host}:631/ipp/print`, {
+			method: "GET",
+			mode: "no-cors",
+			cache: "no-store",
+			signal: ac.signal,
+			targetAddressSpace: "local"
+		});
+		return true;
+	} catch {
+		return false;
+	} finally {
+		clearTimeout(timer);
+	}
+}
+async function mapPool(items, limit, fn) {
+	const out = [];
+	let index = 0;
+	async function worker() {
+		while (index < items.length) {
+			const item = items[index++];
+			const hit = await fn(item);
+			if (hit) out.push(hit);
+		}
+	}
+	await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
+	return out;
+}
+async function discoverLanPrinters(onStatus, prefer = []) {
+	onStatus?.("이 기기 주소를 읽는 중…");
+	const local = await guessLocalIPv4s();
+	const subnets = /* @__PURE__ */ new Set();
+	for (const raw of prefer) {
+		const text = raw.trim();
+		if (/^(\d{1,3}\.){2}\d{1,3}$/.test(text)) subnets.add(text);
+	}
+	for (const ip of local) {
+		const subnet = subnetOf(ip);
+		if (subnet) subnets.add(subnet);
+	}
+	if (subnets.size === 0) {
+		subnets.add("192.168.0");
+		subnets.add("192.168.1");
+	}
+	const hosts = [...subnets].flatMap((subnet) => OCTETS.map((n) => `${subnet}.${n}`));
+	const where = local[0] ? `이 기기 ${local[0]}` : [...subnets].join(", ");
+	onStatus?.(`${where} · ${hosts.length}곳, 끝자리 ${OCTETS.length}개만 확인`);
+	return (await mapPool(hosts, 8, async (host) => await probeIpp(host) ? host : null)).map((host) => ({
+		host,
+		port: 631,
+		answered: true
+	}));
+}
+function concat(parts) {
+	const size = parts.reduce((sum, part) => sum + part.length, 0);
+	const out = new Uint8Array(size);
+	let offset = 0;
+	for (const part of parts) {
+		out.set(part, offset);
+		offset += part.length;
+	}
+	return out;
+}
+function textAttr(tag, name, value) {
+	const n = new TextEncoder().encode(name);
+	const v = new TextEncoder().encode(value);
+	const out = new Uint8Array(5 + n.length + v.length);
+	const view = new DataView(out.buffer);
+	out[0] = tag;
+	view.setUint16(1, n.length);
+	out.set(n, 3);
+	view.setUint16(3 + n.length, v.length);
+	out.set(v, 5 + n.length);
+	return out;
+}
+function intAttr(name, value) {
+	const n = new TextEncoder().encode(name);
+	const out = new Uint8Array(3 + n.length + 2 + 4);
+	const view = new DataView(out.buffer);
+	out[0] = 33;
+	view.setUint16(1, n.length);
+	out.set(n, 3);
+	view.setUint16(3 + n.length, 4);
+	view.setInt32(5 + n.length, value);
+	return out;
+}
+function printJobPacket(host, pdf, options) {
+	const header = /* @__PURE__ */ new Uint8Array(8);
+	const view = new DataView(header.buffer);
+	header[0] = 2;
+	view.setUint16(2, 2);
+	view.setUint32(4, 1);
+	const media = options.paper === "A3" ? "iso_a3_297x420mm" : options.paper === "B5" ? "jis_b5_182x257mm" : "iso_a4_210x297mm";
+	const sides = options.duplex === "long" ? "two-sided-long-edge" : options.duplex === "short" ? "two-sided-short-edge" : "one-sided";
+	return concat([
+		header,
+		concat([
+			new Uint8Array([1]),
+			textAttr(71, "attributes-charset", "utf-8"),
+			textAttr(72, "attributes-natural-language", "ko"),
+			textAttr(69, "printer-uri", `ipp://${host}:631/ipp/print`),
+			textAttr(66, "requesting-user-name", "nuguna"),
+			textAttr(66, "job-name", "누구나프린트"),
+			textAttr(73, "document-format", "application/pdf"),
+			new Uint8Array([2]),
+			intAttr("copies", Math.max(1, Math.min(99, options.copies))),
+			textAttr(68, "sides", sides),
+			textAttr(68, "media", media),
+			textAttr(68, "print-color-mode", options.gray ? "monochrome" : "color"),
+			new Uint8Array([3])
+		]),
+		pdf
+	]);
+}
+var CORS_HINT = "브라우저 보안 정책(CORS) 때문에 이 복사기로 직접 보낼 수 없어요. 같은 와이파이의 PC 도우미를 켜거나 USB/설치형 앱을 이용해 주세요.";
+/** 같은 망의 IPP(631)로 PDF를 넣는다. 실패해도 기기 인쇄 창은 열지 않는다. */
+async function sendIppPdf(host, pdf, options) {
+	const body = printJobPacket(host, pdf, options);
+	let response;
+	try {
+		response = await fetch(`http://${host}:631/ipp/print`, {
+			method: "POST",
+			headers: { "Content-Type": "application/ipp" },
+			body,
+			targetAddressSpace: "local"
+		});
+	} catch {
+		throw new Error(CORS_HINT);
+	}
+	if (!response.ok && response.type !== "opaque") throw new Error(response.status === 0 ? CORS_HINT : `${host} 가 작업을 거절했어요 (${response.status}). 삼성 인쇄 앱은 열지 않아요.`);
+}
+var lines = [];
+function maskSecrets(text) {
+	return text.replace(/HOLDKEY=\S+/gi, "HOLDKEY=****").replace(/PIN\s*[=:]\s*\S+/gi, "PIN=****").replace(/(비밀번호|password)\s*[:=]?\s*\S+/gi, "$1 ****");
+}
+function diag(line) {
+	const stamp = (/* @__PURE__ */ new Date()).toISOString().slice(11, 19);
+	lines.push(`${stamp} ${maskSecrets(line)}`);
+	if (lines.length > 50) lines.shift();
+}
+function diagText() {
+	return lines.join("\n");
+}
+async function helperSend(base, code, host, bytes) {
+	const root = base.replace(/\/$/, "");
+	let response;
+	const copy = new Uint8Array(bytes.byteLength);
+	copy.set(bytes);
+	try {
+		response = await fetch(`${root}/print?host=${encodeURIComponent(host)}&port=9100`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/octet-stream",
+				...code ? { "X-Helper-Code": code } : {}
+			},
+			body: copy.buffer
+		});
+	} catch {
+		throw new Error("PC 도우미에 연결하지 못했어요. 같은 컴퓨터에서 raw-print-helper 가 켜져 있는지 확인해 주세요.");
+	}
+	if (!response.ok) throw new Error(`PC 도우미가 거절했어요 (${response.status}).`);
+}
+async function helperPing(base) {
+	const root = base.replace(/\/$/, "");
+	const response = await fetch(`${root}/ping`);
+	if (!response.ok) throw new Error("도우미가 응답하지 않아요.");
+	return response.json();
+}
+function drawFit(ctx, image, sw, sh, x, y, w, h, fit) {
+	const scale = fit === "cover" ? Math.max(w / sw, h / sh) : Math.min(w / sw, h / sh);
+	const dw = sw * scale;
+	const dh = sh * scale;
+	ctx.save();
+	ctx.beginPath();
+	ctx.rect(x, y, w, h);
+	ctx.clip();
+	ctx.drawImage(image, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+	ctx.restore();
+}
+function composeSheet(images, sizes, width, height, nup, fit) {
+	const sheet = document.createElement("canvas");
+	sheet.width = width;
+	sheet.height = height;
+	const ctx = sheet.getContext("2d");
+	if (!ctx) return sheet;
+	ctx.fillStyle = "#fff";
+	ctx.fillRect(0, 0, width, height);
+	const cols = nup === 4 ? 2 : 1;
+	const rows = nup === 1 ? 1 : 2;
+	const cellW = width / cols;
+	const cellH = height / rows;
+	images.forEach((image, index) => {
+		const size = sizes[index];
+		if (!size) return;
+		const col = index % cols;
+		const row = Math.floor(index / cols);
+		drawFit(ctx, image, size.width, size.height, col * cellW, row * cellH, cellW, cellH, fit);
+	});
+	return sheet;
 }
 var usePrinterStore = create()(persist((set, get) => ({
 	saved: [],
@@ -6967,7 +7287,7 @@ var usePrinterStore = create()(persist((set, get) => ({
 var VIA_LABEL = {
 	saved: "저장",
 	usb: "USB",
-	bluetooth: "블루투스"
+	wifi: "와이파이"
 };
 function uidOf(title) {
 	return title.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9가-힣-]/g, "");
@@ -7013,19 +7333,6 @@ function stageForQuery(query, cmd) {
 function isInkjet(match) {
 	return match.pack.id === "raster-ink";
 }
-function Mark() {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-		className: "grid size-14 shrink-0 grid-cols-2 overflow-hidden rounded-2xl",
-		"aria-hidden": "true",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-			className: "flex items-center justify-end bg-paper pr-0.5 text-ink",
-			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Printer, { className: "size-6" })
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-			className: "flex items-center justify-start bg-accent pl-0.5 text-paper",
-			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Globe, { className: "size-6" })
-		})]
-	});
-}
 function AtlasApp() {
 	const saved = usePrinterStore((state) => state.saved);
 	const remember = usePrinterStore((state) => state.remember);
@@ -7043,7 +7350,6 @@ function AtlasApp() {
 	const [gray, setGray] = (0, import_react.useState)(false);
 	const [duplex, setDuplex] = (0, import_react.useState)("simplex");
 	const [theme, setTheme] = (0, import_react.useState)("dark");
-	const [phonePrint, setPhonePrint] = (0, import_react.useState)(false);
 	const [inApp, setInApp] = (0, import_react.useState)(false);
 	const [usbMissed, setUsbMissed] = (0, import_react.useState)(false);
 	const [step, setStep] = (0, import_react.useState)("connect");
@@ -7064,17 +7370,36 @@ function AtlasApp() {
 	const [progress, setProgress] = (0, import_react.useState)(0);
 	const [photoFit, setPhotoFit] = (0, import_react.useState)("contain");
 	const [photoTurn, setPhotoTurn] = (0, import_react.useState)(0);
+	const [orient, setOrient] = (0, import_react.useState)("auto");
+	const [lanBusy, setLanBusy] = (0, import_react.useState)(false);
+	const [lanNote, setLanNote] = (0, import_react.useState)("");
+	const [ipInput, setIpInput] = (0, import_react.useState)("");
+	const [pageList, setPageList] = (0, import_react.useState)("");
+	const [nup, setNup] = (0, import_react.useState)(1);
+	const [reverse, setReverse] = (0, import_react.useState)(false);
+	const [secureOn, setSecureOn] = (0, import_react.useState)(false);
+	const [pin, setPin] = (0, import_react.useState)("");
+	const [jobUser, setJobUser] = (0, import_react.useState)("USER");
+	const [helperUrl, setHelperUrl] = (0, import_react.useState)("http://127.0.0.1:47631");
+	const [helperCode, setHelperCode] = (0, import_react.useState)("");
+	const [useHelper, setUseHelper] = (0, import_react.useState)(false);
+	const [subnetInput, setSubnetInput] = (0, import_react.useState)("");
+	const [album, setAlbum] = (0, import_react.useState)([]);
+	const [showDiag, setShowDiag] = (0, import_react.useState)(false);
+	const [linkOpen, setLinkOpen] = (0, import_react.useState)(true);
+	const [advancedOpen, setAdvancedOpen] = (0, import_react.useState)(false);
+	const [usbOk, setUsbOk] = (0, import_react.useState)(false);
 	const stopRef = (0, import_react.useRef)(false);
 	const photoUrlRef = (0, import_react.useRef)(null);
-	const photoGen = (0, import_react.useRef)(0);
+	const albumRef = (0, import_react.useRef)([]);
 	const pdfRef = (0, import_react.useRef)(null);
 	const previewReq = (0, import_react.useRef)(0);
 	(0, import_react.useEffect)(() => {
 		const savedTheme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
 		setTheme(savedTheme);
-		const ua = navigator.userAgent;
-		const ios = /iPad|iPhone|iPod/.test(ua) || navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
-		setPhonePrint(ios);
+		setUsbOk(typeof navigator !== "undefined" && "usb" in navigator);
+		const rememberedSubnet = localStorage.getItem("nuguna-subnet") || "";
+		if (rememberedSubnet) setSubnetInput(rememberedSubnet);
 		setInApp(inAppBrowser());
 		if ("serviceWorker" in navigator) {
 			let hadController = Boolean(navigator.serviceWorker.controller);
@@ -7190,11 +7515,13 @@ function AtlasApp() {
 		extra
 	]);
 	(0, import_react.useEffect)(() => {
+		albumRef.current = album;
+	}, [album]);
+	(0, import_react.useEffect)(() => {
 		return () => {
-			photoGen.current += 1;
-			const url = photoUrlRef.current;
+			for (const url of albumRef.current) URL.revokeObjectURL(url);
 			photoUrlRef.current = null;
-			if (url) URL.revokeObjectURL(url);
+			clearPrintRoot();
 		};
 	}, []);
 	const selected = list.find((item) => item.id === selectedId) || null;
@@ -7224,6 +7551,8 @@ function AtlasApp() {
 		setNotice("");
 		try {
 			const linked = await identifyUsb(await pickUsb(all));
+			const ids = linked.usbKey.split(":");
+			diag(`USB VID=${ids[0] || "?"} PID=${ids[1] || "?"} ${linked.title} CMD=${linked.cmd || "(없음)"}`);
 			addFound({
 				id: `usb-pick:${linked.usbKey}:${linked.query}`,
 				title: linked.title,
@@ -7235,7 +7564,7 @@ function AtlasApp() {
 				usbKey: linked.usbKey
 			});
 			setUsbMissed(false);
-			setNotice(linked.live ? "USB로 연결했어요." : "USB로 기기는 잡았어요. 인쇄할 내용을 고르면 인쇄 창이 열려요.");
+			setNotice(linked.live ? "USB로 연결했어요." : "USB로 기기는 잡았어요. 이 화면에서 인쇄할 내용을 고르세요.");
 		} catch (error) {
 			setUsbMissed(true);
 			setNotice(humanError(error, "USB 복사기를 열지 못했어요."));
@@ -7276,20 +7605,68 @@ function AtlasApp() {
 		setStep("print");
 		setNotice("");
 	}
+	function startWith(kind) {
+		setDocKind(kind);
+		setStep("print");
+		setNotice("");
+	}
 	function backToConnect() {
 		if (sending) return;
 		clearPrintRoot();
-		setPdfBytes(null);
-		setPdfPreview(null);
-		setPdfName("");
-		setPdfCount(0);
-		setPdfKey("");
-		setPdfNeedsKey(false);
 		setStep("connect");
-		setSelectedId(null);
-		setOverrideQuery(null);
-		setAskName("");
 		setNotice("");
+	}
+	function addWifi(host, answered) {
+		const item = {
+			id: `wifi:${host}`,
+			title: `프린터 ${host}`,
+			subtitle: answered ? "631 응답 확인 · 직접 인쇄 시 CORS 허용 필요" : "직접 넣은 주소",
+			via: "wifi",
+			query: host,
+			host,
+			live: true
+		};
+		setHits((prev) => [item, ...prev.filter((row) => row.id !== item.id)]);
+		setSelectedId(item.id);
+	}
+	async function findOnWifi() {
+		if (lanBusy || sending) return;
+		setLanBusy(true);
+		setLanNote("브라우저가 같은 망 접근을 물어보면 허용하세요. 삼성 앱은 열지 않아요.");
+		try {
+			const found = await discoverLanPrinters(setLanNote, [subnetInput, localStorage.getItem("nuguna-subnet") || ""]);
+			if (found.length === 0) {
+				setLanNote("응답한 주소가 없어요. 대역(예: 192.168.50)이나 복사기 IP를 직접 넣으세요.");
+				return;
+			}
+			const subnet = found[0].host.split(".").slice(0, 3).join(".");
+			localStorage.setItem("nuguna-subnet", subnet);
+			setSubnetInput(subnet);
+			for (const hit of found) addWifi(hit.host, true);
+			setLanNote(`${found.length}대를 찾았어요. 그 주소로 이 화면에서 보냅니다.`);
+		} catch {
+			setLanNote("같은 망을 보지 못했어요. IP를 직접 넣으세요.");
+		} finally {
+			setLanBusy(false);
+		}
+	}
+	function addTypedIp() {
+		const host = ipInput.trim();
+		if (!isValidIPv4(host)) {
+			setLanNote("IP는 192.168.0.10 처럼 넣어 주세요.");
+			return;
+		}
+		addWifi(host, false);
+		setLanNote(`${host} 를 이 화면의 프린터로 골랐어요.`);
+	}
+	function leaveInApp() {
+		const url = window.location.href;
+		if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+			navigator.clipboard.writeText(url).then(() => setNotice("주소를 복사했어요. Safari 주소창에 붙여 넣으세요."));
+			return;
+		}
+		const bare = url.replace(/^https?:\/\//, "");
+		window.location.href = `intent://${bare}#Intent;scheme=${window.location.protocol.replace(":", "")};package=com.android.chrome;end`;
 	}
 	function useRecent() {
 		const recent = saved[0];
@@ -7302,47 +7679,78 @@ function AtlasApp() {
 		setAskName("");
 		setStep("print");
 	}
-	function choosePhoto(file) {
-		if (!file || sending) return;
-		if (/\.heic$|\.heif$/i.test(file.name) || file.type === "image/heic" || file.type === "image/heif") {
-			setNotice("HEIC 사진은 지원하지 않아요. JPG/PNG로 바꿔서 골라 주세요.");
+	async function choosePhotos(files) {
+		if (!files.length || sending) return;
+		const room = 20 - album.length;
+		if (room < 1) {
+			setNotice("사진은 20장까지예요.");
 			return;
 		}
-		if (file.size > 12582912) {
-			setNotice("사진이 너무 커요. JPG나 PNG로, 긴 변 2000px 정도로 줄여 주세요.");
-			return;
+		const urls = [];
+		let heic = false;
+		for (const file of files.slice(0, room)) {
+			if (/\.heic$|\.heif$/i.test(file.name) || file.type === "image/heic" || file.type === "image/heif") {
+				heic = true;
+				continue;
+			}
+			if (file.size > 12582912) {
+				setNotice("사진이 너무 커요. JPG나 PNG로, 긴 변 2000px 정도로 줄여 주세요.");
+				continue;
+			}
+			try {
+				urls.push(await shrinkPhoto(file));
+			} catch {
+				setNotice("사진을 열지 못했어요.");
+			}
 		}
+		if (heic) setNotice("HEIC는 브라우저에서 못 읽어요. JPG/PNG로 저장하거나 공유 메뉴에서 변환해 올려 주세요.");
+		if (!urls.length) return;
 		clearPrintRoot();
-		const token = ++photoGen.current;
+		setAlbum((prev) => [...prev, ...urls].slice(0, 20));
+		setPhotoUrl(urls[0]);
+		photoUrlRef.current = urls[0];
+		setDocKind("photo");
+	}
+	function removePhoto(url) {
+		setAlbum((prev) => {
+			const next = prev.filter((item) => item !== url);
+			setPhotoUrl((current) => current === url ? next[0] ?? null : current);
+			return next;
+		});
+		if (photoUrlRef.current === url) photoUrlRef.current = null;
+		URL.revokeObjectURL(url);
+	}
+	function movePhoto(url, dir) {
+		setAlbum((prev) => {
+			const index = prev.indexOf(url);
+			const nextIndex = index + dir;
+			if (index < 0 || nextIndex < 0 || nextIndex >= prev.length) return prev;
+			const next = [...prev];
+			const swap = next[index];
+			next[index] = next[nextIndex];
+			next[nextIndex] = swap;
+			return next;
+		});
+	}
+	async function shrinkPhoto(file) {
 		const raw = URL.createObjectURL(file);
-		const keep = (next) => {
-			if (token !== photoGen.current) {
-				URL.revokeObjectURL(next);
-				return;
-			}
-			const previous = photoUrlRef.current;
-			photoUrlRef.current = next;
-			if (previous && previous !== next) URL.revokeObjectURL(previous);
-			setPhotoUrl(next);
-			setDocKind("photo");
-		};
-		loadImage(raw).then(async (image) => {
+		try {
+			const image = await loadImage(raw);
 			const long = Math.max(image.width, image.height);
-			let next = raw;
-			if (image.width * image.height >= 4e7 || long > 2e3) {
-				const scale = 2e3 / long;
-				const canvas = document.createElement("canvas");
-				canvas.width = Math.max(1, Math.round(image.width * scale));
-				canvas.height = Math.max(1, Math.round(image.height * scale));
-				canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
-				const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", .86));
-				if (blob) {
-					URL.revokeObjectURL(raw);
-					next = URL.createObjectURL(blob);
-				}
-			}
-			keep(next);
-		}).catch(() => keep(raw));
+			if (image.width * image.height < 4e7 && long <= 2e3) return raw;
+			const scale = 2e3 / long;
+			const canvas = document.createElement("canvas");
+			canvas.width = Math.max(1, Math.round(image.width * scale));
+			canvas.height = Math.max(1, Math.round(image.height * scale));
+			canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+			const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", .86));
+			URL.revokeObjectURL(raw);
+			if (!blob) throw new Error("사진을 열지 못했어요.");
+			return URL.createObjectURL(blob);
+		} catch (error) {
+			URL.revokeObjectURL(raw);
+			throw error;
+		}
 	}
 	(0, import_react.useEffect)(() => {
 		if (!pdfBytes) {
@@ -7378,8 +7786,8 @@ function AtlasApp() {
 				const opened = pdfRef.current?.opened;
 				if (!opened || cancel || requestId !== previewReq.current) return;
 				const page = Math.min(opened.doc.numPages, Math.max(1, previewPage));
-				const size = previewSize(paper);
-				const canvas = await renderPdfPage(opened.doc, page, size.width, size.height, slot);
+				const size = oriented(previewSize(paper));
+				const canvas = await renderPdfPage(opened.doc, page, size.width, size.height, slot, orient === "auto" ? "auto" : "fit");
 				if (!canvas || cancel || requestId !== previewReq.current) {
 					if (canvas) {
 						canvas.width = 0;
@@ -7414,7 +7822,8 @@ function AtlasApp() {
 		pdfBytes,
 		previewPage,
 		paper,
-		pdfKey
+		pdfKey,
+		orient
 	]);
 	(0, import_react.useEffect)(() => () => {
 		const previous = pdfRef.current;
@@ -7439,29 +7848,90 @@ function AtlasApp() {
 		});
 	}
 	const catalogPcl5 = Boolean(match && sure && !isInkjet(match) && languageIsPcl5((match.printer.languages || []).join(" ")));
+	const helperLive = Boolean(useHelper && selected?.host && helperUrl.trim());
+	const rasterForced = Boolean(pdfKey) || nup !== 1 || reverse || pageMode !== "all" || secureOn || orient === "landscape";
 	const route = resolvePrintRoute({
-		liveUsb: Boolean(selected?.live && selected.usbKey),
-		cmd: selected?.cmd || "",
+		liveUsb: Boolean(selected?.live && selected.usbKey) || helperLive,
+		cmd: selected?.cmd || (helperLive ? "PCL5e,PDF" : ""),
 		catalogPcl5,
 		catalogSure: Boolean(match && sure),
 		pdfBytes: Boolean(pdfBytes),
 		docKind,
-		pageMode,
+		pageMode: pageMode === "list" ? "list" : pageMode,
 		gray,
-		pdfDirect: Boolean(pdfBytes && canPdfDirect(pdfBytes))
+		pdfDirect: Boolean(pdfBytes && canPdfDirect(pdfBytes) && !rasterForced)
 	});
+	function oriented(size) {
+		return orient === "landscape" ? {
+			width: size.height,
+			height: size.width
+		} : size;
+	}
+	function pageBox() {
+		const points = paperPoints(paper);
+		return orient === "landscape" ? {
+			width: points.height,
+			height: points.width
+		} : points;
+	}
+	async function canvasJpeg(canvas) {
+		const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", .9));
+		const width = canvas.width;
+		const height = canvas.height;
+		canvas.width = 0;
+		canvas.height = 0;
+		if (!blob) throw new Error("인쇄 이미지를 만들지 못했어요.");
+		return {
+			jpeg: new Uint8Array(await blob.arrayBuffer()),
+			width,
+			height
+		};
+	}
+	async function photoSheetJpegs() {
+		const sources = album.length ? album : photoUrl ? [photoUrl] : [];
+		if (!sources.length) throw new Error("사진을 골라 주세요.");
+		const groups = nupGroups(sources.map((_, index) => index + 1), nup, reverse);
+		const px = oriented(printPixelSize(paper));
+		const sheets = [];
+		for (const group of groups) {
+			const images = await Promise.all(group.map((number) => loadImage(sources[number - 1])));
+			if (nup === 1 && group.length === 1) {
+				const canvas = await renderSheetCanvas({
+					kind: "photo",
+					title: "",
+					note: "",
+					paper,
+					image: images[0],
+					fit: photoFit,
+					turn: photoTurn,
+					gray,
+					frame: px
+				});
+				if (gray) grayCanvas(canvas);
+				sheets.push(await canvasJpeg(canvas));
+			} else {
+				const sheet = composeSheet(images, images.map((image) => ({
+					width: image.naturalWidth || image.width,
+					height: image.naturalHeight || image.height
+				})), px.width, px.height, nup, photoFit);
+				if (gray) grayCanvas(sheet);
+				sheets.push(await canvasJpeg(sheet));
+			}
+		}
+		return sheets;
+	}
 	async function buildSystem(forceColor = false) {
 		const useGray = forceColor ? false : gray;
 		const title = match ? `${match.printer.brand} ${match.printer.model}` : selected?.title || "인쇄";
-		const note = docKind === "memo" ? memo.trim() : "인쇄 창에서 이 복사기를 고르세요.";
+		const note = docKind === "memo" ? memo.trim() : "이 브라우저에서 만든 인쇄본입니다.";
 		if (docKind === "pdf" && pdfBytes) {
 			const opened = await openPdf(pdfBytes, pdfKey || void 0);
 			try {
-				const numbers = pageSpan(opened.doc.numPages, pageMode, pageFrom, pageTo);
-				const size = osRasterSize(paper, numbers.length);
+				const numbers = currentPages(opened.doc.numPages).pages;
+				const size = oriented(osRasterSize(paper, numbers.length));
 				const urls = [];
 				for (const number of numbers) {
-					const canvas = await renderPdfPage(opened.doc, number, size.width, size.height);
+					const canvas = await renderPdfPage(opened.doc, number, size.width, size.height, void 0, orient === "auto" ? "auto" : "fit");
 					if (!canvas) throw new Error("PDF를 열지 못했어요.");
 					urls.push(await canvasObjectUrl(canvas, .86));
 					canvas.width = 0;
@@ -7477,13 +7947,15 @@ function AtlasApp() {
 				await opened.destroy();
 			}
 		}
-		if (docKind === "photo" && photoUrl) return {
-			kind: "photo",
-			src: photoUrl,
-			fit: photoFit,
-			turn: photoTurn,
+		if (docKind === "photo" && (photoUrl || album.length)) return {
+			kind: "pdf",
+			pages: (await photoSheetJpegs()).map((sheet) => {
+				const copy = new Uint8Array(sheet.jpeg.byteLength);
+				copy.set(sheet.jpeg);
+				return URL.createObjectURL(new Blob([copy], { type: "image/jpeg" }));
+			}),
 			paper,
-			gray: useGray
+			gray: false
 		};
 		if (docKind === "memo") return {
 			kind: "memo",
@@ -7499,29 +7971,140 @@ function AtlasApp() {
 			gray: useGray
 		};
 	}
-	async function onPrint() {
+	function currentPages(total) {
+		if (pageMode === "list") {
+			const parsed = parsePageRange(pageList, total);
+			return "error" in parsed ? {
+				pages: [],
+				error: parsed.error
+			} : { pages: parsed.pages };
+		}
+		return { pages: pageSpan(total, pageMode === "span" ? "span" : "all", pageFrom, pageTo) };
+	}
+	function secureOpts() {
+		if (!secureOn) return void 0;
+		if (!/^\d{4}$/.test(pin)) return null;
+		return {
+			pin,
+			user: jobUser.replace(/[^A-Za-z0-9]/g, "").slice(0, 16) || "USER"
+		};
+	}
+	async function onPrint(trial = false) {
 		if (sending) return;
-		const pages = pageSpan(pdfCount, pageMode, pageFrom, pageTo);
-		if (docKind === "pdf" && (!pdfBytes || pages.length < 1)) {
-			setNotice("PDF를 골라 주세요.");
-			return;
+		const pages = trial ? [1] : docKind === "pdf" ? currentPages(pdfCount).pages : [1];
+		if (!trial && docKind === "pdf") {
+			const picked = currentPages(pdfCount);
+			if (picked.error) {
+				setNotice(picked.error);
+				return;
+			}
+			if (!pdfBytes || picked.pages.length < 1) {
+				setNotice("PDF를 골라 주세요.");
+				return;
+			}
 		}
 		if (docKind === "memo" && memo.trim().length < 1) {
 			setNotice("메모를 적어 주세요.");
 			return;
 		}
-		if (docKind === "photo" && !photoUrl) {
+		if (docKind === "photo" && !photoUrl && album.length < 1) {
 			setNotice("사진을 골라 주세요.");
 			return;
 		}
 		const title = match ? `${match.printer.brand} ${match.printer.model}` : selected?.title || "인쇄";
-		const note = docKind === "memo" ? memo.trim() : "인쇄 창에서 이 복사기를 고르세요.";
-		if (route === "os-print" || !selected?.usbKey) {
-			await printSheet(await buildSystem());
-			setNotice(dialogNotice("인쇄 창을 열었어요. 거기서 이 복사기를 고르면 돼요."));
+		const secure = secureOpts();
+		if (secure === null) {
+			setNotice("보안 인쇄 PIN은 숫자 4자리로 넣어 주세요.");
 			return;
 		}
-		const usbKey = selected.usbKey;
+		const note = docKind === "memo" ? memo.trim() : "이 브라우저에서 만든 인쇄본입니다.";
+		const viaHelper = helperLive;
+		if (selected?.host && !viaHelper && !trial) {
+			setSending(true);
+			setNotice(`${selected.host} 로 넣는 중…`);
+			try {
+				let bytes = pdfBytes;
+				if (docKind === "pdf") {
+					if (!bytes) throw new Error("PDF를 골라 주세요.");
+					if (orient === "landscape") {
+						const opened = await openPdf(bytes, pdfKey || void 0);
+						try {
+							const picked = pages;
+							const size = oriented(osRasterSize(paper, picked.length));
+							const sheets = [];
+							for (const number of picked) {
+								const canvas = await renderPdfPage(opened.doc, number, size.width, size.height, void 0, "fit");
+								if (!canvas) throw new Error("PDF를 열지 못했어요.");
+								if (gray) grayCanvas(canvas);
+								sheets.push(await canvasJpeg(canvas));
+							}
+							bytes = new Uint8Array(await imagesToPdf(sheets, pageBox()));
+						} finally {
+							await opened.destroy();
+						}
+					} else if (pageMode !== "all") bytes = await slicePdf(bytes, pages);
+				} else if (docKind === "memo") {
+					const frame = oriented(printPixelSize(paper));
+					const chunks = sheetMemoChunks(note, paper, frame);
+					const sheets = [];
+					for (const chunk of chunks) {
+						const canvas = await renderSheetCanvas({
+							kind: "memo",
+							title: selected.title,
+							note: chunk,
+							paper,
+							gray,
+							frame
+						});
+						if (gray) grayCanvas(canvas);
+						sheets.push(await canvasJpeg(canvas));
+					}
+					bytes = new Uint8Array(await imagesToPdf(sheets, pageBox()));
+				} else if (docKind === "photo") bytes = new Uint8Array(await imagesToPdf(await photoSheetJpegs(), pageBox()));
+				else {
+					const frame = oriented(printPixelSize(paper));
+					const canvas = await renderSheetCanvas({
+						kind: "test",
+						title: selected.title,
+						note,
+						paper,
+						gray,
+						frame
+					});
+					if (gray) grayCanvas(canvas);
+					const sheet = await canvasJpeg(canvas);
+					bytes = new Uint8Array(await imagesToPdf([sheet], pageBox()));
+				}
+				await sendIppPdf(selected.host, bytes, {
+					copies,
+					duplex,
+					paper,
+					gray
+				});
+				setNotice(`${selected.host} 로 보냈어요. 삼성 기본 앱은 열지 않았어요.`);
+			} catch (error) {
+				const message = error instanceof Error ? error.message : "그 주소로 넣지 못했어요.";
+				diag(`IPP ${selected.host} ${message}`);
+				setNotice(message);
+			} finally {
+				setSending(false);
+			}
+			return;
+		}
+		const effective = trial && selected?.usbKey ? "usb-pcl" : route;
+		if (effective === "preview-only" || !selected?.usbKey && !viaHelper) {
+			setNotice("보낼 연결이 없어요. 화면 미리보기나 PDF 저장을 눌러 주세요.");
+			return;
+		}
+		const usbKey = selected?.usbKey || "";
+		const write = async (bytes, onProgress, shouldStop, atomic = false) => {
+			if (viaHelper && selected?.host) {
+				await helperSend(helperUrl, helperCode, selected.host, bytes);
+				onProgress?.(100);
+				return;
+			}
+			await sendUsbBytes(usbKey, bytes, onProgress, shouldStop, atomic);
+		};
 		stopRef.current = false;
 		setSending(true);
 		setProgress(0);
@@ -7532,106 +8115,157 @@ function AtlasApp() {
 			const packets = bundleCommands(commands);
 			for (const [index, packet] of packets.entries()) {
 				if (stopRef.current) throw new Error("보내기를 멈췄어요.");
-				await sendUsbBytes(usbKey, packet, () => progress(Math.round((index + 1) / packets.length * 100)), () => false, true);
+				await write(packet, () => progress(Math.round((index + 1) / packets.length * 100)), () => false, true);
 			}
 		};
 		try {
-			if (route === "usb-pdf" && pdfBytes) {
+			if (effective === "usb-pdf" && pdfBytes && !trial) {
 				const bytes = wrapPdfJob(pdfBytes, {
 					copies,
 					duplex,
 					paper,
-					pages: Math.max(1, pdfCount)
+					pages: Math.max(1, pdfCount),
+					secure
 				});
 				setProgress(8);
-				await sendUsbBytes(usbKey, bytes, (percent) => setProgress(8 + Math.round(percent * .92)), stop);
+				await write(bytes, (percent) => setProgress(8 + Math.round(percent * .92)), stop);
 			} else {
-				const size = printableSize(paper);
-				const memoChunks = docKind === "memo" ? officeMemoChunks(note, size.width, size.height) : null;
-				const jobPages = docKind === "pdf" ? Math.max(1, pages.length) : memoChunks?.length || 1;
-				await sendUsbBytes(usbKey, pclJobHeader({
+				const size = oriented(printableSize(paper));
+				const memoChunks = !trial && docKind === "memo" ? officeMemoChunks(note, size.width, size.height) : null;
+				const sources = album.length ? album : photoUrl ? [photoUrl] : [];
+				const photoGroups = nupGroups(sources.map((_, index) => index + 1), nup, reverse);
+				const pdfGroups = nupGroups(pages, nup, reverse);
+				const jobPages = trial ? 1 : docKind === "pdf" ? Math.max(1, pdfGroups.length) : memoChunks?.length || photoGroups.length || 1;
+				await write(pclJobHeader({
 					copies,
 					duplex,
 					paper,
-					pages: jobPages
+					pages: jobPages,
+					secure,
+					orient: orient === "landscape" ? "landscape" : "portrait"
 				}), () => setProgress(2), stop, true);
 				started = true;
 				if (stopRef.current) throw new Error("보내기를 멈췄어요.");
-				if (docKind === "pdf" && pdfBytes) {
+				if (!trial && docKind === "pdf" && pdfBytes) {
 					const opened = await openPdf(pdfBytes, pdfKey || void 0);
 					try {
-						const listPages = pageSpan(opened.doc.numPages, pageMode, pageFrom, pageTo);
-						for (const [index, number] of listPages.entries()) {
+						const cellW = nup === 4 ? Math.floor(size.width / 2) : size.width;
+						const cellH = nup === 1 ? size.height : Math.floor(size.height / (nup === 4 ? 2 : 2));
+						for (const [index, group] of pdfGroups.entries()) {
 							if (stopRef.current) throw new Error("보내기를 멈췄어요.");
-							const canvas = await renderPdfPage(opened.doc, number, size.width, size.height);
-							if (!canvas || stopRef.current) {
-								if (canvas) {
-									canvas.width = 0;
-									canvas.height = 0;
+							const rendered = [];
+							for (const number of group) {
+								const canvas = await renderPdfPage(opened.doc, number, cellW, cellH, void 0, orient === "auto" ? "auto" : "fit");
+								if (!canvas || stopRef.current) {
+									canvas?.width && (canvas.width = 0);
+									throw new Error("보내기를 멈췄어요.");
 								}
-								throw new Error("보내기를 멈췄어요.");
+								rendered.push(canvas);
 							}
-							const commands = canvasPclCommands(canvas, "dither");
-							canvas.width = 0;
-							canvas.height = 0;
-							const percent = Math.round(4 + (index + 1) / listPages.length * 90);
-							await sendPackets(commands, () => setProgress(percent));
+							const sheet = nup === 1 && rendered[0] ? rendered[0] : composeSheet(rendered, rendered.map((canvas) => ({
+								width: canvas.width,
+								height: canvas.height
+							})), size.width, size.height, nup, "contain");
+							const commands = canvasPclCommands(sheet, "dither");
+							for (const canvas of rendered) {
+								canvas.width = 0;
+								canvas.height = 0;
+							}
+							if (sheet !== rendered[0]) {
+								sheet.width = 0;
+								sheet.height = 0;
+							}
+							await sendPackets(commands, () => setProgress(Math.round(4 + (index + 1) / pdfGroups.length * 90)));
 						}
-						if (needsBlankBack(listPages.length, duplex)) await sendPackets(pclPageCommands(new Uint8Array(size.width * size.height), size.width, size.height), () => setProgress(96));
+						if (needsBlankBack(pdfGroups.length, duplex)) await sendPackets(pclPageCommands(new Uint8Array(size.width * size.height), size.width, size.height), () => setProgress(96));
 					} finally {
 						await opened.destroy();
 					}
 				} else if (memoChunks) {
-					for (const [index, chunk] of memoChunks.entries()) {
+					const groups = nup === 1 && !reverse ? memoChunks.map((chunk) => [chunk]) : nupGroups(memoChunks.map((_, index) => index + 1), nup, reverse).map((group) => group.map((number) => memoChunks[number - 1]));
+					for (const [index, group] of groups.entries()) {
 						if (stopRef.current) throw new Error("보내기를 멈췄어요.");
-						const canvas = document.createElement("canvas");
-						canvas.width = size.width;
-						canvas.height = size.height;
-						drawOfficePage(canvas, {
-							kind: "memo",
-							title,
-							note: chunk,
-							gray: true
+						const cells = group.map((chunk) => {
+							const canvas = document.createElement("canvas");
+							canvas.width = nup === 4 ? Math.floor(size.width / 2) : size.width;
+							canvas.height = nup === 1 ? size.height : Math.floor(size.height / 2);
+							drawOfficePage(canvas, {
+								kind: "memo",
+								title,
+								note: chunk,
+								gray: true
+							});
+							return canvas;
 						});
-						const commands = canvasPclCommands(canvas, "threshold");
-						canvas.width = 0;
-						canvas.height = 0;
-						await sendPackets(commands, () => setProgress(Math.round(8 + (index + 1) / memoChunks.length * 84)));
+						const commands = canvasPclCommands(nup === 1 ? cells[0] : composeSheet(cells, cells.map((canvas) => ({
+							width: canvas.width,
+							height: canvas.height
+						})), size.width, size.height, nup, "contain"), "threshold");
+						for (const canvas of cells) {
+							canvas.width = 0;
+							canvas.height = 0;
+						}
+						await sendPackets(commands, () => setProgress(Math.round(8 + (index + 1) / groups.length * 84)));
 					}
-					if (needsBlankBack(memoChunks.length, duplex)) await sendPackets(pclPageCommands(new Uint8Array(size.width * size.height), size.width, size.height), () => setProgress(96));
+					if (needsBlankBack(groups.length, duplex)) await sendPackets(pclPageCommands(new Uint8Array(size.width * size.height), size.width, size.height), () => setProgress(96));
+				} else if (docKind === "photo" && sources.length) {
+					for (const [index, group] of photoGroups.entries()) {
+						if (stopRef.current) throw new Error("보내기를 멈췄어요.");
+						const images = await Promise.all(group.map((number) => loadImage(sources[number - 1])));
+						const sheet = composeSheet(images, images.map((image) => ({
+							width: image.naturalWidth || image.width,
+							height: image.naturalHeight || image.height
+						})), size.width, size.height, nup === 1 && group.length === 1 ? 1 : nup, photoFit);
+						if (photoTurn) {
+							const turned = document.createElement("canvas");
+							turned.width = size.width;
+							turned.height = size.height;
+							const ctx = turned.getContext("2d");
+							ctx?.translate(size.width / 2, size.height / 2);
+							ctx?.rotate(photoTurn * Math.PI / 180);
+							ctx?.drawImage(sheet, -size.width / 2, -size.height / 2);
+							sheet.width = 0;
+							const commands = canvasPclCommands(turned, "dither");
+							turned.width = 0;
+							turned.height = 0;
+							await sendPackets(commands, () => setProgress(Math.round(8 + (index + 1) / photoGroups.length * 84)));
+						} else {
+							const commands = canvasPclCommands(sheet, "dither");
+							sheet.width = 0;
+							sheet.height = 0;
+							await sendPackets(commands, () => setProgress(Math.round(8 + (index + 1) / photoGroups.length * 84)));
+						}
+					}
+					if (needsBlankBack(photoGroups.length, duplex)) await sendPackets(pclPageCommands(new Uint8Array(size.width * size.height), size.width, size.height), () => setProgress(96));
 				} else {
 					const canvas = document.createElement("canvas");
 					canvas.width = size.width;
 					canvas.height = size.height;
-					const image = docKind === "photo" && photoUrl ? await loadImage(photoUrl) : null;
 					drawOfficePage(canvas, {
-						kind: docKind,
+						kind: "test",
 						title,
 						note,
-						image,
-						fit: photoFit,
-						turn: photoTurn,
 						gray: true
 					});
 					if (stopRef.current) throw new Error("보내기를 멈췄어요.");
-					const commands = canvasPclCommands(canvas, docKind === "photo" ? "dither" : "threshold");
+					const commands = canvasPclCommands(canvas, "threshold");
 					canvas.width = 0;
 					canvas.height = 0;
 					await sendPackets(commands, (percent) => setProgress(8 + Math.round(percent * .84)));
 					if (needsBlankBack(1, duplex)) await sendPackets(pclPageCommands(new Uint8Array(size.width * size.height), size.width, size.height), () => setProgress(96));
 				}
 				if (stopRef.current) throw new Error("보내기를 멈췄어요.");
-				await sendUsbBytes(usbKey, pclJobFooter(), () => setProgress(100), () => false, true);
+				await write(pclJobFooter(), () => setProgress(100), () => false, true);
 				started = false;
 			}
 			if (stopRef.current) {
 				setNotice("보내기를 멈췄어요.");
 				return;
 			}
-			setNotice("USB로 보냈어요.");
+			setNotice(secure ? `${viaHelper ? "도우미로" : "USB로"} 보냈어요. 복사기 화면에서 PIN을 입력해야 출력돼요.` : viaHelper ? "PC 도우미로 보냈어요." : "USB로 보냈어요.");
 		} catch (error) {
 			if (started && !fatalUsb(error)) try {
-				await sendUsbBytes(usbKey, pclAbortFooter(), void 0, () => false, true);
+				await write(pclAbortFooter(), void 0, () => false, true);
 			} catch {}
 			if (fatalUsb(error) && selected?.usbKey) {
 				const mark = (item) => item.usbKey === selected.usbKey ? {
@@ -7647,8 +8281,9 @@ function AtlasApp() {
 				return;
 			}
 			if (!started) {
-				setNotice(dialogNotice(humanError(error, "바로 넣지는 못해서 인쇄 창을 열었어요.")));
-				await printSheet(await buildSystem());
+				const message = humanError(error, "바로 넣지 못했어요.");
+				diag(`보내기 실패 ${message}`);
+				setNotice(`${message} 화면 미리보기나 PDF 저장을 눌러 주세요.`);
 				return;
 			}
 			setNotice(humanError(error, "보내는 중에 끊겼어요. 복사기에서 작업을 지운 뒤 다시 눌러 주세요."));
@@ -7659,21 +8294,18 @@ function AtlasApp() {
 	async function onColorPrint() {
 		if (sending) return;
 		await printSheet(await buildSystem(true));
-		setNotice(dialogNotice("인쇄 창을 열었어요. 거기서 컬러로 고르면 돼요."));
+		setNotice(dialogNotice("이 화면에 미리보기를 띄웠어요. 프린터로는 보내지 않았어요."));
 	}
 	function dialogNotice(base) {
-		const count = docKind === "pdf" ? pageSpan(pdfCount, pageMode, pageFrom, pageTo).length : 0;
+		const count = docKind === "pdf" ? currentPages(pdfCount).pages.length : 0;
 		const safari = typeof navigator !== "undefined" && /Safari/i.test(navigator.userAgent) && !/Chrome|CriOS|Edg|Android/i.test(navigator.userAgent);
 		const notes = [base];
-		if (count > 30) notes.push("30쪽이 넘어 인쇄 창 해상도를 낮췄어요. 더 선명하게 찍으려면 30쪽씩 나눠 주세요.");
-		if (safari && (paper === "A3" || paper === "B5")) notes.push("사파리 인쇄 창에서 용지 크기를 한 번 더 확인해 주세요.");
+		if (count > 30) notes.push("30쪽이 넘어 이 화면의 해상도를 낮췄어요. 더 선명하게 보려면 30쪽씩 나눠 주세요.");
+		if (safari && (paper === "A3" || paper === "B5")) notes.push("이 화면의 용지 크기를 한 번 더 확인해 주세요.");
 		return notes.join(" ");
 	}
-	const skippedConfirm = step === "print" && !(match && sure);
-	const stepNo = step === "print" ? 3 : step === "confirm" ? 2 : 1;
-	const chosenPages = pageSpan(pdfCount, pageMode, pageFrom, pageTo);
-	const readyDoc = docKind === "test" || (docKind === "photo" ? Boolean(photoUrl) : docKind === "memo" ? memo.trim().length > 0 : Boolean(pdfBytes && chosenPages.length && !pdfNeedsKey));
-	const viaName = selected?.live && selected.usbKey ? "USB" : "와이파이 (인쇄 창)";
+	const chosenPages = currentPages(pdfCount).pages;
+	const readyDoc = docKind === "test" || (docKind === "photo" ? Boolean(photoUrl || album.length) : docKind === "memo" ? memo.trim().length > 0 : Boolean(pdfBytes && chosenPages.length && !pdfNeedsKey));
 	async function onPdf() {
 		if (!readyDoc || sending) return;
 		try {
@@ -7693,10 +8325,10 @@ function AtlasApp() {
 				}
 				const opened = await openPdf(pdfBytes, pdfKey || void 0);
 				try {
-					const size = osRasterSize(paper, chosenPages.length);
+					const size = oriented(osRasterSize(paper, chosenPages.length));
 					const sheets = [];
 					for (const number of chosenPages) {
-						const canvas = await renderPdfPage(opened.doc, number, size.width, size.height);
+						const canvas = await renderPdfPage(opened.doc, number, size.width, size.height, void 0, orient === "auto" ? "auto" : "fit");
 						if (!canvas) throw new Error("PDF로 만들지 못했어요.");
 						grayCanvas(canvas);
 						const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", .92));
@@ -7709,7 +8341,7 @@ function AtlasApp() {
 							height: size.height
 						});
 					}
-					const bytes = await imagesToPdf(sheets, paperPoints(paper));
+					const bytes = await imagesToPdf(sheets, pageBox());
 					const copy = new Uint8Array(bytes.byteLength);
 					copy.set(bytes);
 					const url = URL.createObjectURL(new Blob([copy], { type: "application/pdf" }));
@@ -7724,7 +8356,8 @@ function AtlasApp() {
 				return;
 			}
 			if (docKind === "memo") {
-				const chunks = sheetMemoChunks(memo.trim(), paper);
+				const frame = oriented(printPixelSize(paper));
+				const chunks = sheetMemoChunks(memo.trim(), paper, frame);
 				const sheets = [];
 				for (const chunk of chunks) {
 					const canvas = await renderSheetCanvas({
@@ -7732,7 +8365,8 @@ function AtlasApp() {
 						title: "",
 						note: chunk,
 						paper,
-						gray
+						gray,
+						frame
 					});
 					if (gray) grayCanvas(canvas);
 					const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", .92));
@@ -7747,7 +8381,7 @@ function AtlasApp() {
 						height
 					});
 				}
-				const bytes = await imagesToPdf(sheets, paperPoints(paper));
+				const bytes = await imagesToPdf(sheets, pageBox());
 				const copy = new Uint8Array(bytes.byteLength);
 				copy.set(bytes);
 				const url = URL.createObjectURL(new Blob([copy], { type: "application/pdf" }));
@@ -7758,28 +8392,29 @@ function AtlasApp() {
 				URL.revokeObjectURL(url);
 				return;
 			}
-			const image = docKind === "photo" && photoUrl ? await loadImage(photoUrl) : null;
+			if (docKind === "photo") {
+				const bytes = await imagesToPdf(await photoSheetJpegs(), pageBox());
+				const copy = new Uint8Array(bytes.byteLength);
+				copy.set(bytes);
+				const url = URL.createObjectURL(new Blob([copy], { type: "application/pdf" }));
+				const link = document.createElement("a");
+				link.href = url;
+				link.download = "사진.pdf";
+				link.click();
+				URL.revokeObjectURL(url);
+				return;
+			}
+			const frame = oriented(printPixelSize(paper));
 			const canvas = await renderSheetCanvas({
-				kind: docKind === "photo" ? "photo" : "test",
+				kind: "test",
 				title: match ? `${match.printer.brand} ${match.printer.model}` : "인쇄",
-				note: "인쇄 창에서 이 복사기를 고르세요.",
+				note: "이 브라우저에서 만든 인쇄본입니다.",
 				paper,
-				image,
-				fit: photoFit,
-				turn: photoTurn,
-				gray
+				gray,
+				frame
 			});
 			if (gray) grayCanvas(canvas);
-			await downloadCanvasPdf(canvas, "인쇄", paper === "A3" ? {
-				width: 841.89,
-				height: 1190.55
-			} : paper === "B5" ? {
-				width: 515.91,
-				height: 728.5
-			} : {
-				width: 595.28,
-				height: 841.89
-			});
+			await downloadCanvasPdf(canvas, "인쇄", pageBox());
 		} catch (error) {
 			setNotice(humanError(error, "PDF로 만들지 못했어요."));
 		}
@@ -7787,154 +8422,393 @@ function AtlasApp() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", {
 		className: "shell mx-auto flex w-full max-w-lg flex-col gap-4 px-4 py-6 sm:py-10",
 		children: [
-			inApp ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "rounded-2xl border border-warn bg-subtle px-4 py-3 text-sm leading-relaxed",
-				children: "이 앱 안에서는 복사기를 열 수 없어요. 메뉴에서 Chrome이나 Safari로 열어 주세요."
+			inApp ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "card px-4 py-3 text-sm leading-relaxed",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "인앱 브라우저에서는 USB와 일부 인쇄가 막혀 있어요." }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "button",
+					onClick: leaveInApp,
+					className: "mt-3 h-11 w-full rounded-2xl bg-accent text-sm font-medium text-accent-fg",
+					children: /iPad|iPhone|iPod/.test(navigator.userAgent) ? "주소 복사하기" : "Chrome으로 바로 열기"
+				})]
 			}) : null,
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
-				className: "flex items-center gap-3",
-				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Mark, {}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "min-w-0 flex-1",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-							className: "text-3xl font-semibold leading-none",
-							children: "인쇄"
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-							className: "mt-1 text-sm leading-snug text-muted",
-							children: [
-								"사무용 복사기·복합기를 USB로 바로 연결하거나,",
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("br", {}),
-								"사내 와이파이 인쇄 창으로 인쇄합니다."
-							]
-						})]
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+				className: "flex items-center justify-between gap-3",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "min-w-0",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+						className: "text-2xl font-medium tracking-tight",
+						children: "누구나프린트"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "mt-1 text-sm text-muted",
+						children: "이 화면에서 인쇄합니다."
+					})]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex shrink-0 gap-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						type: "button",
+						onClick: () => setShowDiag(true),
+						className: "inline-flex size-11 items-center justify-center rounded-full border border-line",
+						"aria-label": "진단 로그",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CircleHelp, { className: "size-4" })
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 						type: "button",
 						onClick: toggleTheme,
-						className: "inline-flex size-11 items-center justify-center rounded-full border border-line bg-subtle",
+						className: "inline-flex size-11 items-center justify-center rounded-full border border-line",
 						"aria-label": theme === "dark" ? "밝게" : "어둡게",
 						children: theme === "dark" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sun, { className: "size-4" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Moon, { className: "size-4" })
-					})
-				]
+					})]
+				})]
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ol", {
-				className: "grid grid-cols-3 gap-2 text-center text-xs",
-				children: [
-					"연결",
-					"확인",
-					"인쇄"
-				].map((label, index) => {
-					const skipped = skippedConfirm && index === 1;
-					const on = stepNo === index + 1;
-					return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", {
-						className: `rounded-full px-2 py-2 ${on ? "bg-accent text-accent-fg" : "bg-subtle text-muted"}`,
-						children: skipped ? "2. 건너뜀" : `${index + 1}. ${label}`
-					}, label);
+			showDiag ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center",
+				onClick: () => setShowDiag(false),
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "card w-full max-w-lg p-4 text-sm",
+					onClick: (event) => event.stopPropagation(),
+					role: "dialog",
+					"aria-label": "진단 로그",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "flex items-center justify-between",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "font-medium text-fg",
+								children: "진단 로그"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+								type: "button",
+								onClick: () => setShowDiag(false),
+								className: "text-sm font-medium text-accent",
+								children: "닫기"
+							})]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("pre", {
+							className: "mt-3 max-h-64 overflow-auto whitespace-pre-wrap text-xs text-muted",
+							children: diagText() || "아직 기록이 없어요."
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							type: "button",
+							onClick: () => void navigator.clipboard.writeText(diagText()),
+							className: "mt-3 h-10 rounded-xl border border-line px-3 text-sm text-fg",
+							children: "복사"
+						})
+					]
 				})
-			}),
-			skippedConfirm ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "-mt-2 text-center text-xs text-muted",
-				children: "복사기 확인은 넘어갔어요. 인쇄할 내용만 고르면 됩니다."
 			}) : null,
-			step === "print" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-				className: "rounded-2xl bg-subtle px-4 py-3 text-sm text-fg",
-				children: [
-					"연결 방식: ",
-					viaName,
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-						type: "button",
-						onClick: backToConnect,
-						disabled: sending,
-						className: "ml-2 font-medium disabled:opacity-40",
-						children: "· 바꾸기"
-					})
-				]
+			step === "print" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+				type: "button",
+				onClick: backToConnect,
+				disabled: sending,
+				className: "card flex w-full items-center justify-between px-4 py-3 text-left disabled:opacity-40",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+					className: "min-w-0",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "block text-xs font-medium text-muted",
+						children: "프린터"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "mt-1 block truncate text-base font-medium text-fg",
+						children: selected?.title || "화면 미리보기 전용"
+					})]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "shrink-0 text-sm font-semibold text-accent",
+					children: "프린터 바꾸기"
+				})]
 			}) : null,
 			step === "connect" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
-				className: "panel rounded-3xl p-4 sm:p-5",
-				children: [
-					saved[0] ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-						type: "button",
-						onClick: useRecent,
-						className: "mb-3 flex w-full items-center justify-between gap-3 rounded-2xl border border-ink/10 bg-white px-3 py-3 text-left",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "block text-sm font-medium",
-							children: "최근 복사기 바로 쓰기"
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "mt-0.5 block text-xs text-ink/60",
-							children: saved[0].title
-						})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Printer, {
-							className: "size-4 shrink-0",
-							"aria-hidden": "true"
+				className: "flex flex-col gap-4",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "card p-4",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "flex items-start justify-between gap-3",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-xs font-medium text-muted",
+								children: "1. 연결된 프린터"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+								className: "mt-1 flex items-center gap-2 text-base font-medium text-fg",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: `inline-block size-2.5 rounded-full ${selected?.live && selected.usbKey ? "dot-usb" : selected?.host || helperLive ? "dot-wifi" : "dot-idle"}` }), selected?.live && selected.usbKey ? "USB 연결" : helperLive ? "PC 도우미 연결" : selected?.host ? "와이파이 연결" : "화면 미리보기 전용"]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "mt-0.5 truncate text-sm text-muted",
+								children: selected?.title || "아직 복사기를 고르지 않았어요"
+							})
+						] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							type: "button",
+							onClick: () => setLinkOpen((value) => !value),
+							className: "rounded-full border border-line px-3 py-2 text-sm font-semibold text-accent",
+							children: linkOpen ? "접기" : "연결 변경"
 						})]
-					}) : null,
-					phonePrint ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(WifiLane, {
-						primary: true,
-						onOpen: openChooser
-					}) : null,
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-						type: "button",
-						onClick: () => void connectUsb(false),
-						className: `flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-base font-medium ${phonePrint ? "mt-3 border border-ink/15" : "bg-accent text-accent-fg"}`,
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Usb, {
-							className: "size-5",
-							"aria-hidden": "true"
-						}), "선으로 연결"]
-					}),
-					usbMissed ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-						type: "button",
-						onClick: () => void connectUsb(true),
-						className: "mt-2 text-xs text-ink/60 underline-offset-2 hover:underline",
-						children: "USB 목록에 없으면 다른 기기도 보기"
-					}) : null,
-					phonePrint ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(WifiLane, { onOpen: openChooser }),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "mt-4 text-sm text-ink/70",
-						"aria-live": "polite",
-						children: scanning ? "전에 연결했던 복사기가 있나 보고 있어요." : selected?.live ? "연결되어 있어요." : "위에서 하나만 누르면 돼요."
-					}),
-					notice ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "mt-2 text-sm text-warn",
-						children: notice
-					}) : null,
-					list.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-						className: "mt-4 space-y-2",
-						children: list.map((item) => {
-							const on = item.id === selectedId;
-							return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+					}), linkOpen ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-4 space-y-3",
+						children: [
+							saved[0] ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 								type: "button",
-								onClick: () => {
-									setSelectedId(item.id);
-									setOverrideQuery(null);
-									setAskName("");
-									setStep(stageForQuery(item.query, item.cmd));
-								},
-								className: `flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left ${on ? "border-accent bg-white" : "border-ink/10 bg-white/70"}`,
+								onClick: useRecent,
+								className: "flex w-full items-center justify-between gap-3 border-b border-line py-3 text-left",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "block text-sm font-medium",
+									children: "최근 복사기"
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "mt-0.5 block text-xs text-muted",
+									children: saved[0].title
+								})] })
+							}) : null,
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+								type: "button",
+								disabled: lanBusy || sending,
+								onClick: () => void findOnWifi(),
+								className: "flex h-12 w-full items-center justify-center rounded-2xl bg-accent text-sm font-medium text-accent-fg disabled:opacity-40",
+								children: lanBusy ? "IP 찾는 중…" : "같은 와이파이에서 IP 찾기"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("details", {
+								className: "rounded-2xl border border-line px-3 py-2",
 								children: [
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Printer, {
-										className: "size-4 shrink-0",
-										"aria-hidden": "true"
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("summary", {
+										className: "text-sm font-medium text-fg",
+										children: "다른 대역 검색"
 									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-										className: "min-w-0 flex-1",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											className: "block truncate font-medium",
-											children: item.title
-										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											className: "mt-0.5 block text-xs text-ink/60",
-											children: item.subtitle
-										})]
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", {
+										className: "mt-3 block text-xs font-medium text-muted",
+										htmlFor: "subnet-field",
+										children: "자동 검색 대역 (선택)"
 									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										className: `text-xs ${item.live ? "text-ok" : "text-ink/50"}`,
-										children: item.live ? "연결됨" : VIA_LABEL[item.via]
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+										id: "subnet-field",
+										value: subnetInput,
+										onChange: (event) => setSubnetInput(event.target.value),
+										placeholder: "192.168.50",
+										"aria-label": "자동 검색 대역",
+										className: "field mt-1 h-11 w-full rounded-xl px-3 text-sm outline-none"
 									})
 								]
-							}) }, item.id);
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
+								className: "space-y-1",
+								onSubmit: (event) => {
+									event.preventDefault();
+									addTypedIp();
+								},
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", {
+									className: "block text-xs font-medium text-muted",
+									htmlFor: "printer-ip",
+									children: "복사기 IP 직접 입력"
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "ip-join",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+										id: "printer-ip",
+										value: ipInput,
+										onChange: (event) => setIpInput(event.target.value),
+										inputMode: "decimal",
+										placeholder: "192.168.0.10",
+										"aria-label": "복사기 IP 직접 입력",
+										className: "field h-12 min-w-0 flex-1 px-3 text-sm outline-none"
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+										type: "submit",
+										children: "이 IP로"
+									})]
+								})]
+							}),
+							lanNote ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-sm text-muted",
+								children: lanNote
+							}) : null,
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+								type: "button",
+								disabled: !usbOk,
+								onClick: () => void connectUsb(false),
+								className: "flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-line text-sm disabled:opacity-40",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Usb, {
+									className: "size-4",
+									"aria-hidden": "true"
+								}), "USB 선으로 연결"]
+							}),
+							usbOk ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-xs text-muted",
+								children: "Chrome(안드로이드/PC)에서만 USB 선 연결을 지원해요."
+							}),
+							usbMissed ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+								type: "button",
+								onClick: () => void connectUsb(true),
+								className: "mt-2 text-xs text-muted underline-offset-2 hover:underline",
+								children: "USB 목록에 없으면 다른 기기도 보기"
+							}) : null,
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-sm leading-relaxed text-muted",
+								"aria-live": "polite",
+								children: scanning ? "전에 연결했던 복사기가 있나 보고 있어요." : selected?.live ? "연결되어 있어요. 삼성 기본 앱으로는 넘기지 않아요." : "선을 꽂으면 이 화면에서 바로 넣습니다. 삼성 기본 앱으로는 넘기지 않아요."
+							}),
+							notice ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "mt-2 text-sm text-warn",
+								children: notice
+							}) : null,
+							list.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+								className: "mt-2",
+								children: list.map((item) => {
+									const on = item.id === selectedId;
+									return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+										type: "button",
+										onClick: () => {
+											setSelectedId(item.id);
+											setOverrideQuery(null);
+											setAskName("");
+											setStep(item.host ? "print" : stageForQuery(item.query, item.cmd));
+										},
+										className: `flex w-full items-center gap-3 border-b border-line py-3 text-left ${on ? "text-accent" : ""}`,
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+											className: "min-w-0 flex-1",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												className: "block truncate font-medium",
+												children: item.title
+											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												className: "mt-0.5 block text-xs text-muted",
+												children: item.subtitle
+											})]
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: `text-xs ${item.live ? "text-ok" : "text-faint"}`,
+											children: item.live ? "연결됨" : VIA_LABEL[item.via]
+										})]
+									}) }, item.id);
+								})
+							}) : null,
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+								className: "mt-3 flex items-center gap-2 text-sm",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+									type: "checkbox",
+									checked: useHelper,
+									onChange: (event) => setUseHelper(event.target.checked)
+								}), "PC 도우미(9100)로 보내기"]
+							}),
+							useHelper ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "space-y-2",
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "flex gap-2",
+										children: [
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+												value: helperUrl,
+												onChange: (event) => setHelperUrl(event.target.value),
+												"aria-label": "도우미 주소",
+												placeholder: "http://127.0.0.1:47631",
+												className: "field h-11 min-w-0 flex-1 rounded-xl px-3 text-sm outline-none"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+												value: helperCode,
+												onChange: (event) => setHelperCode(event.target.value),
+												placeholder: "코드",
+												"aria-label": "도우미 코드",
+												className: "field h-11 w-24 rounded-xl px-3 text-sm outline-none"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+												type: "button",
+												className: "h-11 rounded-xl border border-line px-3 text-sm text-fg",
+												onClick: () => void helperPing(helperUrl).then(() => setLanNote("도우미가 응답했어요.")).catch((error) => setLanNote(error instanceof Error ? error.message : "도우미가 없어요.")),
+												children: "확인"
+											})
+										]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
+										href: "/raw-print-helper.mjs",
+										download: true,
+										className: "text-xs font-medium text-accent",
+										children: "PC 도우미 스크립트 받기"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+										className: "text-xs leading-relaxed text-muted",
+										children: "같은 컴퓨터에서는 http://127.0.0.1:47631 입니다. 폰에서는 그 PC의 사설 IP(예: http://192.168.0.20:47631)를 넣으세요. 터미널의 6자리 코드가 있어야 9100으로 PCL·PDF·보안 PIN이 나갑니다."
+									})
+								]
+							}) : null,
+							selected?.usbKey && route === "preview-only" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: "h-11 w-full rounded-2xl border border-line text-sm",
+								onClick: () => void onPrint(true),
+								children: "언어를 못 읽었어요. PCL5e 흑백 시험 1쪽 보내기"
+							}) : null
+						]
+					}) : null]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "card p-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "text-xs font-medium text-muted",
+							children: "2. 무엇을 보낼까요"
+						}),
+						pdfName || photoUrl || album.length || memo.trim() ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							type: "button",
+							onClick: openChooser,
+							className: "mt-3 h-12 w-full rounded-2xl bg-accent text-sm font-medium text-accent-fg",
+							children: ["이어서 인쇄 · ", pdfName || (album.length ? `사진 ${album.length}장` : photoUrl ? "사진" : "메모")]
+						}) : null,
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "mt-3 grid grid-cols-2 gap-2",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+									type: "button",
+									onClick: () => startWith("pdf"),
+									className: "tile flex min-h-24 flex-col items-start justify-center px-3 py-3 text-left",
+									children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(FileText, { className: "size-5 text-accent" }),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: "mt-2 font-medium text-fg",
+											children: "PDF"
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: "text-xs text-muted",
+											children: "미리보기 · 쪽 범위 · 모아찍기"
+										})
+									]
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+									type: "button",
+									onClick: () => startWith("photo"),
+									className: "tile flex min-h-24 flex-col items-start justify-center px-3 py-3 text-left",
+									children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Image$1, { className: "size-5 text-accent" }),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: "mt-2 font-medium text-fg",
+											children: "사진"
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: "text-xs text-muted",
+											children: "여러 장 · 맞춤/채우기"
+										})
+									]
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+									type: "button",
+									onClick: () => startWith("memo"),
+									className: "tile flex min-h-24 flex-col items-start justify-center px-3 py-3 text-left",
+									children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StickyNote, { className: "size-5 text-accent" }),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: "mt-2 font-medium text-fg",
+											children: "메모"
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: "text-xs text-muted",
+											children: "글 입력 · 자동 쪽 나눔"
+										})
+									]
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+									type: "button",
+									onClick: () => startWith("test"),
+									className: "tile flex min-h-24 flex-col items-start justify-center px-3 py-3 text-left",
+									children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sheet, { className: "size-5 text-accent" }),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: "mt-2 font-medium text-fg",
+											children: "테스트 페이지"
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: "text-xs text-muted",
+											children: "연결 확인 1장"
+										})
+									]
+								})
+							]
 						})
-					}) : null
-				]
+					]
+				})]
 			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
 				className: "panel rounded-3xl p-4 sm:p-5",
 				children: step === "confirm" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
@@ -7948,14 +8822,14 @@ function AtlasApp() {
 							children: selected?.title
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-2 text-sm leading-relaxed text-ink/70",
-							children: result?.kind === "list" ? "이름이 여러 기종에 걸려요. 앞면에 적힌 글자를 조금 더 적어 주세요." : "앞면에 적힌 이름을 알면, 바로 보낼지 인쇄 창으로 열지를 골라요."
+							className: "mt-2 text-sm leading-relaxed text-muted",
+							children: result?.kind === "list" ? "이름이 여러 기종에 걸려요. 앞면에 적힌 글자를 조금 더 적어 주세요." : "앞면에 적힌 이름을 알면, 이 화면에서 바로 보낼지 미리보기만 볼지를 골라요."
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
 							value: askName,
 							onChange: (event) => setAskName(event.target.value),
 							placeholder: "예: 신도리코 D450, 캐논 iR-ADV C3530, 후지필름 Apeos",
-							className: "mt-4 h-12 w-full rounded-xl border border-ink/15 bg-white px-3 text-sm outline-none"
+							className: "field mt-4 h-12 w-full rounded-xl px-3 text-sm outline-none"
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 							className: "mt-3 flex flex-col gap-2",
@@ -7966,7 +8840,7 @@ function AtlasApp() {
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 								type: "button",
 								onClick: openChooser,
-								className: "h-12 rounded-2xl border border-ink/15 text-sm",
+								className: "h-12 rounded-2xl border border-line text-sm",
 								children: "이름은 모르겠고, 인쇄할 내용 고르기"
 							})]
 						})
@@ -7979,7 +8853,7 @@ function AtlasApp() {
 					match && sure && selected ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ReadyCard, {
 						match,
 						saved: Boolean(remembered),
-						direct: route !== "os-print",
+						direct: route !== "preview-only",
 						route,
 						onRemember,
 						onForget: () => {
@@ -7989,31 +8863,41 @@ function AtlasApp() {
 						className: "text-2xl font-semibold",
 						children: "무엇을 인쇄할까요?"
 					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(OfficeOptions, {
-						paper,
-						gray,
-						duplex,
-						copies,
-						route,
-						locked: sending,
-						onPaper: setPaper,
-						onGray: setGray,
-						onDuplex: setDuplex,
-						onCopies: setCopies
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "mb-3 inline-flex rounded-full border border-line bg-subtle px-3 py-1 text-xs font-medium text-fg",
+						children: helperLive && route !== "preview-only" ? "PC 도우미 9100" : route === "usb-pdf" ? "USB PDF Direct" : route === "usb-pcl" ? "USB PCL5e 흑백" : selected?.host ? "와이파이 IPP" : "화면 저장 전용"
 					}),
+					nup !== 1 || reverse || secureOn || pageMode !== "all" || orient !== "auto" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "mb-3 text-xs text-muted",
+						children: ["고급 ", [
+							nup !== 1 ? `모아찍기 ${nup}` : "",
+							reverse ? "역순" : "",
+							secureOn ? "보안 PIN" : "",
+							pageMode === "list" ? "쪽 선택" : "",
+							pageMode === "span" ? "쪽 범위" : "",
+							orient === "landscape" ? "가로" : "",
+							orient === "portrait" ? "세로" : ""
+						].filter(Boolean).join(" · ")]
+					}) : null,
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(PrintChooser, {
 						docKind,
 						memo,
 						photoUrl,
+						album,
 						pdfName,
 						pdfCount,
 						pageMode,
+						pageList,
+						onPageList: setPageList,
 						pageFrom,
 						pageTo,
 						sending,
 						progress,
 						ready: readyDoc,
-						label: route === "os-print" ? "이 기기의 인쇄 창으로 열기" : "USB로 바로 인쇄",
+						showPages: false,
+						label: route === "usb-pdf" ? "USB PDF로 인쇄" : route === "usb-pcl" ? helperLive ? "도우미 9100으로 인쇄" : "USB PCL로 인쇄" : selected?.host ? `${selected.host}로 인쇄` : "연결 후 인쇄",
+						canSend: Boolean(selected?.live && selected.usbKey || helperLive || selected?.host),
+						onConnect: backToConnect,
 						preview: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PaperPreview, {
 							paper,
 							gray: gray || route === "usb-pcl",
@@ -8026,13 +8910,197 @@ function AtlasApp() {
 							previewPage,
 							photoFit,
 							photoTurn,
+							orient,
+							showTools: false,
 							onFit: setPhotoFit,
 							onTurn: () => setPhotoTurn((value) => (value + 90) % 360),
 							onPreview: setPreviewPage
 						}),
+						extras: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(OfficeOptions, {
+							paper,
+							gray,
+							duplex,
+							copies,
+							route,
+							locked: sending,
+							controls: route !== "preview-only" || Boolean(selected?.host),
+							copyMax: 99,
+							onPaper: setPaper,
+							onGray: setGray,
+							onDuplex: setDuplex,
+							onCopies: setCopies
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("details", {
+							className: "mt-3 rounded-2xl border border-line px-3 py-2",
+							open: advancedOpen,
+							onToggle: (event) => setAdvancedOpen(event.target.open),
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("summary", {
+								className: "text-sm font-medium text-fg",
+								children: "고급 옵션"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "mt-3 space-y-3 text-sm",
+								children: [
+									docKind === "pdf" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "space-y-2",
+										children: [
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+												className: "text-xs text-muted",
+												children: "복합 쪽 범위"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+												className: "flex flex-wrap gap-2",
+												children: [
+													/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+														type: "button",
+														disabled: sending,
+														onClick: () => setPageMode("all"),
+														className: `h-10 rounded-full px-3 text-sm disabled:opacity-40 ${pageMode === "all" ? "bg-accent text-accent-fg" : "border border-line text-fg"}`,
+														children: "전체"
+													}),
+													/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+														type: "button",
+														disabled: !pdfCount || sending,
+														onClick: () => setPageMode("span"),
+														className: `h-10 rounded-full px-3 text-sm disabled:opacity-40 ${pageMode === "span" ? "bg-accent text-accent-fg" : "border border-line text-fg"}`,
+														children: "시작~끝"
+													}),
+													/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+														type: "button",
+														disabled: !pdfCount || sending,
+														onClick: () => setPageMode("list"),
+														className: `h-10 rounded-full px-3 text-sm disabled:opacity-40 ${pageMode === "list" ? "bg-accent text-accent-fg" : "border border-line text-fg"}`,
+														children: "골라서"
+													})
+												]
+											}),
+											pageMode === "list" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+												value: pageList,
+												onChange: (event) => setPageList(event.target.value),
+												placeholder: "1, 3-5, 8",
+												"aria-label": "쪽 범위",
+												className: "field h-10 w-full rounded-xl px-3 text-sm outline-none"
+											}) : null,
+											pageMode === "span" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+												className: "flex items-center gap-2 text-sm text-fg",
+												children: [
+													/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+														type: "number",
+														min: 1,
+														max: pdfCount || 1,
+														disabled: sending,
+														value: pageFrom,
+														onChange: (event) => setPageFrom(Number(event.target.value)),
+														className: "field h-10 w-16 rounded-xl px-2 text-center disabled:opacity-40",
+														"aria-label": "시작 페이지"
+													}),
+													/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "~" }),
+													/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+														type: "number",
+														min: 1,
+														max: pdfCount || 1,
+														disabled: sending,
+														value: pageTo,
+														onChange: (event) => setPageTo(Number(event.target.value)),
+														className: "field h-10 w-16 rounded-xl px-2 text-center disabled:opacity-40",
+														"aria-label": "끝 페이지"
+													})
+												]
+											}) : null
+										]
+									}) : null,
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "flex flex-wrap gap-2",
+										children: [[
+											1,
+											2,
+											4
+										].map((value) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+											type: "button",
+											onClick: () => setNup(value),
+											className: `h-10 rounded-full px-3 ${nup === value ? "bg-accent text-accent-fg" : "border border-line text-fg"}`,
+											children: value === 1 ? "모아찍기 없음" : `${value}쪽`
+										}, value)), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+											type: "button",
+											onClick: () => setReverse((value) => !value),
+											className: `h-10 rounded-full px-3 ${reverse ? "bg-accent text-accent-fg" : "border border-line text-fg"}`,
+											children: "역순"
+										})]
+									}),
+									docKind === "pdf" || docKind === "photo" || docKind === "memo" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "space-y-2",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+											className: "text-xs text-muted",
+											children: "방향"
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+											className: "flex flex-wrap gap-2",
+											children: [
+												["auto", "자동"],
+												["portrait", "세로"],
+												["landscape", "가로"]
+											].map(([id, text]) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+												type: "button",
+												onClick: () => setOrient(id),
+												className: `h-10 rounded-full px-3 ${orient === id ? "bg-accent text-accent-fg" : "border border-line text-fg"}`,
+												children: text
+											}, id))
+										})]
+									}) : null,
+									docKind === "photo" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "flex flex-wrap gap-2",
+										children: [
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+												type: "button",
+												onClick: () => setPhotoFit("contain"),
+												className: `h-10 rounded-full px-3 ${photoFit === "contain" ? "bg-accent text-accent-fg" : "border border-line text-fg"}`,
+												children: "맞추기"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+												type: "button",
+												onClick: () => setPhotoFit("cover"),
+												className: `h-10 rounded-full px-3 ${photoFit === "cover" ? "bg-accent text-accent-fg" : "border border-line text-fg"}`,
+												children: "채우기"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+												type: "button",
+												onClick: () => setPhotoTurn((value) => (value + 90) % 360),
+												className: "h-10 rounded-full border border-line px-3 text-fg",
+												children: ["90도 회전", photoTurn ? ` ${photoTurn}°` : ""]
+											})
+										]
+									}) : null,
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+										className: "flex items-center gap-2 text-fg",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+											type: "checkbox",
+											checked: secureOn,
+											onChange: (event) => setSecureOn(event.target.checked)
+										}), "보안 인쇄"]
+									}),
+									secureOn ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "flex gap-2",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+											value: pin,
+											onChange: (event) => setPin(event.target.value.replace(/\D/g, "").slice(0, 4)),
+											inputMode: "numeric",
+											placeholder: "PIN 4자리",
+											"aria-label": "보안 PIN",
+											className: "field h-10 w-28 rounded-xl px-3 outline-none"
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+											value: jobUser,
+											onChange: (event) => setJobUser(event.target.value),
+											placeholder: "사용자 영숫자",
+											"aria-label": "사용자 이름",
+											className: "field h-10 min-w-0 flex-1 rounded-xl px-3 outline-none"
+										})]
+									}) : null
+								]
+							})]
+						})] }),
 						onKind: setDocKind,
 						onMemo: setMemo,
-						onPhoto: choosePhoto,
+						onPhotos: choosePhotos,
+						onRemovePhoto: removePhoto,
+						onMovePhoto: movePhoto,
+						onFocusPhoto: setPhotoUrl,
 						onPdfFile: choosePdf,
 						pdfNeedsKey,
 						onPdfUnlock: setPdfKey,
@@ -8040,7 +9108,7 @@ function AtlasApp() {
 						onPageFrom: setPageFrom,
 						onPageTo: setPageTo,
 						onPrint: () => void onPrint(),
-						onColorPrint: route === "usb-pcl" ? () => void onColorPrint() : void 0,
+						onColorPrint: () => void onColorPrint(),
 						onPdf: () => void onPdf(),
 						onCancel: () => {
 							stopRef.current = true;
@@ -8056,9 +9124,10 @@ function AtlasApp() {
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
 					className: "mt-3 space-y-2 leading-relaxed",
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "컴퓨터는 Chrome으로 여세요. 선을 꽂고 선으로 연결을 누르면 복사기 목록이 나옵니다." }),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "아이폰은 선을 여기서 못 잡습니다. 인쇄할 내용 고르기를 누른 뒤, 인쇄 창에서 복사기를 고르세요." }),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "같은 와이파이에 복사기가 안 보이면, 폰이나 컴퓨터 설정에서 한 번 추가하세요." })
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "컴퓨터는 Chrome으로 여세요. 선을 꽂고 USB로 연결하면 목록이 나옵니다. 아이폰은 선을 잡을 수 없어요." }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "삼성 기본 인쇄 앱으로는 넘기지 않아요." }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "와이파이 직접 인쇄가 CORS로 막히면 같은 와이파이 PC에서 node raw-print-helper.mjs 를 켜고 PC 도우미(9100)를 체크하세요. 아이폰·삼성 인터넷도 가능해요." }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "같은 와이파이 주소가 안 보이면 복사기 화면의 IP를 직접 넣으세요." })
 					]
 				})]
 			}),
@@ -8071,40 +9140,13 @@ function AtlasApp() {
 		]
 	});
 }
-function WifiLane({ primary, onOpen }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: `wifi-card rounded-2xl p-3 ${primary ? "" : "mt-5"}`,
-		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-				className: "flex items-center gap-1.5 text-sm font-medium",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Wifi, {
-					className: "size-4",
-					"aria-hidden": "true"
-				}), "와이파이"]
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "mt-2 text-sm leading-relaxed text-ink/70",
-				children: "같은 와이파이에 있는 복사기는 따로 연결하지 않고, 인쇄 창에서 바로 고릅니다."
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-				type: "button",
-				onClick: onOpen,
-				className: `mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-medium ${primary ? "bg-accent text-accent-fg" : "bg-navy text-paper"}`,
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Printer, {
-					className: "size-4",
-					"aria-hidden": "true"
-				}), "인쇄할 내용 고르기"]
-			})
-		]
-	});
-}
 function ReadyCard({ match, saved, direct, route, onRemember, onForget }) {
 	const printer = match.printer;
 	const inkjet = isInkjet(match);
-	const line = inkjet ? "잉크젯은 웹에서 바로 보낼 수 없어 이 기기의 인쇄 창을 엽니다. 목록에 없으면 폰이나 PC 설정에서 복사기를 먼저 추가해야 합니다." : route === "usb-pdf" ? "전체 쪽을 컬러로 보낼 때 USB로 PDF를 바로 넣어요." : route === "usb-pcl" ? "USB로는 흑백으로 바로 넣어요. 컬러는 인쇄 창을 쓰면 됩니다." : "이 기기의 인쇄 창으로 열어서 인쇄해요.";
+	const line = inkjet ? "잉크젯은 이 브라우저에서 프린터로 바로 넣지 못해요. 아래에서 미리보기만 볼 수 있어요." : route === "usb-pdf" ? "전체 쪽을 컬러로 보낼 때 USB로 PDF를 바로 넣어요." : route === "usb-pcl" ? "USB로는 이 브라우저가 흑백으로 바로 넣어요." : "삼성 기본 앱으로 넘기지 않고, 이 화면에 미리보기를 띄워요.";
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-			className: "text-xs text-ink/60",
+			className: "text-xs text-muted",
 			children: "확인됨"
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
@@ -8116,21 +9158,21 @@ function ReadyCard({ match, saved, direct, route, onRemember, onForget }) {
 			]
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-			className: "mt-3 text-sm leading-relaxed text-ink/80",
+			className: "mt-3 text-sm leading-relaxed text-fg",
 			children: line
 		}),
 		inkjet ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-			className: "mt-2 text-sm text-ink/70",
-			children: direct ? "USB로 바로 인쇄합니다." : "이 기기의 인쇄 창으로 엽니다."
+			className: "mt-2 text-sm text-muted",
+			children: direct ? "USB로 이 브라우저에서 바로 넣습니다." : "이 화면에 미리보기를 띄웁니다."
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-			className: "mt-3 text-xs leading-relaxed text-ink/55",
+			className: "mt-3 text-xs leading-relaxed text-faint",
 			children: "파일을 받지 않고, 이 브라우저에 복사기 종류만 기억합니다."
 		}),
 		saved ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 			type: "button",
 			onClick: onForget,
-			className: "mt-3 flex h-11 w-full items-center justify-center gap-1 rounded-2xl border border-ink/15 text-sm",
+			className: "mt-3 flex h-11 w-full items-center justify-center gap-1 rounded-2xl border border-line text-sm",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, {
 				className: "size-3.5",
 				"aria-hidden": "true"
@@ -8138,7 +9180,7 @@ function ReadyCard({ match, saved, direct, route, onRemember, onForget }) {
 		}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 			type: "button",
 			onClick: onRemember,
-			className: "mt-3 flex h-11 w-full items-center justify-center gap-1 rounded-2xl border border-ink/15 text-sm",
+			className: "mt-3 flex h-11 w-full items-center justify-center gap-1 rounded-2xl border border-line text-sm",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bookmark, {
 				className: "size-3.5",
 				"aria-hidden": "true"
@@ -8146,8 +9188,8 @@ function ReadyCard({ match, saved, direct, route, onRemember, onForget }) {
 		})
 	] });
 }
-function OfficeOptions({ paper, gray, duplex, copies, route, locked, onPaper, onGray, onDuplex, onCopies }) {
-	const usbJob = route !== "os-print";
+function OfficeOptions({ paper, gray, duplex, copies, route, locked, controls, copyMax, onPaper, onGray, onDuplex, onCopies }) {
+	const liveJob = controls;
 	const monoUsb = route === "usb-pcl";
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "mt-4 space-y-3",
@@ -8162,22 +9204,18 @@ function OfficeOptions({ paper, gray, duplex, copies, route, locked, onPaper, on
 					type: "button",
 					disabled: locked,
 					onClick: () => onPaper(item),
-					className: `h-10 rounded-full px-3 text-sm disabled:opacity-40 ${paper === item ? "bg-navy text-paper" : "border border-ink/15"}`,
+					className: `h-10 rounded-full px-3 text-sm disabled:opacity-40 ${paper === item ? "bg-accent text-accent-fg" : "border border-line"}`,
 					children: item
 				}, item)), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 					type: "button",
 					disabled: monoUsb || locked,
 					onClick: () => onGray(!gray),
-					className: `h-10 rounded-full px-3 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${monoUsb || gray ? "bg-navy text-paper" : "border border-ink/15"}`,
+					className: `h-10 rounded-full px-3 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${monoUsb || gray ? "bg-accent text-accent-fg" : "border border-line"}`,
 					children: monoUsb || gray ? "흑백" : "컬러"
 				})]
 			}),
-			monoUsb ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "text-xs leading-relaxed text-ink/70",
-				children: "USB 기본 인쇄는 흑백만 지원해요. 컬러는 인쇄 창을 이용해 주세요."
-			}) : null,
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: `flex flex-wrap items-center gap-2 ${usbJob && !locked ? "" : "opacity-40"}`,
+				className: `flex flex-wrap items-center gap-2 ${liveJob && !locked ? "" : "opacity-40"}`,
 				children: [
 					[
 						["simplex", "단면"],
@@ -8185,46 +9223,50 @@ function OfficeOptions({ paper, gray, duplex, copies, route, locked, onPaper, on
 						["short", "짧은 쪽 넘김"]
 					].map(([id, text]) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 						type: "button",
-						disabled: !usbJob || locked,
+						disabled: !liveJob || locked,
 						onClick: () => onDuplex(id),
-						className: `h-10 rounded-full px-3 text-sm disabled:cursor-not-allowed ${duplex === id && usbJob ? "bg-navy text-paper" : "border border-ink/15"}`,
+						className: `h-10 rounded-full px-3 text-sm disabled:cursor-not-allowed ${duplex === id && liveJob ? "bg-accent text-accent-fg" : "border border-line"}`,
 						children: text
 					}, id)),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 						type: "button",
-						disabled: !usbJob || locked,
-						className: "size-10 rounded-full border border-ink/15 disabled:cursor-not-allowed",
+						disabled: !liveJob || locked,
+						className: "size-10 rounded-full border border-line disabled:cursor-not-allowed",
 						onClick: () => onCopies(Math.max(1, copies - 1)),
 						"aria-label": "장수 줄이기",
 						children: "−"
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 						className: "w-8 text-center text-sm tabular-nums",
-						children: usbJob ? copies : 1
+						children: liveJob ? copies : 1
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 						type: "button",
-						disabled: !usbJob || locked,
-						className: "size-10 rounded-full border border-ink/15 disabled:cursor-not-allowed",
-						onClick: () => onCopies(Math.min(9, copies + 1)),
+						disabled: !liveJob || locked || copies >= copyMax,
+						className: "size-10 rounded-full border border-line disabled:cursor-not-allowed",
+						onClick: () => onCopies(Math.min(copyMax, copies + 1)),
 						"aria-label": "장수 늘리기",
 						children: "+"
 					})
 				]
 			}),
-			usbJob ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "text-xs text-ink/55",
-				children: "장수와 양면은 인쇄 창에서 고릅니다."
+			monoUsb ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "text-xs leading-relaxed text-muted",
+				children: "USB 직접 인쇄는 흑백만 지원해요."
+			}) : null,
+			liveJob ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "text-xs text-muted",
+				children: "연결 전에는 장수와 양면을 복사기로 보내지 않아요. 화면 미리보기와 PDF 저장은 따로 있어요."
 			})
 		]
 	});
 }
-function PrintChooser({ docKind, memo, photoUrl, pdfName, pdfCount, pageMode, pageFrom, pageTo, sending, progress, ready, label, preview, onKind, onMemo, onPhoto, onPdfFile, pdfNeedsKey, onPdfUnlock, onPageMode, onPageFrom, onPageTo, onPrint, onColorPrint, onPdf, onCancel }) {
+function PrintChooser({ docKind, memo, photoUrl, album, pdfName, pdfCount, pageMode, pageList, onPageList, pageFrom, pageTo, sending, progress, ready, showPages = true, label, canSend = true, onConnect, preview, extras, onKind, onMemo, onPhotos, onRemovePhoto, onMovePhoto, onFocusPhoto, onPdfFile, pdfNeedsKey, onPdfUnlock, onPageMode, onPageFrom, onPageTo, onPrint, onColorPrint, onPdf, onCancel }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "mt-4",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "grid grid-cols-4 gap-1 rounded-2xl bg-ink/5 p-1",
+				className: "grid grid-cols-4 gap-1 rounded-2xl bg-subtle p-1",
 				role: "tablist",
 				children: [
 					["pdf", "PDF 문서"],
@@ -8239,7 +9281,7 @@ function PrintChooser({ docKind, memo, photoUrl, pdfName, pdfCount, pageMode, pa
 						if (!sending) onKind(id);
 					},
 					disabled: sending,
-					className: `min-h-10 rounded-xl px-1 py-2 text-xs disabled:opacity-40 ${docKind === id ? "bg-white font-medium" : "text-ink/60"}`,
+					className: `min-h-10 rounded-xl px-1 py-2 text-xs disabled:opacity-40 ${docKind === id ? "bg-accent font-medium text-accent-fg" : "text-muted"}`,
 					children: text
 				}, id))
 			}),
@@ -8247,7 +9289,7 @@ function PrintChooser({ docKind, memo, photoUrl, pdfName, pdfCount, pageMode, pa
 				className: "mt-3 space-y-2",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
-						className: "flex h-12 cursor-pointer items-center justify-center rounded-xl border border-ink/15 text-sm",
+						className: "flex h-12 cursor-pointer items-center justify-center rounded-xl border border-line text-sm",
 						children: ["PDF 고르기", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
 							type: "file",
 							accept: "application/pdf,.pdf",
@@ -8257,7 +9299,7 @@ function PrintChooser({ docKind, memo, photoUrl, pdfName, pdfCount, pageMode, pa
 						})]
 					}),
 					pdfName ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-						className: "text-sm text-ink/70",
+						className: "text-sm text-muted",
 						children: [
 							pdfName,
 							" · 총 ",
@@ -8276,69 +9318,139 @@ function PrintChooser({ docKind, memo, photoUrl, pdfName, pdfCount, pageMode, pa
 							name: "pdf-key",
 							type: "password",
 							placeholder: "열기 비밀번호",
-							className: "h-10 min-w-0 flex-1 rounded-xl border border-ink/15 bg-white px-3 text-sm outline-none"
+							className: "field h-10 min-w-0 flex-1 rounded-xl px-3 text-sm outline-none"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 							type: "submit",
-							className: "h-10 rounded-xl bg-navy px-3 text-sm text-paper",
+							className: "h-10 rounded-xl bg-accent px-3 text-sm text-accent-fg",
 							children: "열기"
 						})]
 					}) : null,
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "flex flex-wrap gap-2",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-							type: "button",
-							disabled: sending,
-							onClick: () => onPageMode("all"),
-							className: `h-10 rounded-full px-3 text-sm disabled:opacity-40 ${pageMode === "all" ? "bg-navy text-paper" : "border border-ink/15"}`,
-							children: "전체"
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-							type: "button",
-							disabled: !pdfCount || sending,
-							onClick: () => onPageMode("span"),
-							className: `h-10 rounded-full px-3 text-sm disabled:opacity-40 ${pageMode === "span" ? "bg-navy text-paper" : "border border-ink/15"}`,
-							children: "시작~끝"
-						})]
-					}),
-					pageMode === "span" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "flex items-center gap-2 text-sm",
-						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
-								type: "number",
-								min: 1,
-								max: pdfCount || 1,
-								disabled: sending,
-								value: pageFrom,
-								onChange: (event) => onPageFrom(Number(event.target.value)),
-								className: "h-10 w-16 rounded-xl border border-ink/15 bg-white px-2 text-center disabled:opacity-40",
-								"aria-label": "시작 페이지"
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "~" }),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
-								type: "number",
-								min: 1,
-								max: pdfCount || 1,
-								disabled: sending,
-								value: pageTo,
-								onChange: (event) => onPageTo(Number(event.target.value)),
-								className: "h-10 w-16 rounded-xl border border-ink/15 bg-white px-2 text-center disabled:opacity-40",
-								"aria-label": "끝 페이지"
-							})
-						]
-					}) : null
+					showPages ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "flex flex-wrap gap-2",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+									type: "button",
+									disabled: sending,
+									onClick: () => onPageMode("all"),
+									className: `h-10 rounded-full px-3 text-sm disabled:opacity-40 ${pageMode === "all" ? "bg-accent text-accent-fg" : "border border-line text-fg"}`,
+									children: "전체"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+									type: "button",
+									disabled: !pdfCount || sending,
+									onClick: () => onPageMode("span"),
+									className: `h-10 rounded-full px-3 text-sm disabled:opacity-40 ${pageMode === "span" ? "bg-accent text-accent-fg" : "border border-line text-fg"}`,
+									children: "시작~끝"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+									type: "button",
+									disabled: !pdfCount || sending,
+									onClick: () => onPageMode("list"),
+									className: `h-10 rounded-full px-3 text-sm disabled:opacity-40 ${pageMode === "list" ? "bg-accent text-accent-fg" : "border border-line text-fg"}`,
+									children: "골라서"
+								})
+							]
+						}),
+						pageMode === "list" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+							value: pageList,
+							onChange: (event) => onPageList(event.target.value),
+							placeholder: "1, 3-5, 8",
+							"aria-label": "쪽 범위",
+							className: "field h-10 w-full rounded-xl px-3 text-sm outline-none"
+						}) : null,
+						pageMode === "span" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "flex items-center gap-2 text-sm text-fg",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+									type: "number",
+									min: 1,
+									max: pdfCount || 1,
+									disabled: sending,
+									value: pageFrom,
+									onChange: (event) => onPageFrom(Number(event.target.value)),
+									className: "field h-10 w-16 rounded-xl px-2 text-center disabled:opacity-40",
+									"aria-label": "시작 페이지"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "~" }),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+									type: "number",
+									min: 1,
+									max: pdfCount || 1,
+									disabled: sending,
+									value: pageTo,
+									onChange: (event) => onPageTo(Number(event.target.value)),
+									className: "field h-10 w-16 rounded-xl px-2 text-center disabled:opacity-40",
+									"aria-label": "끝 페이지"
+								})
+							]
+						}) : null
+					] }) : null
 				]
 			}) : null,
-			docKind === "photo" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "mt-3",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
-					className: "flex h-12 cursor-pointer items-center justify-center rounded-xl border border-ink/15 text-sm",
-					children: ["사진 고르기", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
-						type: "file",
-						accept: "image/*",
-						disabled: sending,
-						className: "sr-only",
-						onChange: (event) => onPhoto(event.target.files?.[0])
-					})]
-				})
+			docKind === "photo" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "mt-3 space-y-2",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+						className: "flex h-12 cursor-pointer items-center justify-center rounded-xl border border-line text-sm text-fg",
+						children: ["사진 여러 장 고르기", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+							type: "file",
+							accept: "image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.heic,.heif",
+							multiple: true,
+							disabled: sending,
+							className: "sr-only",
+							onChange: (event) => {
+								const files = [...event.target.files ?? []];
+								event.target.value = "";
+								onPhotos(files);
+							}
+						})]
+					}),
+					album.length ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+						className: "flex gap-2 overflow-x-auto pb-1",
+						children: album.map((src, index) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+							className: "w-16 shrink-0",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+								type: "button",
+								onClick: () => onFocusPhoto(src),
+								className: `block overflow-hidden rounded-lg border-2 ${src === photoUrl ? "border-accent" : "border-line"}`,
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+									src,
+									alt: "",
+									className: "h-16 w-16 object-cover"
+								})
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "mt-1 flex items-center justify-between text-xs text-fg",
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+										type: "button",
+										disabled: index === 0,
+										onClick: () => onMovePhoto(src, -1),
+										"aria-label": "앞으로",
+										children: "←"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+										type: "button",
+										onClick: () => onRemovePhoto(src),
+										"aria-label": "이 사진 삭제",
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, { className: "size-3.5" })
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+										type: "button",
+										disabled: index === album.length - 1,
+										onClick: () => onMovePhoto(src, 1),
+										"aria-label": "뒤로",
+										children: "→"
+									})
+								]
+							})]
+						}, src))
+					}) : null,
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "text-xs text-muted",
+						children: album.length ? `${album.length}/20장. 순서를 바꿀 수 있어요.` : "JPG·PNG를 한 번에 여러 장 고를 수 있어요. HEIC는 변환이 필요해요."
+					})
+				]
 			}) : null,
 			docKind === "memo" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("textarea", {
 				value: memo,
@@ -8346,17 +9458,18 @@ function PrintChooser({ docKind, memo, photoUrl, pdfName, pdfCount, pageMode, pa
 				rows: 4,
 				disabled: sending,
 				placeholder: "적을 내용을 적어 주세요",
-				className: "mt-3 w-full rounded-xl border border-ink/15 bg-white px-3 py-2 text-sm outline-none"
+				className: "field mt-3 w-full rounded-xl px-3 py-2 text-sm outline-none"
 			}) : null,
 			docKind === "test" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "mt-3 text-sm text-ink/70",
+				className: "mt-3 text-sm text-muted",
 				children: "연결이 되는지 확인하는 시험 페이지입니다."
 			}) : null,
 			preview,
+			extras,
 			sending ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 				type: "button",
 				onClick: onCancel,
-				className: "mt-3 h-12 w-full rounded-2xl border border-ink/15 text-sm",
+				className: "mt-3 h-12 w-full rounded-2xl border border-line text-sm",
 				children: [
 					"취소 · ",
 					progress,
@@ -8365,41 +9478,53 @@ function PrintChooser({ docKind, memo, photoUrl, pdfName, pdfCount, pageMode, pa
 			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "mt-3 flex flex-col gap-2",
 				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+					canSend ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 						type: "button",
 						onClick: onPrint,
 						disabled: !ready,
-						className: "flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-accent text-base font-medium text-accent-fg disabled:opacity-40",
+						className: "btn-send flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-accent text-base font-medium text-accent-fg",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Printer, {
 							className: "size-5",
 							"aria-hidden": "true"
 						}), label]
+					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						type: "button",
+						onClick: onConnect,
+						className: "flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-line text-base font-medium text-fg",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Printer, {
+							className: "size-5",
+							"aria-hidden": "true"
+						}), "프린터 연결하기"]
 					}),
-					onColorPrint ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 						type: "button",
 						onClick: onColorPrint,
-						disabled: !ready,
-						className: "h-12 w-full rounded-2xl border border-ink/15 text-sm disabled:opacity-40",
-						children: "컬러로 인쇄 창 열기"
-					}) : null,
+						disabled: !ready || !onColorPrint,
+						className: "h-12 w-full rounded-2xl border border-line text-sm disabled:opacity-40",
+						children: "화면 미리보기"
+					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 						type: "button",
 						onClick: onPdf,
 						disabled: !ready,
-						className: "h-12 w-full rounded-2xl border border-ink/15 text-sm disabled:opacity-40",
-						children: "PDF로 저장"
+						className: "h-12 w-full rounded-2xl border border-line text-sm disabled:opacity-40",
+						children: "PDF 저장"
 					})
 				]
 			})
 		]
 	});
 }
-function PaperPreview({ paper, gray, docKind, title, memo, photoUrl, pdfPreview, pdfCount, previewPage, photoFit, photoTurn, onFit, onTurn, onPreview }) {
+function PaperPreview({ paper, gray, docKind, title, memo, photoUrl, pdfPreview, pdfCount, previewPage, photoFit, photoTurn, orient = "auto", showTools = true, onFit, onTurn, onPreview }) {
 	const pageRef = (0, import_react.useRef)(null);
 	(0, import_react.useEffect)(() => {
 		if (docKind !== "photo" || !photoUrl) return;
 		let stop = false;
-		const size = previewSize(paper);
+		const base = previewSize(paper);
+		const size = orient === "landscape" ? {
+			width: base.height,
+			height: base.width
+		} : base;
 		loadImage(photoUrl).then((image) => {
 			const canvas = pageRef.current;
 			if (stop || !canvas) return;
@@ -8425,17 +9550,18 @@ function PaperPreview({ paper, gray, docKind, title, memo, photoUrl, pdfPreview,
 		photoFit,
 		photoTurn,
 		gray,
-		title
+		title,
+		orient
 	]);
 	const emptyPhoto = docKind === "photo" && !photoUrl;
 	const emptyMemo = docKind === "memo" && memo.trim().length < 1;
 	const emptyPdf = docKind === "pdf" && !pdfPreview;
-	const paperClass = paper === "A3" ? "a3" : paper === "B5" ? "b5" : "";
+	const paperClass = `${paper === "A3" ? "a3" : paper === "B5" ? "b5" : ""}${orient === "landscape" ? " is-land" : ""}`;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: `preview-stage ${gray ? "gray" : ""}`,
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-				className: "text-center text-xs text-ink/70",
+				className: "preview-caption text-center text-xs",
 				children: [
 					paper,
 					" 미리보기",
@@ -8453,13 +9579,13 @@ function PaperPreview({ paper, gray, docKind, title, memo, photoUrl, pdfPreview,
 			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: `sheet-a4 relative ${paperClass}`,
 				children: emptyPhoto ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "absolute inset-0 grid place-items-center px-4 text-center text-xs leading-relaxed text-ink/60",
+					className: "on-paper absolute inset-0 grid place-items-center px-4 text-center text-xs leading-relaxed",
 					children: "사진을 고르면 여기에 미리보기가 나타납니다"
 				}) : emptyMemo ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "absolute inset-0 grid place-items-center px-4 text-center text-xs leading-relaxed text-ink/60",
+					className: "on-paper absolute inset-0 grid place-items-center px-4 text-center text-xs leading-relaxed",
 					children: "메모를 적으면 여기에 미리보기가 나타납니다"
 				}) : emptyPdf ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "absolute inset-0 grid place-items-center px-4 text-center text-xs leading-relaxed text-ink/60",
+					className: "on-paper absolute inset-0 grid place-items-center px-4 text-center text-xs leading-relaxed",
 					children: "PDF를 고르면 여기에 미리보기가 나타납니다"
 				}) : docKind === "memo" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 					className: "absolute inset-0 overflow-hidden whitespace-pre-wrap p-3 text-left text-[11px] leading-snug",
@@ -8475,18 +9601,18 @@ function PaperPreview({ paper, gray, docKind, title, memo, photoUrl, pdfPreview,
 					})]
 				})
 			}),
-			docKind === "pdf" && pdfCount > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "flex items-center justify-center gap-2",
+			docKind === "pdf" && pdfCount > 1 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "preview-pager",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 						type: "button",
 						disabled: previewPage <= 1,
 						onClick: () => onPreview(previewPage - 1),
-						className: "h-10 rounded-full border border-ink/15 bg-white px-3 text-sm disabled:opacity-40",
+						className: "paper-btn disabled:opacity-40",
 						children: "< 이전"
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-						className: "min-w-16 text-center text-sm tabular-nums",
+						className: "preview-caption min-w-16 text-center text-sm tabular-nums",
 						children: [
 							previewPage,
 							" / ",
@@ -8497,33 +9623,33 @@ function PaperPreview({ paper, gray, docKind, title, memo, photoUrl, pdfPreview,
 						type: "button",
 						disabled: previewPage >= pdfCount,
 						onClick: () => onPreview(Math.min(pdfCount, previewPage + 1)),
-						className: "h-10 rounded-full border border-ink/15 bg-white px-3 text-sm disabled:opacity-40",
+						className: "paper-btn disabled:opacity-40",
 						children: "다음 >"
 					})
 				]
 			}) : null,
-			docKind === "photo" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			docKind === "photo" && showTools ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "flex flex-wrap justify-center gap-2",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 						type: "button",
 						disabled: emptyPhoto,
 						onClick: () => onFit("contain"),
-						className: `h-10 rounded-full px-3 text-sm disabled:opacity-40 ${photoFit === "contain" && !emptyPhoto ? "bg-navy text-paper" : "border border-ink/15 bg-white"}`,
+						className: `paper-btn disabled:opacity-40 ${photoFit === "contain" && !emptyPhoto ? "is-on" : ""}`,
 						children: "안 잘리게 맞추기"
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 						type: "button",
 						disabled: emptyPhoto,
 						onClick: () => onFit("cover"),
-						className: `h-10 rounded-full px-3 text-sm disabled:opacity-40 ${photoFit === "cover" && !emptyPhoto ? "bg-navy text-paper" : "border border-ink/15 bg-white"}`,
+						className: `paper-btn disabled:opacity-40 ${photoFit === "cover" && !emptyPhoto ? "is-on" : ""}`,
 						children: "꽉 채우기"
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 						type: "button",
 						disabled: emptyPhoto,
 						onClick: onTurn,
-						className: "h-10 rounded-full border border-ink/15 bg-white px-3 text-sm disabled:opacity-40",
+						className: "paper-btn disabled:opacity-40",
 						children: "90도 회전"
 					})
 				]

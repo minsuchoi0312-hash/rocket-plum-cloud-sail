@@ -9,6 +9,51 @@ enum DuplexMode { simplex, long, short }
 
 enum RasterMode { threshold, dither }
 
+enum PaperTray { auto, manual, tray1, tray2 }
+
+/// HP PCL5e `ESC &l#H`. 자동은 7이라 이전 작업의 용지함이 남지 않는다. 용지함 2는 하단 카세트(4). 45는 B5 용지 코드라 쓰지 않는다.
+int pclTrayCode(PaperTray tray) => switch (tray) {
+      PaperTray.auto => 7,
+      PaperTray.manual => 2,
+      PaperTray.tray1 => 1,
+      PaperTray.tray2 => 4,
+    };
+
+String pjlMediaSource(PaperTray tray) => switch (tray) {
+      PaperTray.auto => 'AUTO',
+      PaperTray.manual => 'MANUAL',
+      PaperTray.tray1 => 'TRAY1',
+      PaperTray.tray2 => 'TRAY2',
+    };
+
+String sanitizeUsername(String raw) {
+  final cleaned = raw.replaceAll(RegExp(r'[^A-Za-z0-9]'), '');
+  if (cleaned.isEmpty) return 'MOBILE';
+  return cleaned.length > 31 ? cleaned.substring(0, 31) : cleaned;
+}
+
+bool validHoldPin(String pin) => RegExp(r'^\d{4}$').hasMatch(pin);
+
+int outputSheetCount(int pageCount, int perSheet) {
+  final pages = pageCount < 0 ? 0 : pageCount;
+  final each = perSheet < 1 ? 1 : perSheet;
+  if (pages == 0) return 0;
+  return (pages + each - 1) ~/ each;
+}
+
+/// 모아찍기는 읽기 순서로 먼저 묶고, 역순은 그 묶음만 뒤집는다.
+/// 쪽을 먼저 뒤집으면 2쪽에서 1·2가 한 장에 모이지 않는다.
+List<List<int>> nupGroups(List<int> pages, int perSheet, {bool reverse = false}) {
+  final per = perSheet < 1 ? 1 : perSheet;
+  final groups = <List<int>>[];
+  for (var start = 0; start < pages.length; start += per) {
+    final end = start + per > pages.length ? pages.length : start + per;
+    groups.add(List<int>.from(pages.sublist(start, end)));
+  }
+  if (!reverse) return groups;
+  return groups.reversed.toList();
+}
+
 class PaperSpec {
   const PaperSpec({required this.pcl, required this.pjl, required this.width, required this.height});
   final int pcl;
@@ -48,37 +93,66 @@ String pjl({
   required OfficePaper paper,
   required String language,
   required int pages,
+  String? holdKey,
+  String username = 'MOBILE',
+  PaperTray tray = PaperTray.auto,
 }) {
   final count = clampCopies(copies);
+  // QTY와 COPIES를 같이 넣으면 기종에 따라 부수가 곱해진다. 여러 쪽은 QTY, 한 쪽은 COPIES만.
   final lines = <String>[
     '\x1B%-12345X@PJL JOB',
     pages > 1 ? '@PJL SET QTY=$count' : '@PJL SET COPIES=$count',
   ];
   if (paper != OfficePaper.b5) lines.add('@PJL SET PAPER=${papers[paper]!.pjl}');
+  lines.add('@PJL SET MEDIASOURCE=${pjlMediaSource(tray)}');
   if (duplex == DuplexMode.simplex) {
     lines.add('@PJL SET DUPLEX=OFF');
   } else {
     lines.add('@PJL SET DUPLEX=ON');
     lines.add('@PJL SET BINDING=${duplex == DuplexMode.long ? 'LONGEDGE' : 'SHORTEDGE'}');
   }
+  if (holdKey != null && validHoldPin(holdKey)) {
+    lines.add('@PJL SET HOLD=ON');
+    lines.add('@PJL SET HOLDTYPE=PRIVATE');
+    lines.add('@PJL SET HOLDKEY="$holdKey"');
+    lines.add('@PJL SET USERNAME="${sanitizeUsername(username)}"');
+  }
   lines.add('@PJL ENTER LANGUAGE=$language');
   return '${lines.join('\r\n')}\r\n';
 }
 
-Uint8List wrapPdfJob(Uint8List pdf, {required int copies, required DuplexMode duplex, required OfficePaper paper, required int pages}) {
+Uint8List wrapPdfJob(
+  Uint8List pdf, {
+  required int copies,
+  required DuplexMode duplex,
+  required OfficePaper paper,
+  required int pages,
+  String? holdKey,
+  String username = 'MOBILE',
+  PaperTray tray = PaperTray.auto,
+}) {
   return concat([
-    _ascii.encode(pjl(copies: copies, duplex: duplex, paper: paper, language: 'PDF', pages: pages)),
+    _ascii.encode(pjl(copies: copies, duplex: duplex, paper: paper, language: 'PDF', pages: pages, holdKey: holdKey, username: username, tray: tray)),
     pdf,
     _ascii.encode('\r\n\x1B%-12345X@PJL EOJ\r\n\x1B%-12345X'),
   ]);
 }
 
-Uint8List pclJobHeader({required int copies, required DuplexMode duplex, required OfficePaper paper, required int pages}) {
+Uint8List pclJobHeader({
+  required int copies,
+  required DuplexMode duplex,
+  required OfficePaper paper,
+  required int pages,
+  String? holdKey,
+  String username = 'MOBILE',
+  PaperTray tray = PaperTray.auto,
+}) {
   final spec = papers[paper]!;
   final side = duplex == DuplexMode.long ? 1 : duplex == DuplexMode.short ? 2 : 0;
+  final trayEsc = '\x1B&l${pclTrayCode(tray)}H';
   return _ascii.encode(
-    '${pjl(copies: copies, duplex: duplex, paper: paper, language: 'PCL', pages: pages)}'
-    '\x1BE\x1B&l${spec.pcl}A\x1B&l0O\x1B&l${side}S\x1B&u300D\x1B&l0E\x1B&l0L\x1B&a0L\x1B*t300R\x1B*r0F',
+    '${pjl(copies: copies, duplex: duplex, paper: paper, language: 'PCL', pages: pages, holdKey: holdKey, username: username, tray: tray)}'
+    '\x1BE\x1B&l${spec.pcl}A\x1B&l0O$trayEsc\x1B&l${side}S\x1B&u300D\x1B&l0E\x1B&l0L\x1B&a0L\x1B*t300R\x1B*r0F',
   );
 }
 

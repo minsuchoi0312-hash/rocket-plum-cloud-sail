@@ -12,6 +12,37 @@ bool commandHasPdf(String cmd) => RegExp(r'\bPDF\b', caseSensitive: false).hasMa
 
 bool pdfHasPages(int count) => count > 0;
 
+/// `1, 3-5, 8`. 입력 순서를 유지하고 중복은 한 번만 남긴다. 틀리면 null.
+List<int>? parsePageRange(String input, int totalPages) {
+  if (totalPages < 1) return null;
+  final text = input.trim();
+  if (text.isEmpty) return null;
+  final pages = <int>[];
+  final seen = <int>{};
+  for (final raw in text.split(',')) {
+    final part = raw.trim();
+    if (part.isEmpty) return null;
+    final dash = part.split('-');
+    if (dash.length == 1) {
+      final page = int.tryParse(dash[0].trim());
+      if (page == null || page < 1 || page > totalPages) return null;
+      if (seen.add(page)) pages.add(page);
+      continue;
+    }
+    if (dash.length != 2) return null;
+    final start = int.tryParse(dash[0].trim());
+    final end = int.tryParse(dash[1].trim());
+    if (start == null || end == null || start < 1 || end < 1 || start > totalPages || end > totalPages || start > end) {
+      return null;
+    }
+    for (var page = start; page <= end; page += 1) {
+      if (seen.add(page)) pages.add(page);
+    }
+  }
+  if (pages.isEmpty) return null;
+  return pages;
+}
+
 bool pdfLooksEncrypted(Uint8List data) {
   const needle = [47, 69, 110, 99, 114, 121, 112, 116];
   bool find(int start, int end) {
@@ -49,8 +80,11 @@ PrintRoute resolvePrintRoute({
   required PageMode pageMode,
   required bool gray,
   bool passwordUnlocked = false,
+  bool reverse = false,
+  int pagesPerSheet = 1,
+  bool manualOrientation = false,
 }) {
-  if (passwordUnlocked) return PrintRoute.pcl;
+  if (passwordUnlocked || reverse || pagesPerSheet > 1 || manualOrientation) return PrintRoute.pcl;
   if (docKind == DocKind.pdf && hasPdfBytes && pdfDirectAllowed && devicePdf && !gray && pageMode == PageMode.all) {
     return PrintRoute.pdfDirect;
   }

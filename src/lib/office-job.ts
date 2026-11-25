@@ -46,8 +46,8 @@ function concat(parts: Uint8Array[]) {
   return out;
 }
 
-function pjl(options: { copies: number; duplex: DuplexMode; paper: OfficePaper; language: "PDF" | "PCL"; pages: number }) {
-  const count = Math.min(9, Math.max(1, options.copies));
+function pjl(options: { copies: number; duplex: DuplexMode; paper: OfficePaper; language: "PDF" | "PCL"; pages: number; secure?: { pin: string; user: string } }) {
+  const count = Math.min(99, Math.max(1, options.copies));
   const lines = ["\x1b%-12345X@PJL JOB", options.pages > 1 ? `@PJL SET QTY=${count}` : `@PJL SET COPIES=${count}`];
   if (options.paper !== "B5") lines.push(`@PJL SET PAPER=${PAPER[options.paper].pjl}`);
   if (options.duplex === "simplex") lines.push("@PJL SET DUPLEX=OFF");
@@ -55,11 +55,15 @@ function pjl(options: { copies: number; duplex: DuplexMode; paper: OfficePaper; 
     lines.push("@PJL SET DUPLEX=ON");
     lines.push(`@PJL SET BINDING=${options.duplex === "long" ? "LONGEDGE" : "SHORTEDGE"}`);
   }
+  if (options.secure?.pin) {
+    const user = options.secure.user.replace(/[^A-Za-z0-9]/g, "").slice(0, 16) || "USER";
+    lines.push("@PJL SET HOLD=ON", "@PJL SET HOLDTYPE=PRIVATE", `@PJL SET HOLDKEY=${options.secure.pin}`, `@PJL SET USERNAME=${user}`);
+  }
   lines.push(`@PJL ENTER LANGUAGE=${options.language}`);
   return `${lines.join("\r\n")}\r\n`;
 }
 
-export function wrapPdfJob(pdf: Uint8Array, options: { copies: number; duplex: DuplexMode; paper: OfficePaper; pages: number }) {
+export function wrapPdfJob(pdf: Uint8Array, options: { copies: number; duplex: DuplexMode; paper: OfficePaper; pages: number; secure?: { pin: string; user: string } }) {
   return concat([
     encoder.encode(pjl({ ...options, language: "PDF" })),
     pdf,
@@ -121,12 +125,13 @@ export function officeMemoChunks(text: string, width: number, height: number) {
   return paginateLines(lines, perPage);
 }
 
-export function pclJobHeader(options: { copies: number; duplex: DuplexMode; paper: OfficePaper; pages: number }) {
+export function pclJobHeader(options: { copies: number; duplex: DuplexMode; paper: OfficePaper; pages: number; secure?: { pin: string; user: string }; orient?: "portrait" | "landscape" }) {
   const spec = PAPER[options.paper];
   const side = options.duplex === "long" ? 1 : options.duplex === "short" ? 2 : 0;
+  const face = options.orient === "landscape" ? 1 : 0;
   // ESC * r 0 F는 래스터 방향이다. 장수는 PJL QTY/COPIES 한 곳만 쓴다.
   return encoder.encode(
-    `${pjl({ ...options, language: "PCL" })}\x1bE\x1b&l${spec.pcl}A\x1b&l0O\x1b&l${side}S\x1b&u300D\x1b&l0E\x1b&l0L\x1b&a0L\x1b*t300R\x1b*r0F`,
+    `${pjl({ ...options, language: "PCL" })}\x1bE\x1b&l${spec.pcl}A\x1b&l${face}O\x1b&l${side}S\x1b&u300D\x1b&l0E\x1b&l0L\x1b&a0L\x1b*t300R\x1b*r0F`,
   );
 }
 

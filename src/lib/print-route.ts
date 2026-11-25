@@ -1,4 +1,4 @@
-export type PrintRoute = "usb-pdf" | "usb-pcl" | "os-print";
+export type PrintRoute = "usb-pdf" | "usb-pcl" | "preview-only";
 
 export type RouteInput = {
   liveUsb: boolean;
@@ -7,7 +7,7 @@ export type RouteInput = {
   catalogSure: boolean;
   pdfBytes: boolean;
   docKind: "pdf" | "photo" | "memo" | "test";
-  pageMode: "all" | "span";
+  pageMode: "all" | "span" | "list";
   gray: boolean;
   pdfDirect: boolean;
 };
@@ -28,7 +28,7 @@ export function languageIsPcl5(languages: string) {
 }
 
 export function resolvePrintRoute(input: RouteInput): PrintRoute {
-  if (!input.liveUsb) return "os-print";
+  if (!input.liveUsb) return "preview-only";
   const cmd = input.cmd.trim();
   let pcl5 = false;
   if (cmd && commandHasPcl5(cmd)) pcl5 = true;
@@ -36,5 +36,5 @@ export function resolvePrintRoute(input: RouteInput): PrintRoute {
   const pdfLang = /\bPDF\b/i.test(cmd);
   if (input.docKind === "pdf" && input.pdfBytes && input.pdfDirect && pdfLang && !input.gray && input.pageMode === "all") return "usb-pdf";
   if (pcl5) return "usb-pcl";
-  return "os-print";
+  return "preview-only";
 }

@@ -49,6 +49,8 @@ void main() {
     expect(many, contains('@PJL SET DUPLEX=ON'));
     expect(many, contains('@PJL SET BINDING=LONGEDGE'));
     expect(many, contains('\x1B&l26A'));
+    expect(many, contains('@PJL SET MEDIASOURCE=AUTO'));
+    expect(many, contains('\x1B&l7H'));
     final one = String.fromCharCodes(pclJobHeader(copies: 2, duplex: DuplexMode.simplex, paper: OfficePaper.a4, pages: 1));
     expect(one, contains('@PJL SET COPIES=2'));
     expect(one.contains('@PJL SET QTY'), isFalse);
@@ -281,6 +283,188 @@ void main() {
     final exact = Uint8List(8 * 8 * 4)..fillRange(0, 8 * 8 * 4, 255);
     final page = String.fromCharCodes(concat(packetsFromRgba(exact, 8, 8, 'threshold')));
     expect(page, contains('\x1B*r8S\x1B*r8T'));
+  });
+
+  test('page range, reverse, n-up, secure hold, and PIN redaction', () {
+    expect(parsePageRange('1, 3-5, 8', 10), [1, 3, 4, 5, 8]);
+    expect(parsePageRange('8, 1, 3-5, 3', 10), [8, 1, 3, 4, 5]);
+    expect(parsePageRange('1-2, 9', 4), isNull);
+    expect(parsePageRange('a', 4), isNull);
+    expect(parsePageRange('1, ,2', 4), isNull);
+    expect(
+      resolvePrintRoute(
+        docKind: DocKind.pdf,
+        hasPdfBytes: true,
+        pdfDirectAllowed: true,
+        devicePdf: true,
+        pageMode: PageMode.all,
+        gray: false,
+        reverse: true,
+      ),
+      PrintRoute.pcl,
+    );
+    expect(
+      resolvePrintRoute(
+        docKind: DocKind.pdf,
+        hasPdfBytes: true,
+        pdfDirectAllowed: true,
+        devicePdf: true,
+        pageMode: PageMode.all,
+        gray: false,
+        pagesPerSheet: 2,
+      ),
+      PrintRoute.pcl,
+    );
+    expect(
+      resolvePrintRoute(
+        docKind: DocKind.pdf,
+        hasPdfBytes: true,
+        pdfDirectAllowed: true,
+        devicePdf: true,
+        pageMode: PageMode.all,
+        gray: false,
+        pagesPerSheet: 4,
+      ),
+      PrintRoute.pcl,
+    );
+    expect(outputSheetCount(5, 2), 3);
+    expect(outputSheetCount(4, 2), 2);
+    expect(outputSheetCount(3, 4), 1);
+    expect(outputSheetCount(8, 4), 2);
+    expect(needsBlankBack(outputSheetCount(5, 2), DuplexMode.long), isTrue);
+    expect(needsBlankBack(outputSheetCount(4, 2), DuplexMode.long), isFalse);
+    expect(needsBlankBack(outputSheetCount(3, 4), DuplexMode.short), isTrue);
+    expect(needsBlankBack(outputSheetCount(8, 4), DuplexMode.simplex), isFalse);
+    final header = String.fromCharCodes(pclJobHeader(
+      copies: 1,
+      duplex: DuplexMode.simplex,
+      paper: OfficePaper.a4,
+      pages: 1,
+      holdKey: '1234',
+      username: 'Kim Lee!',
+      tray: PaperTray.tray1,
+    ));
+    expect(header, contains('@PJL SET HOLD=ON'));
+    expect(header, contains('@PJL SET HOLDTYPE=PRIVATE'));
+    expect(header, contains('@PJL SET HOLDKEY="1234"'));
+    expect(header, contains('@PJL SET USERNAME="KimLee"'));
+    expect(header, contains('@PJL SET MEDIASOURCE=TRAY1'));
+    expect(header, contains('\x1B&l1H'));
+    final direct = String.fromCharCodes(wrapPdfJob(
+      Uint8List.fromList(const [1, 2, 3]),
+      copies: 1,
+      duplex: DuplexMode.simplex,
+      paper: OfficePaper.a4,
+      pages: 1,
+      holdKey: '9876',
+      username: 'MOBILE',
+    ));
+    expect(direct, contains('@PJL SET HOLDKEY="9876"'));
+    expect(direct, contains('ENTER LANGUAGE=PDF'));
+    final log = DiagLog();
+    log.add('HOLDKEY="4321"');
+    expect(log.dump().contains('4321'), isFalse);
+    expect(log.dump().contains('PIN=****'), isTrue);
+    log.add('핀=1111');
+    expect(log.dump().contains('1111'), isFalse);
+    expect(friendlyPrintError(StateError('USB 연결이 불안정하거나 끊겼어요.')), 'USB 연결이 불안정하거나 끊겼어요.');
+    expect(friendlyPrintError(StateError('복사기가 15초 안에 받지 않았어요. 용지가 없거나 걸린 것 같아요.')), contains('15초'));
+    expect(usbPipeStalled(StateError('USB 연결이 불안정하거나 끊겼어요.')), isTrue);
+  });
+
+  test('hold, page edges, n-up reverse, and crop frame stay consistent', () {
+    final heldMany = String.fromCharCodes(pclJobHeader(
+      copies: 3,
+      duplex: DuplexMode.simplex,
+      paper: OfficePaper.a4,
+      pages: 4,
+      holdKey: '2468',
+    ));
+    expect(heldMany, contains('@PJL SET QTY=3'));
+    expect(heldMany.contains('@PJL SET COPIES'), isFalse);
+    expect(heldMany.indexOf('@PJL SET HOLD=ON'), lessThan(heldMany.indexOf('@PJL ENTER LANGUAGE=PCL')));
+    final heldOne = String.fromCharCodes(pclJobHeader(
+      copies: 5,
+      duplex: DuplexMode.simplex,
+      paper: OfficePaper.a4,
+      pages: 1,
+      holdKey: '1357',
+    ));
+    expect(heldOne, contains('@PJL SET COPIES=5'));
+    expect(heldOne.contains('@PJL SET QTY'), isFalse);
+
+    final pdf = Uint8List.fromList('%PDF-1.4\n%%EOF'.codeUnits);
+    final wrapped = wrapPdfJob(pdf, copies: 2, duplex: DuplexMode.long, paper: OfficePaper.a4, pages: 3, holdKey: '1234', tray: PaperTray.auto);
+    final text = String.fromCharCodes(wrapped);
+    const enter = '@PJL ENTER LANGUAGE=PDF\r\n';
+    final at = text.indexOf(enter);
+    expect(at, greaterThan(0));
+    expect(text.substring(at + enter.length).startsWith('%PDF-1.4'), isTrue);
+    expect(text.endsWith('\r\n\x1B%-12345X@PJL EOJ\r\n\x1B%-12345X'), isTrue);
+    expect(text, contains('@PJL SET MEDIASOURCE=AUTO'));
+    expect(text, contains('@PJL SET QTY=2'));
+    expect(text.contains('@PJL SET COPIES'), isFalse);
+    expect(text.indexOf('HOLDKEY="1234"'), lessThan(at));
+
+    expect(parsePageRange('  1 ,  2 - 4 , 7 ', 10), [1, 2, 3, 4, 7]);
+    expect(parsePageRange('5-3', 10), isNull);
+    expect(parsePageRange('0', 10), isNull);
+    expect(parsePageRange('-2', 10), isNull);
+    expect(parsePageRange('99', 10), isNull);
+    expect(parsePageRange(',,,', 10), isNull);
+    expect(parsePageRange('1-1', 4), [1]);
+
+    expect(nupGroups([1, 2, 3], 2), [
+      [1, 2],
+      [3],
+    ]);
+    expect(nupGroups([1, 2, 3], 2, reverse: true), [
+      [3],
+      [1, 2],
+    ]);
+    expect(nupGroups([1, 2, 3], 2, reverse: true).length, 2);
+    expect(needsBlankBack(nupGroups([1, 2, 3], 2, reverse: true).length, DuplexMode.long), isFalse);
+    expect(nupGroups([1, 2, 3, 4, 5], 2, reverse: true), [
+      [5],
+      [3, 4],
+      [1, 2],
+    ]);
+    expect(needsBlankBack(nupGroups([1, 2, 3, 4, 5], 2, reverse: true).length, DuplexMode.short), isTrue);
+    expect(nupGroups([1, 2, 3], 4, reverse: true), [
+      [1, 2, 3],
+    ]);
+    expect(needsBlankBack(1, DuplexMode.long), isTrue);
+
+    final landscape = framePlacement(
+      sourceWidth: 1000,
+      sourceHeight: 2000,
+      cellWidth: 2336,
+      cellHeight: 3364,
+      fit: FrameFit.contain,
+      rotate: true,
+    );
+    expect(landscape, isNotNull);
+    expect(landscape!.visualWidth, lessThanOrEqualTo(2336.01));
+    expect(landscape.visualHeight, lessThanOrEqualTo(3364.01));
+    expect(landscape.destWidth, greaterThan(0));
+    expect(landscape.destHeight, greaterThan(0));
+    final cover = framePlacement(
+      sourceWidth: 8000,
+      sourceHeight: 400,
+      cellWidth: 2336,
+      cellHeight: 3364,
+      fit: FrameFit.cover,
+      rotate: false,
+    );
+    expect(cover, isNotNull);
+    expect(cover!.visualWidth, greaterThanOrEqualTo(2336));
+    expect(cover.visualHeight, greaterThanOrEqualTo(3364));
+    expect(cover.destWidth, greaterThan(0));
+    expect(cover.destHeight, greaterThan(0));
+    expect(
+      framePlacement(sourceWidth: 0, sourceHeight: 10, cellWidth: 10, cellHeight: 10, fit: FrameFit.cover, rotate: false),
+      isNull,
+    );
   });
 }
 

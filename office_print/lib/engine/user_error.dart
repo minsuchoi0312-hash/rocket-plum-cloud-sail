@@ -24,11 +24,14 @@ const ippRawPortHint = '복사기의 9100(RAW) 포트가 닫혀 있을 수 있�
 
 const usbDroppedHint = '복사기와 연결이 끊어졌어요. 다시 연결해 주세요.';
 
+const usbUnstableHint = 'USB 연결이 불안정하거나 끊겼어요.';
+
 String friendlyPrintError(Object error) {
   final text = '$error';
   if (error is TimeoutException || text.contains('TimeoutException')) {
     return '복사기 응답이 15초 넘게 없어요. 용지 없음·걸림이나 와이파이 연결을 확인해 주세요.';
   }
+  if (text.contains('불안정')) return usbUnstableHint;
   if (text.contains('권한')) return 'USB 권한을 허용하지 않았어요.';
   if (text.contains('15초') || text.contains('용지')) return '복사기가 15초 안에 받지 않았어요. 용지가 없거나 걸린 것 같아요.';
   if (text.contains('다른 앱')) return '다른 앱이 USB를 사용 중이라 이 앱에서 바로 보낼 수 없어요.';
@@ -71,5 +74,5 @@ String errorSummary(Object error) {
 bool usbPipeStalled(Object error) {
   if (error is TimeoutException) return true;
   final text = '$error';
-  return text.contains('TimeoutException') || text.contains('15초') || text.contains('용지') || text.contains('closed') || text.contains('끊어');
+  return text.contains('TimeoutException') || text.contains('15초') || text.contains('용지') || text.contains('closed') || text.contains('끊어') || text.contains('불안정');
 }

@@ -44,7 +44,8 @@ class UsbAndroid {
     );
   }
 
-  /// 케이블이 빠지면 네이티브가 `detached`를 보낸다. 쓰기 채널과 방향이 달라 같이 둔다.
+  /// 케이블이 빠지면 네이티브가 `detached`를 보낸다.
+  /// 이 핸들러는 네이티브→Dart 수신만 바꾼다. `invokeMethod`로 나가는 쓰기와는 덮어쓰지 않는다.
   void listenDetached(void Function() onDetached) {
     if (!Platform.isAndroid) return;
     _channel.setMethodCallHandler((call) async {
@@ -78,6 +79,28 @@ class UsbAndroid {
     if (!Platform.isAndroid) return;
     try {
       await _channel.invokeMethod<void>('close');
+    } catch (_) {}
+  }
+
+  /// 인쇄 중 화면이 꺼져도 프로세스를 붙잡는다. 알림 권한이 없어도 예외를 삼킨다.
+  Future<void> startGuard() async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _channel.invokeMethod<void>('guardStart');
+    } catch (_) {}
+  }
+
+  Future<void> stopGuard() async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _channel.invokeMethod<void>('guardStop');
+    } catch (_) {}
+  }
+
+  Future<void> openSettings() async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _channel.invokeMethod<void>('openSettings');
     } catch (_) {}
   }
 }

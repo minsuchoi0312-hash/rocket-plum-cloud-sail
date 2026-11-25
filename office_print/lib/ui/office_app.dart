@@ -21,7 +21,7 @@ import '../transport/share_inbox.dart';
 import '../transport/usb_android.dart';
 import '../transport/wifi_raw.dart';
 
-enum FlowStep { connect, confirm, print }
+enum FlowStep { connect, print }
 
 class OfficePrintApp extends StatelessWidget {
   const OfficePrintApp({super.key});
@@ -58,8 +58,9 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
   final _port = TextEditingController(text: '9100');
   final _memo = TextEditingController();
   final _password = TextEditingController();
-  final _pageFromCtrl = TextEditingController(text: '1');
-  final _pageToCtrl = TextEditingController(text: '1');
+  final _rangeCtrl = TextEditingController();
+  final _pinCtrl = TextEditingController();
+  final _userCtrl = TextEditingController(text: 'MOBILE');
 
   FlowStep _step = FlowStep.connect;
   DocKind _kind = DocKind.pdf;
@@ -67,7 +68,15 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
   DuplexMode _duplex = DuplexMode.simplex;
   PageMode _pageMode = PageMode.all;
   int _copies = 1;
+  int _nup = 1;
+  int _photoGrid = 1;
   bool _gray = false;
+  bool _secure = false;
+  bool _reverse = false;
+  bool _usbMissing = false;
+  PaperTray _tray = PaperTray.auto;
+  FrameTurn _turn = FrameTurn.auto;
+  FrameFit _photoFit = FrameFit.contain;
   bool _scanning = false;
   bool _sending = false;
   bool _cancel = false;
@@ -79,16 +88,11 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
   int _previewToken = 0;
   int _pdfCount = 0;
   int _previewPage = 1;
-  int _pageFrom = 1;
-  int _pageTo = 1;
   String _notice = '';
   String _title = '';
-  String _cmd = '';
   String? _hostName;
   int? _hostPort;
   bool _usbLive = false;
-  bool _languageChosen = false;
-  bool _askTest = false;
   bool _bgDuringSend = false;
   bool _sendOk = false;
   List<FoundPrinter> _found = const [];
@@ -142,8 +146,9 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
     _port.dispose();
     _memo.dispose();
     _password.dispose();
-    _pageFromCtrl.dispose();
-    _pageToCtrl.dispose();
+    _rangeCtrl.dispose();
+    _pinCtrl.dispose();
+    _userCtrl.dispose();
     _photo?.dispose();
     _preview?.dispose();
     _pageRenderCancel?.cancel();
@@ -179,6 +184,9 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
         pageMode: _pageMode,
         gray: _gray,
         passwordUnlocked: _unlockedWithPassword,
+        reverse: _kind == DocKind.pdf && _reverse,
+        pagesPerSheet: _kind == DocKind.pdf ? _nup : 1,
+        manualOrientation: _turn != FrameTurn.auto,
       );
 
   bool get _pcl => _route == PrintRoute.pcl;
@@ -235,15 +243,12 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
     final known = pdf || pcl5;
     setState(() {
       _title = title;
-      _cmd = languages;
       _devicePdf = pdf;
-      _askTest = false;
-      _languageChosen = known;
       _hostName = host;
       _hostPort = port;
       _usbLive = false;
-      _step = known ? FlowStep.print : FlowStep.confirm;
-      _notice = known ? '' : 'PDF와 PCL5e 지원을 아직 몰라요. 확인한 뒤 시험 인쇄부터 하는 편이 안전해요.';
+      _step = FlowStep.print;
+      _notice = known ? '' : '지원 언어를 못 읽었어요. 다른 앱으로 넘기지 않고 이 앱이 흑백으로 복사합니다.';
     });
     await _memory.remember(RememberedPrinter(name: title, host: host, port: port, languages: languages));
     await _loadSaved();
@@ -264,9 +269,11 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
       final devices = await _usb.list();
       if (!mounted) return;
       if (devices.isEmpty) {
+        setState(() => _usbMissing = true);
         _toast('USB 복사기가 안 보여요. 선을 꽂고 다시 눌러 주세요.');
         return;
       }
+      setState(() => _usbMissing = false);
       final picked = await showDialog<UsbPrinterInfo>(
         context: context,
         builder: (context) => SimpleDialog(
@@ -289,16 +296,13 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
       final known = pdf || pcl5;
       setState(() {
         _title = identity.title;
-        _cmd = identity.cmd;
         _devicePdf = pdf;
-        _askTest = false;
-        _languageChosen = known;
         _hostName = null;
         _hostPort = null;
         _usbLive = true;
         _usbPulled = false;
-        _step = known ? FlowStep.print : FlowStep.confirm;
-        _notice = known ? '' : '이름만으로는 언어를 확정하지 못했어요. 시험 인쇄부터 확인해 주세요.';
+        _step = FlowStep.print;
+        _notice = known ? '' : '이름만으로는 언어를 못 읽었어요. 다른 앱으로 넘기지 않고 이 앱이 흑백으로 복사합니다.';
       });
     } catch (error) {
       _log('USB 연결 실패 ${errorSummary(error)}');
@@ -307,26 +311,6 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
   }
 
   String _friendly(Object error) => friendlyPrintError(error);
-
-  Future<void> _confirmLanguage({required bool pdf}) async {
-    final stored = pdf
-        ? (deviceSupportsPdf(_cmd) ? _cmd : 'PDF')
-        : 'PCL5e';
-    final host = _hostName;
-    final port = _hostPort;
-    final title = _title.isEmpty ? '복사기' : _title;
-    setState(() {
-      _devicePdf = pdf;
-      _askTest = false;
-      _languageChosen = true;
-      _cmd = stored;
-      _step = FlowStep.print;
-      _notice = '';
-    });
-    if (host == null || port == null) return;
-    await _memory.remember(RememberedPrinter(name: title, host: host, port: port, languages: stored));
-    await _loadSaved();
-  }
 
   void _back() {
     if (_sending) return;
@@ -431,10 +415,6 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
       setState(() {
         _pdf = doc;
         _pdfCount = doc.pages.length;
-        _pageFrom = 1;
-        _pageTo = doc.pages.length;
-        _pageFromCtrl.text = '1';
-        _pageToCtrl.text = '${doc.pages.length}';
         _previewPage = 1;
         _preview = null;
         _needsPassword = false;
@@ -559,25 +539,32 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
     if (!mounted || !ready) return;
     final connected = _hostName != null || _usbLive;
     setState(() {
-      if (_askTest) _kind = DocKind.test;
-      if (!connected) {
-        _step = FlowStep.connect;
-        if (!_needsPassword) _notice = '파일을 받아 두었어요. 복사기를 연결하면 이어서 인쇄해요.';
-      } else if (!_languageChosen) {
-        _step = FlowStep.confirm;
-        _notice = 'PDF와 PCL5e 지원을 아직 몰라요. 확인한 뒤 시험 인쇄부터 하는 편이 안전해요.';
-      } else {
-        _step = FlowStep.print;
-      }
+      _kind = file.kind == 'pdf' ? DocKind.pdf : DocKind.photo;
+      _step = connected ? FlowStep.print : FlowStep.connect;
+      if (!connected && !_needsPassword) _notice = '파일을 받아 두었어요. 아래에서 복사기를 고르면 이 앱이 바로 복사합니다.';
+      if (connected) _notice = '';
     });
   }
 
-  List<int> _pageSpan() {
-    if (_pdf == null) return const [];
-    if (_pageMode == PageMode.all) return [for (var i = 1; i <= _pdfCount; i++) i];
-    final start = _pageFrom.clamp(1, _pdfCount);
-    final end = _pageTo.clamp(start, _pdfCount);
-    return [for (var i = start; i <= end; i++) i];
+  /// 전체와 쪽 지정은 인쇄하는 순간에만 갈라진다. 입력칸은 모드를 바꿔도 비우지 않는다.
+  List<int>? _selectedPages() {
+    if (_pdf == null || _pdfCount < 1) return const [];
+    if (_pageMode == PageMode.all) {
+      return [for (var i = 1; i <= _pdfCount; i++) i];
+    }
+    return parsePageRange(_rangeCtrl.text, _pdfCount);
+  }
+
+  Uint8List _jobHeader(int pages) {
+    return pclJobHeader(
+      copies: _copies,
+      duplex: _duplex,
+      paper: _paper,
+      pages: pages,
+      holdKey: _secure ? _pinCtrl.text.trim() : null,
+      username: _userCtrl.text,
+      tray: _tray,
+    );
   }
 
   Future<void> _print() async {
@@ -598,6 +585,14 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
       _toast('사진을 골라 주세요.');
       return;
     }
+    if (_secure && !validHoldPin(_pinCtrl.text.trim())) {
+      _toast('보안 인쇄 PIN은 숫자 4자리예요.');
+      return;
+    }
+    if (_kind == DocKind.pdf && _pageMode == PageMode.span && parsePageRange(_rangeCtrl.text, _pdfCount) == null) {
+      _toast('쪽 범위를 확인해 주세요. 예: 1, 3-5, 8');
+      return;
+    }
     _log('경로 ${_route == PrintRoute.pdfDirect ? 'PDF Direct' : 'PCL5e'}');
     RawLink? link;
     final usbJob = _usbLive;
@@ -612,13 +607,25 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
       try {
         await WakelockPlus.enable();
       } catch (_) {}
+      try {
+        await _usb.startGuard();
+      } catch (_) {}
       if (!usbJob) {
         link = RawLink();
         await link.open(_hostName!, _hostPort!);
         _link = link;
       }
       if (_route == PrintRoute.pdfDirect && _pdfBytes != null) {
-        final job = wrapPdfJob(_pdfBytes!, copies: _copies, duplex: _duplex, paper: _paper, pages: _pdfCount);
+        final job = wrapPdfJob(
+          _pdfBytes!,
+          copies: _copies,
+          duplex: _duplex,
+          paper: _paper,
+          pages: _pdfCount,
+          holdKey: _secure ? _pinCtrl.text.trim() : null,
+          username: _userCtrl.text,
+          tray: _tray,
+        );
         await _sendAll([job]);
       } else {
         await _sendPcl();
@@ -628,8 +635,10 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
         _toast('보내기를 멈췄어요.');
       } else if (mounted) {
         _sendOk = true;
-        _log('복사기로 보냈어요.');
-        _toast('복사기로 보냈어요.');
+        final held = _secure;
+        final done = held ? '복사기에 넣어 두었어요. 복사기 화면에서 PIN을 입력해야 출력돼요.' : '복사기로 보냈어요.';
+        _log(held ? '보안 인쇄로 넣어 두었어요.' : '복사기로 보냈어요.');
+        _toast(done);
       }
     } catch (error) {
       _log('인쇄 오류 ${errorSummary(error)}');
@@ -644,10 +653,11 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
       if (usbJob && (stalled || _usbPulled)) {
         await _usb.close();
         _usbLive = false;
+        final dropped = '$error'.contains('불안정') ? usbUnstableHint : usbDroppedHint;
         if (mounted) {
           setState(() {
             _step = FlowStep.connect;
-            _notice = usbDroppedHint;
+            _notice = dropped;
           });
         }
       } else if (_cancel) {
@@ -656,6 +666,9 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
         _toast(_friendly(error));
       }
     } finally {
+      try {
+        await _usb.stopGuard();
+      } catch (_) {}
       try {
         await WakelockPlus.disable();
       } catch (_) {}
@@ -667,27 +680,80 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
 
   Future<void> _sendPcl() async {
     if (_kind == DocKind.pdf) {
-      final numbers = _pageSpan();
-      final header = pclJobHeader(copies: _copies, duplex: _duplex, paper: _paper, pages: numbers.length);
-      await _writeChunk(header, 2);
-      for (var index = 0; index < numbers.length; index += 1) {
-        if (_cancel) break;
-        await _sendPdfPage(numbers[index], index, numbers.length);
+      final numbers = _selectedPages();
+      if (numbers == null || numbers.isEmpty) {
+        throw StateError('쪽 범위를 확인해 주세요. 예: 1, 3-5, 8');
       }
-      if (!_cancel && needsBlankBack(numbers.length, _duplex)) await _sendBlank();
+      final per = _nup >= 4 ? 4 : (_nup == 2 ? 2 : 1);
+      final columns = per >= 4 ? 2 : 1;
+      final rows = per >= 4 ? 2 : (per == 2 ? 2 : 1);
+      final groups = nupGroups(numbers, per, reverse: _reverse);
+      final sheets = groups.length;
+      await _writeChunk(_jobHeader(sheets), 2);
+      for (var sheetIndex = 0; sheetIndex < groups.length; sheetIndex += 1) {
+        if (_cancel) break;
+        final group = groups[sheetIndex];
+        final images = <ui.Image>[];
+        ui.Image? sheet;
+        try {
+          for (final number in group) {
+            if (_cancel) break;
+            final image = await _renderPdfImage(number, targetWidth: _spec.width / columns, targetHeight: _spec.height / rows);
+            if (_cancel) {
+              image?.dispose();
+              break;
+            }
+            if (image == null) throw StateError('쪽을 그리지 못했어요.');
+            images.add(image);
+          }
+          if (!_cancel && images.length == group.length) {
+            sheet = await composeNup(
+              sources: images,
+              width: _spec.width,
+              height: _spec.height,
+              columns: columns,
+              rows: rows,
+              turn: _turn,
+            );
+          }
+        } finally {
+          for (final image in images) {
+            image.dispose();
+          }
+        }
+        if (_cancel) {
+          sheet?.dispose();
+          break;
+        }
+        if (sheet == null) throw StateError('쪽을 그리지 못했어요.');
+        await _sendImage(sheet, sheetIndex, sheets, RasterMode.dither);
+      }
+      if (!_cancel && needsBlankBack(sheets, _duplex)) await _sendBlank();
     } else if (_kind == DocKind.photo && _photo != null) {
-      final header = pclJobHeader(copies: _copies, duplex: _duplex, paper: _paper, pages: 1);
-      await _writeChunk(header, 2);
-      await _sendImage(_photo!, 0, 1, RasterMode.dither, disposeImage: false);
+      await _writeChunk(_jobHeader(1), 2);
+      if (_photoGrid >= 4) {
+        // 같은 사진을 네 칸에 그린다. composeNup은 원본을 버리지 않고, 합성본만 보낸 뒤 버린다.
+        final sheet = await composeNup(
+          sources: [_photo!, _photo!, _photo!, _photo!],
+          width: _spec.width,
+          height: _spec.height,
+          columns: 2,
+          rows: 2,
+          fit: _photoFit,
+          turn: _turn,
+        );
+        await _sendImage(sheet, 0, 1, RasterMode.dither);
+      } else {
+        await _sendImage(_photo!, 0, 1, RasterMode.dither, disposeImage: false, fit: _photoFit, turn: _turn);
+      }
       if (!_cancel && needsBlankBack(1, _duplex)) await _sendBlank();
     } else {
       final chunks = await _textPages();
-      final header = pclJobHeader(copies: _copies, duplex: _duplex, paper: _paper, pages: chunks.length);
-      await _writeChunk(header, 2);
+      await _writeChunk(_jobHeader(chunks.length), 2);
       for (var index = 0; index < chunks.length; index += 1) {
         if (_cancel) break;
         final image = await paintTextSheet(chunks[index], _spec.width, _spec.height);
-        await _sendImage(image, index, chunks.length, RasterMode.threshold);
+        await _sendImage(image, index, chunks.length, RasterMode.threshold, turn: _turn);
       }
       if (!_cancel && needsBlankBack(chunks.length, _duplex)) await _sendBlank();
     }
@@ -704,16 +770,16 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
     return ['$title\n연결이 되는지 확인하는 시험 페이지입니다.'];
   }
 
-  Future<void> _sendPdfPage(int number, int index, int total) async {
+  Future<ui.Image?> _renderPdfImage(int number, {required double targetWidth, required double targetHeight}) async {
     final doc = _pdf;
-    if (doc == null || number < 1 || number > doc.pages.length) return;
+    if (doc == null || number < 1 || number > doc.pages.length) return null;
     final page = doc.pages[number - 1];
     if (page.width <= 0 || page.height <= 0) throw StateError('쪽을 그리지 못했어요.');
     _pageRenderCancel?.cancel();
     final cancel = page.createCancellationToken();
     _pageRenderCancel = cancel;
-    final longPaper = _spec.height.toDouble();
-    final shortPaper = _spec.width.toDouble();
+    final longPaper = targetWidth > targetHeight ? targetWidth : targetHeight;
+    final shortPaper = targetWidth > targetHeight ? targetHeight : targetWidth;
     final pageLong = page.width > page.height ? page.width : page.height;
     final pageShort = page.width > page.height ? page.height : page.width;
     var scale = longPaper / pageLong;
@@ -725,23 +791,26 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
       backgroundColor: 0xFFFFFFFF,
       cancellationToken: cancel,
     );
-    if (rendered == null) {
-      if (_cancel) return;
-      throw StateError('쪽을 그리지 못했어요.');
-    }
-    final ui.Image image;
+    if (rendered == null) return null;
     try {
-      image = await imageFromBgra(rendered.pixels, rendered.width, rendered.height);
+      return await imageFromBgra(rendered.pixels, rendered.width, rendered.height);
     } finally {
       rendered.dispose();
     }
-    await _sendImage(image, index, total, RasterMode.dither);
   }
 
-  Future<void> _sendImage(ui.Image image, int index, int total, RasterMode mode, {bool disposeImage = true}) async {
+  Future<void> _sendImage(
+    ui.Image image,
+    int index,
+    int total,
+    RasterMode mode, {
+    bool disposeImage = true,
+    FrameFit fit = FrameFit.contain,
+    FrameTurn turn = FrameTurn.auto,
+  }) async {
     var release = disposeImage;
     try {
-      final rgba = await rasterize(image, _spec.width, _spec.height);
+      final rgba = await rasterize(image, _spec.width, _spec.height, fit: fit, turn: turn);
       if (release) {
         image.dispose();
         release = false;
@@ -868,38 +937,49 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
               icon: const Icon(Icons.help_outline),
             ),
           ],
-          leading: _step == FlowStep.connect
-              ? null
-              : IconButton(onPressed: _sending ? null : _back, icon: const Icon(Icons.arrow_back)),
+          leading: _step == FlowStep.print
+              ? IconButton(onPressed: _sending ? null : _back, icon: const Icon(Icons.arrow_back), tooltip: '복사기 바꾸기')
+              : null,
         ),
         body: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
           children: [
-            Text(_stepTitle, style: Theme.of(context).textTheme.titleMedium),
+            Text(_connected ? '복사할 내용을 고르세요' : '복사기와 문서를 이 화면에서 고르세요', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 6),
-            Text(
-              '사무용 복사기를 같은 와이파이(9100)나 USB로 바로 찍습니다. 기본 인쇄 창으로 넘기지 않아요.',
-              style: Theme.of(context).textTheme.bodyMedium,
+            const Text(
+              '와이파이나 USB로 이 앱이 직접 보냅니다. 기본 인쇄 앱, 에어프린트, 시스템 인쇄 창으로 넘기지 않아요.',
+              style: TextStyle(color: Color(0xFF5C6570)),
             ),
             if (_notice.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(_notice, style: const TextStyle(color: Color(0xFF8A4B08))),
             ],
             const SizedBox(height: 16),
-            if (_step == FlowStep.connect) _connectBody(),
-            if (_step == FlowStep.confirm) _confirmBody(),
-            if (_step == FlowStep.print) _printBody(),
+            _printerCard(),
+            const SizedBox(height: 16),
+            _printBody(),
           ],
         ),
       ),
     );
   }
 
-  String get _stepTitle => switch (_step) {
-        FlowStep.connect => '1. 복사기 연결',
-        FlowStep.confirm => '2. 이 복사기 확인',
-        FlowStep.print => '3. 인쇄',
-      };
+  bool get _connected => _hostName != null || _usbLive;
+
+  Widget _printerCard() {
+    if (_connected && _step == FlowStep.print) {
+      final where = _usbLive ? 'USB' : '${_hostName ?? ''}:${_hostPort ?? 9100}';
+      return Card(
+        child: ListTile(
+          leading: Icon(_usbLive ? Icons.usb : Icons.wifi, color: const Color(0xFF1B3A6B)),
+          title: Text(_title.isEmpty ? '연결된 복사기' : _title),
+          subtitle: Text(where),
+          trailing: TextButton(onPressed: _sending ? null : _back, child: const Text('바꾸기')),
+        ),
+      );
+    }
+    return _connectBody();
+  }
 
   Widget _connectBody() {
     return Column(
@@ -933,6 +1013,8 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
         if (_android) ...[
           const SizedBox(height: 8),
           FilledButton.icon(onPressed: _sending ? null : _connectUsb, icon: const Icon(Icons.usb), label: const Text('USB 선으로 연결')),
+          if (_usbMissing)
+            OutlinedButton(onPressed: _sending ? null : () => _usb.openSettings(), child: const Text('OTG 설정 열기')),
         ],
         if (_saved.isNotEmpty) ...[
           const SizedBox(height: 20),
@@ -949,64 +1031,25 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
     );
   }
 
-  Widget _confirmBody() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(_title.isEmpty ? '복사기' : _title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
-        Text(_cmd.isEmpty ? '지원 언어를 아직 모르겠어요. 아래에서 고르거나, 잘 모르면 시험 인쇄부터 하세요.' : '읽은 언어: $_cmd'),
-        const SizedBox(height: 12),
-        FilledButton(
-          onPressed: () => _confirmLanguage(pdf: true),
-          child: const Text('PDF 지원'),
-        ),
-        const SizedBox(height: 8),
-        FilledButton.tonal(
-          onPressed: () => _confirmLanguage(pdf: false),
-          child: const Text('PCL5e 흑백'),
-        ),
-        const SizedBox(height: 8),
-        OutlinedButton(
-          onPressed: () => setState(() {
-            _devicePdf = false;
-            _askTest = true;
-            _languageChosen = true;
-            _kind = DocKind.test;
-            _step = FlowStep.print;
-            _notice = '언어를 모르는 복사기예요. 먼저 1쪽 시험 인쇄로 깨지지 않는지 확인해 주세요.';
-          }),
-          child: const Text('잘 모름'),
-        ),
-      ],
-    );
-  }
-
   Widget _printBody() {
     final locked = _sending;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(_title.isEmpty ? '연결된 복사기' : _title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 4),
-        Text(_route == PrintRoute.pdfDirect ? 'PDF를 그대로 넣어요.' : 'USB/와이파이 직접 인쇄는 흑백만 지원해요.'),
-        if (_askTest) ...[
-          const SizedBox(height: 8),
-          const Text('먼저 시험 페이지 1쪽만 보내 정상 출력되는지 확인해 주세요. 이상 없으면 PDF나 사진으로 바꾸세요.'),
-        ],
-        const SizedBox(height: 12),
-        SegmentedButton<DocKind>(
-          showSelectedIcon: false,
-          segments: const [
-            ButtonSegment(value: DocKind.pdf, label: Text('PDF')),
-            ButtonSegment(value: DocKind.photo, label: Text('사진')),
-            ButtonSegment(value: DocKind.memo, label: Text('메모')),
-            ButtonSegment(value: DocKind.test, label: Text('시험')),
+        const Text('무엇을 복사할까요', style: TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ChoiceChip(label: const Text('문서 복사'), selected: _kind == DocKind.pdf, onSelected: locked ? null : (_) => setState(() => _kind = DocKind.pdf)),
+            ChoiceChip(label: const Text('사진 복사'), selected: _kind == DocKind.photo, onSelected: locked ? null : (_) => setState(() => _kind = DocKind.photo)),
+            ChoiceChip(label: const Text('글 복사'), selected: _kind == DocKind.memo, onSelected: locked ? null : (_) => setState(() => _kind = DocKind.memo)),
+            ChoiceChip(label: const Text('시험 페이지'), selected: _kind == DocKind.test, onSelected: locked ? null : (_) => setState(() => _kind = DocKind.test)),
           ],
-          selected: {_kind},
-          onSelectionChanged: locked ? null : (value) => setState(() => _kind = value.first),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
+        Text(_route == PrintRoute.pdfDirect ? '이 PDF는 앱이 그대로 복사기로 넣어요.' : 'USB/와이파이 직접 인쇄는 흑백만 지원해요.'),
         if (_kind == DocKind.pdf) ...[
           OutlinedButton(onPressed: locked ? null : _pickPdf, child: const Text('PDF 고르기')),
           if (_pdfCount > 0) Text('총 $_pdfCount쪽'),
@@ -1033,39 +1076,29 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
             spacing: 8,
             children: [
               ChoiceChip(label: const Text('전체'), selected: _pageMode == PageMode.all, onSelected: locked ? null : (_) => setState(() => _pageMode = PageMode.all)),
-              ChoiceChip(label: const Text('시작~끝'), selected: _pageMode == PageMode.span, onSelected: locked || _pdfCount == 0 ? null : (_) => setState(() => _pageMode = PageMode.span)),
+              ChoiceChip(label: const Text('쪽 지정'), selected: _pageMode == PageMode.span, onSelected: locked || _pdfCount == 0 ? null : (_) => setState(() => _pageMode = PageMode.span)),
             ],
           ),
           if (_pageMode == PageMode.span)
-            Row(
-              children: [
-                SizedBox(
-                  width: 72,
-                  child: TextField(
-                    enabled: !locked,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: '시작'),
-                    controller: _pageFromCtrl,
-                    onChanged: (value) => _pageFrom = int.tryParse(value) ?? 1,
-                  ),
-                ),
-                const Text(' ~ '),
-                SizedBox(
-                  width: 72,
-                  child: TextField(
-                    enabled: !locked,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: '끝'),
-                    controller: _pageToCtrl,
-                    onChanged: (value) => _pageTo = int.tryParse(value) ?? _pageFrom,
-                  ),
-                ),
-              ],
+            TextField(
+              controller: _rangeCtrl,
+              enabled: !locked,
+              decoration: const InputDecoration(labelText: '쪽 범위', hintText: '1, 3-5, 8', border: OutlineInputBorder()),
             ),
         ],
         if (_kind == DocKind.photo) ...[
           OutlinedButton(onPressed: locked ? null : _pickPhoto, child: const Text('사진 고르기')),
           if (_photo != null) RawImage(image: _photo, height: 180, fit: BoxFit.contain),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: [
+              ChoiceChip(label: const Text('맞춤(안 자름)'), selected: _photoFit == FrameFit.contain, onSelected: locked ? null : (_) => setState(() => _photoFit = FrameFit.contain)),
+              ChoiceChip(label: const Text('채우기(자름)'), selected: _photoFit == FrameFit.cover, onSelected: locked ? null : (_) => setState(() => _photoFit = FrameFit.cover)),
+              ChoiceChip(label: const Text('1장'), selected: _photoGrid == 1, onSelected: locked ? null : (_) => setState(() => _photoGrid = 1)),
+              ChoiceChip(label: const Text('2×2 분할'), selected: _photoGrid == 4, onSelected: locked ? null : (_) => setState(() => _photoGrid = 4)),
+            ],
+          ),
         ],
         if (_kind == DocKind.memo)
           TextField(controller: _memo, enabled: !locked, minLines: 4, maxLines: 8, decoration: const InputDecoration(labelText: '적을 내용', border: OutlineInputBorder())),
@@ -1099,6 +1132,73 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
             IconButton(onPressed: locked ? null : () => setState(() => _copies = (_copies + 1).clamp(1, 99)), icon: const Icon(Icons.add)),
           ],
         ),
+        if (_advancedBadges.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Wrap(spacing: 8, children: [for (final badge in _advancedBadges) Chip(label: Text(badge), visualDensity: VisualDensity.compact)]),
+        ],
+        ExpansionTile(
+          title: const Text('고급 인쇄 옵션'),
+          childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+          children: [
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('보안 인쇄 (PIN)'),
+              value: _secure,
+              onChanged: locked ? null : (value) => setState(() => _secure = value),
+            ),
+            if (_secure) ...[
+              TextField(
+                controller: _pinCtrl,
+                enabled: !locked,
+                keyboardType: TextInputType.number,
+                maxLength: 4,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'PIN 4자리', counterText: ''),
+              ),
+              TextField(
+                controller: _userCtrl,
+                enabled: !locked,
+                decoration: const InputDecoration(labelText: '사용자 이름 (영문/숫자, 비우면 MOBILE)'),
+              ),
+            ],
+            const SizedBox(height: 8),
+            const Text('모아찍기'),
+            Wrap(
+              spacing: 8,
+              children: [
+                ChoiceChip(label: const Text('1쪽'), selected: _nup == 1, onSelected: locked ? null : (_) => setState(() => _nup = 1)),
+                ChoiceChip(label: const Text('2쪽'), selected: _nup == 2, onSelected: locked ? null : (_) => setState(() => _nup = 2)),
+                ChoiceChip(label: const Text('4쪽'), selected: _nup == 4, onSelected: locked ? null : (_) => setState(() => _nup = 4)),
+              ],
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('역순 인쇄'),
+              value: _reverse,
+              onChanged: locked ? null : (value) => setState(() => _reverse = value),
+            ),
+            const Text('용지함'),
+            Wrap(
+              spacing: 8,
+              children: [
+                ChoiceChip(label: const Text('자동'), selected: _tray == PaperTray.auto, onSelected: locked ? null : (_) => setState(() => _tray = PaperTray.auto)),
+                ChoiceChip(label: const Text('수동급지'), selected: _tray == PaperTray.manual, onSelected: locked ? null : (_) => setState(() => _tray = PaperTray.manual)),
+                ChoiceChip(label: const Text('용지함 1'), selected: _tray == PaperTray.tray1, onSelected: locked ? null : (_) => setState(() => _tray = PaperTray.tray1)),
+                ChoiceChip(label: const Text('용지함 2'), selected: _tray == PaperTray.tray2, onSelected: locked ? null : (_) => setState(() => _tray = PaperTray.tray2)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text('방향'),
+            Wrap(
+              spacing: 8,
+              children: [
+                ChoiceChip(label: const Text('자동'), selected: _turn == FrameTurn.auto, onSelected: locked ? null : (_) => setState(() => _turn = FrameTurn.auto)),
+                ChoiceChip(label: const Text('세로'), selected: _turn == FrameTurn.portrait, onSelected: locked ? null : (_) => setState(() => _turn = FrameTurn.portrait)),
+                ChoiceChip(label: const Text('가로'), selected: _turn == FrameTurn.landscape, onSelected: locked ? null : (_) => setState(() => _turn = FrameTurn.landscape)),
+              ],
+            ),
+          ],
+        ),
         const SizedBox(height: 8),
         if (_sending)
           FilledButton(
@@ -1111,9 +1211,23 @@ class _OfficeHomeState extends State<OfficeHome> with WidgetsBindingObserver {
             child: Text('취소 · $_progress%'),
           )
         else
-          FilledButton.icon(onPressed: _print, icon: const Icon(Icons.print), label: const Text('복사기로 바로 인쇄')),
+          FilledButton.icon(onPressed: _print, icon: const Icon(Icons.copy), label: const Text('이 앱에서 복사')),
       ],
     );
+  }
+
+  List<String> get _advancedBadges {
+    final badges = <String>[];
+    if (_secure) badges.add('보안');
+    if (_kind == DocKind.pdf && _nup == 2) badges.add('2쪽');
+    if (_kind == DocKind.pdf && _nup == 4) badges.add('4쪽');
+    if (_kind == DocKind.pdf && _reverse) badges.add('역순');
+    if (_tray == PaperTray.manual) badges.add('수동급지');
+    if (_tray == PaperTray.tray1) badges.add('용지함 1');
+    if (_tray == PaperTray.tray2) badges.add('용지함 2');
+    if (_turn == FrameTurn.portrait) badges.add('세로');
+    if (_turn == FrameTurn.landscape) badges.add('가로');
+    return badges;
   }
 
   Future<void> _flip(int delta) async {

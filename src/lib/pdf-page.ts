@@ -114,10 +114,11 @@ export async function renderSheetCanvas(options: {
   fit?: "contain" | "cover";
   turn?: number;
   gray?: boolean;
+  frame?: { width: number; height: number };
 }) {
-  const size = options.paper === "A3" ? [1754, 2480] : options.paper === "B5" ? [1075, 1518] : options.paper === "Letter" ? [1275, 1650] : [1240, 1754];
-  const width = size[0];
-  const height = size[1];
+  const fallback = options.paper === "A3" ? [1754, 2480] : options.paper === "B5" ? [1075, 1518] : options.paper === "Letter" ? [1275, 1650] : [1240, 1754];
+  const width = options.frame?.width || fallback[0];
+  const height = options.frame?.height || fallback[1];
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -155,9 +156,9 @@ export async function renderSheetCanvas(options: {
   return canvas;
 }
 
-export function sheetMemoChunks(text: string, paper: string) {
-  const width = paper === "A3" ? 1754 : paper === "B5" ? 1075 : 1240;
-  const height = paper === "A3" ? 2480 : paper === "B5" ? 1518 : 1754;
+export function sheetMemoChunks(text: string, paper: string, frame?: { width: number; height: number }) {
+  const width = frame?.width || (paper === "A3" ? 1754 : paper === "B5" ? 1075 : 1240);
+  const height = frame?.height || (paper === "A3" ? 2480 : paper === "B5" ? 1518 : 1754);
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
   if (!ctx) return [text];

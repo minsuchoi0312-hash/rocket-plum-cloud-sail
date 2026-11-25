@@ -140,21 +140,21 @@ test("memo threshold stays sharp and photos keep gray", () => {
 
 test("UFR, PostScript, PCL6 and PDF-only gray stay on the print dialog", () => {
   const base = { liveUsb: true, catalogPcl5: true, catalogSure: true, pdfBytes: true, pdfDirect: true, docKind: "pdf" as const, pageMode: "all" as const, gray: false };
-  assert.equal(resolvePrintRoute({ ...base, cmd: "UFR II" }), "os-print");
-  assert.equal(resolvePrintRoute({ ...base, cmd: "PostScript" }), "os-print");
-  assert.equal(resolvePrintRoute({ ...base, cmd: "PCL 6, PostScript" }), "os-print");
-  assert.equal(resolvePrintRoute({ ...base, cmd: "PCL3GUI" }), "os-print");
+  assert.equal(resolvePrintRoute({ ...base, cmd: "UFR II" }), "preview-only");
+  assert.equal(resolvePrintRoute({ ...base, cmd: "PostScript" }), "preview-only");
+  assert.equal(resolvePrintRoute({ ...base, cmd: "PCL 6, PostScript" }), "preview-only");
+  assert.equal(resolvePrintRoute({ ...base, cmd: "PCL3GUI" }), "preview-only");
   assert.equal(resolvePrintRoute({ ...base, cmd: "PDF" }), "usb-pdf");
-  assert.equal(resolvePrintRoute({ ...base, cmd: "PDF", gray: true }), "os-print");
-  assert.equal(resolvePrintRoute({ ...base, cmd: "PDF", pageMode: "span" }), "os-print");
+  assert.equal(resolvePrintRoute({ ...base, cmd: "PDF", gray: true }), "preview-only");
+  assert.equal(resolvePrintRoute({ ...base, cmd: "PDF", pageMode: "span" }), "preview-only");
   assert.equal(resolvePrintRoute({ ...base, cmd: "PCL5e,PDF", pageMode: "span" }), "usb-pcl");
   assert.equal(resolvePrintRoute({ ...base, cmd: "PCL5e,PDF", gray: true }), "usb-pcl");
-  assert.equal(resolvePrintRoute({ ...base, cmd: "", docKind: "photo" }), "os-print");
-  assert.equal(resolvePrintRoute({ ...base, cmd: "", catalogPcl5: false, docKind: "photo" }), "os-print");
-  assert.equal(resolvePrintRoute({ ...base, cmd: "PDF", pdfDirect: false }), "os-print");
+  assert.equal(resolvePrintRoute({ ...base, cmd: "", docKind: "photo" }), "preview-only");
+  assert.equal(resolvePrintRoute({ ...base, cmd: "", catalogPcl5: false, docKind: "photo" }), "preview-only");
+  assert.equal(resolvePrintRoute({ ...base, cmd: "PDF", pdfDirect: false }), "preview-only");
   assert.equal(resolvePrintRoute({ ...base, cmd: "PCL5e,PDF", pdfDirect: false }), "usb-pcl");
-  assert.equal(resolvePrintRoute({ ...base, cmd: "PCL,PCLXL" }), "os-print");
-  assert.equal(resolvePrintRoute({ ...base, cmd: "PCL,SPL" }), "os-print");
+  assert.equal(resolvePrintRoute({ ...base, cmd: "PCL,PCLXL" }), "preview-only");
+  assert.equal(resolvePrintRoute({ ...base, cmd: "PCL,SPL" }), "preview-only");
   assert.equal(commandHasPcl5("PJL,PCL,PDF"), false);
   assert.equal(commandHasPcl5("PCL5e"), true);
   assert.equal(commandHasPcl5("PCLXL"), false);

@@ -44,21 +44,39 @@ Future<PrinterProbe> queryPrinterId(String host, int port) async {
       await socket.flush().timeout(const Duration(seconds: 2));
     } catch (_) {}
     final done = Completer<void>();
+    Timer? idle;
+    void finish() {
+      idle?.cancel();
+      if (!done.isCompleted) done.complete();
+    }
+
     final sub = socket.listen(
       (chunk) {
         buffer.add(chunk);
-        if (buffer.length >= 2048 && !done.isCompleted) done.complete();
+        var formFeed = false;
+        for (final byte in chunk) {
+          if (byte == 0x0C) {
+            formFeed = true;
+            break;
+          }
+        }
+        if (formFeed || buffer.length >= 2048) {
+          finish();
+          return;
+        }
+        idle?.cancel();
+        idle = Timer(const Duration(milliseconds: 150), finish);
       },
-      onError: (_) {
-        if (!done.isCompleted) done.complete();
-      },
-      onDone: () {
-        if (!done.isCompleted) done.complete();
-      },
+      onError: (_) => finish(),
+      onDone: finish,
       cancelOnError: true,
     );
-    await done.future.timeout(const Duration(seconds: 2), onTimeout: () {});
-    await sub.cancel();
+    try {
+      await done.future.timeout(const Duration(seconds: 2), onTimeout: finish);
+    } finally {
+      idle?.cancel();
+      await sub.cancel();
+    }
   } finally {
     socket.destroy();
   }
