@@ -261,10 +261,10 @@ html[data-theme="light"] .app-header .icon-btn:hover,
 }
 
 .card-title {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
-  line-height: 1.4;
-  letter-spacing: -0.022em;
+  line-height: 1.35;
+  letter-spacing: -0.025em;
   color: var(--text-primary);
 }
 
@@ -334,21 +334,65 @@ html[data-theme="light"] .app-header .icon-btn:hover,
   transform: scale(0.985);
 }
 
+/* 토스 아이콘 칩 — 옅은 색 바탕 + 같은 계열 진한 아이콘 */
 .doc-ico {
+  --tone: var(--accent);
   display: grid;
   flex: none;
   place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  color: #ffffff;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--tone) 14%, transparent);
+  color: var(--tone);
 }
 
 /* 종류마다 다른 색 — 토스 레드 · 당근 그린 · 당근 주황 · 토스 블루 */
-.doc-ico.is-pdf { background: #f04452; }
-.doc-ico.is-photo { background: #10ab7d; }
-.doc-ico.is-memo { background: #ff8a1f; }
-.doc-ico.is-test { background: #3182f6; }
+.doc-ico.is-pdf { --tone: #f04452; }
+.doc-ico.is-photo { --tone: #10ab7d; }
+.doc-ico.is-memo { --tone: #ff7a1a; }
+.doc-ico.is-test { --tone: #3182f6; }
+.doc-ico.is-help { --tone: #8b95a1; }
+
+html:not([data-theme="light"]) .doc-ico {
+  background: color-mix(in srgb, var(--tone) 20%, transparent);
+}
+
+html:not([data-theme="light"]) .doc-ico.is-help { --tone: #9e9ea4; }
+
+/* 오른쪽 화살표 — 작고 연하게 (토스 grey-400) */
+.doc-chev {
+  width: 18px;
+  height: 18px;
+  color: #b0b8c1;
+}
+
+html:not([data-theme="light"]) .doc-chev {
+  color: #62626d;
+}
+
+/* 맨 아래 도움말 줄 */
+.help-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  border-radius: 24px;
+  background: var(--surface);
+  text-align: left;
+  transition: transform 120ms var(--ease), background-color 120ms var(--ease);
+}
+
+.help-row:active {
+  transform: scale(0.985);
+}
+
+@media (hover: hover) {
+  .help-row:hover {
+    background: color-mix(in srgb, var(--color-fg) 3%, var(--surface));
+  }
+}
 
 /* 문서 타일 아이콘 칩 */
 .tile-icon {

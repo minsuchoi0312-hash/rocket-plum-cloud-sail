@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CircleHelp, Moon, Sun, Upload } from "@/components/icons";
+import { ChevronRight as ChevronRightIcon, CircleHelp, Moon, Sun, Upload } from "@/components/icons";
 import { I18nProvider, m, msgText, tr, useI18n, type Msg } from "@/lib/i18n";
 import { LangSwitcher } from "@/components/lang-switcher";
 import { AppErrorBoundary } from "@/components/error-boundary";
@@ -2047,13 +2047,16 @@ function AtlasMain() {
           setSupportTab("help");
           setShowDiag(true);
         }}
-        className="help-card flex items-center justify-between rounded-3xl px-4 py-3 text-left text-sm"
+        className="help-row"
       >
-        <span>
-          <span className="block font-medium text-fg">{tr("ap.helpCard")}</span>
-          <span className="mt-0.5 block text-xs text-muted">{tr("ap.helpTopics")}</span>
+        <span className="doc-ico is-help" aria-hidden="true">
+          <CircleHelp weight="fill" className="size-[22px]" />
         </span>
-        <CircleHelp className="size-4 shrink-0 text-accent" aria-hidden="true" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[16px] font-semibold text-fg">{tr("ap.helpCard")}</span>
+          <span className="mt-0.5 block truncate text-[13px] text-muted">{tr("ap.helpTopics")}</span>
+        </span>
+        <ChevronRightIcon className="doc-chev" aria-hidden="true" />
       </button>
       {saved.length > 0 ? (
         <button type="button" onClick={() => setScanId((value) => value + 1)} className="self-center text-xs text-faint">

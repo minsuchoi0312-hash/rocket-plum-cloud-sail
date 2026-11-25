@@ -210,14 +210,14 @@ export function PrinterPanel(props: PrinterPanelProps) {
                   <button type="button" disabled={lanBusy || sending} onClick={() => {
                     setSearched(true);
                     void findOnWifi("quick");
-                  }} className="btn-solid flex h-12 items-center justify-center gap-2 rounded-2xl text-sm font-medium disabled:opacity-50">
-                    <Search className="size-4" aria-hidden="true" />
+                  }} className="btn-solid flex h-[52px] items-center justify-center gap-2 rounded-2xl text-[16px] disabled:opacity-50">
+                    <Search className="size-5" aria-hidden="true" />
                     {lanBusy && scanMode === "quick" ? t("pp.findingQuick") : lanBusy && scanMode === "helper" ? t("pp.helperFinding") : useHelper && helperUrl.trim() ? t("pp.findHelper") : t("pp.findQuick")}
                   </button>
                   <button type="button" disabled={lanBusy || sending} onClick={() => {
                     setSearched(true);
                     void findOnWifi("full");
-                  }} className="chip h-12 rounded-2xl px-3 text-sm font-medium disabled:opacity-50" title={t("pp.fullTitle")}>
+                  }} className="chip h-[52px] rounded-2xl px-3.5 text-sm disabled:opacity-50" title={t("pp.fullTitle")}>
                     {t("pp.full")}
                     <span className="block text-[11px] font-normal text-muted">1~254</span>
                   </button>
@@ -571,7 +571,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
                   <span className="block text-[16px] font-semibold text-fg">{docLabel(kind)}</span>
                   <span className="mt-0.5 block truncate text-[13px] text-muted">{t(hint)}</span>
                 </span>
-                <ChevronRight className="size-5 text-faint" aria-hidden="true" />
+                <ChevronRight className="doc-chev" aria-hidden="true" />
               </button>
             </li>
           ))}
