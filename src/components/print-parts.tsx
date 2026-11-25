@@ -3,7 +3,7 @@
  * atlas-app.tsx에서 분리한 컴포넌트.
  */
 import type { ReactNode } from "react";
-import { ArrowLeft, ArrowRight, Bookmark, Printer, RotateCw, Trash2, Upload } from "@/components/icons";
+import { ArrowLeft, ArrowRight, Bookmark, Minus, Plus, Printer, RotateCw, Trash2, Upload } from "@/components/icons";
 import type { MatchResult } from "@/lib/atlas";
 import type { DuplexMode, OfficePaper } from "@/lib/office-job";
 import type { PrintRoute } from "@/lib/print-route";
@@ -98,36 +98,56 @@ export function OfficeOptions({
     ["long", tr("opt.long")],
     ["short", tr("opt.short")],
   ] as const;
+  const colorOn = !(monoUsb || gray);
+  const idle = !liveJob || locked;
+  /* 토스 설정 화면처럼 줄마다 이름 + 분절 버튼, 장수는 − 값 + 캡슐 */
   return (
-    <div className="mt-4 space-y-3">
-      <div className="flex flex-wrap gap-2">
-        {(["A4", "A3", "B5"] as const).map((item) => (
-          <button key={item} type="button" disabled={locked} onClick={() => onPaper(item)} className={`chip h-10 rounded-full px-3 text-sm ${paper === item ? "is-on" : ""}`}>
-            {item}
-          </button>
-        ))}
-        <button type="button" disabled={monoUsb || locked} onClick={() => onGray(!gray)} className={`chip h-10 rounded-full px-3 text-sm disabled:cursor-not-allowed ${monoUsb || gray ? "is-on" : ""}`}>
-          {tr(monoUsb || gray ? "opt.gray" : "opt.color")}
-        </button>
+    <div className="opt-group mt-5">
+      <div className="opt-row">
+        <span className="opt-label">{tr("opt.paper")}</span>
+        <div className="seg" role="radiogroup" aria-label={tr("opt.paper")}>
+          {(["A4", "A3", "B5"] as const).map((item) => (
+            <button key={item} type="button" role="radio" aria-checked={paper === item} disabled={locked} onClick={() => onPaper(item)} className={`seg-btn ${paper === item ? "is-on" : ""}`}>
+              {item}
+            </button>
+          ))}
+        </div>
       </div>
-      <div className={`flex flex-wrap items-center gap-2 ${liveJob && !locked ? "" : "opt-idle"}`}>
-        {sides.map(([id, text]) => (
-          <button key={id} type="button" disabled={!liveJob || locked} onClick={() => onDuplex(id)} className={`chip h-10 rounded-full px-3 text-sm disabled:cursor-not-allowed ${duplex === id && liveJob ? "is-on" : ""}`}>
-            {text}
+      <div className="opt-row">
+        <span className="opt-label">{tr("opt.colorMode")}</span>
+        <div className="seg" role="radiogroup" aria-label={tr("opt.colorMode")}>
+          <button type="button" role="radio" aria-checked={colorOn} disabled={monoUsb || locked} onClick={() => onGray(false)} className={`seg-btn ${colorOn ? "is-on" : ""}`}>
+            {tr("opt.color")}
           </button>
-        ))}
-        <span className="copies-group inline-flex shrink-0 flex-nowrap items-center gap-1" role="group" aria-label={tr("opt.copiesAria")}>
-          <button type="button" disabled={!liveJob || locked} className="chip size-10 shrink-0 rounded-full disabled:cursor-not-allowed" onClick={() => onCopies(Math.max(1, copies - 1))} aria-label={tr("opt.less")}>
-            −
+          <button type="button" role="radio" aria-checked={!colorOn} disabled={monoUsb || locked} onClick={() => onGray(true)} className={`seg-btn ${colorOn ? "" : "is-on"}`}>
+            {tr("opt.gray")}
           </button>
-          <span className="w-8 shrink-0 text-center text-sm font-medium tabular-nums text-fg">{liveJob ? copies : 1}</span>
-          <button type="button" disabled={!liveJob || locked || copies >= copyMax} className="chip size-10 shrink-0 rounded-full disabled:cursor-not-allowed" onClick={() => onCopies(Math.min(copyMax, copies + 1))} aria-label={tr("opt.more")}>
-            +
+        </div>
+        {monoUsb ? <p className="opt-note">{tr("opt.usbMono")}</p> : null}
+      </div>
+      <div className={`opt-row ${idle ? "is-idle" : ""}`}>
+        <span className="opt-label">{tr("opt.sides")}</span>
+        <div className="seg" role="radiogroup" aria-label={tr("opt.sides")}>
+          {sides.map(([id, text]) => (
+            <button key={id} type="button" role="radio" aria-checked={duplex === id && liveJob} disabled={idle} onClick={() => onDuplex(id)} className={`seg-btn ${duplex === id && liveJob ? "is-on" : ""}`}>
+              {text}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className={`opt-row is-inline ${idle ? "is-idle" : ""}`}>
+        <span className="opt-label">{tr("opt.copies")}</span>
+        <span className="stepper" role="group" aria-label={tr("opt.copiesAria")}>
+          <button type="button" disabled={idle || copies <= 1} onClick={() => onCopies(Math.max(1, copies - 1))} aria-label={tr("opt.less")}>
+            <Minus className="size-4" aria-hidden="true" />
+          </button>
+          <span className="stepper-value">{liveJob ? copies : 1}</span>
+          <button type="button" disabled={idle || copies >= copyMax} onClick={() => onCopies(Math.min(copyMax, copies + 1))} aria-label={tr("opt.more")}>
+            <Plus className="size-4" aria-hidden="true" />
           </button>
         </span>
       </div>
-      {monoUsb ? <p className="text-xs leading-relaxed text-muted">{tr("opt.usbMono")}</p> : null}
-      {liveJob ? null : <p className="text-xs text-muted">{tr("opt.connectFirst")}</p>}
+      {liveJob ? null : <p className="opt-note -mt-1">{tr("opt.connectFirst")}</p>}
     </div>
   );
 }

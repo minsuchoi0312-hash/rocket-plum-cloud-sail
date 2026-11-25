@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight as ChevronRightIcon, CircleHelp, Moon, Sun, Upload } from "@/components/icons";
+import { ChevronRight as ChevronRightIcon, CircleHelp, Monitor as MonitorIcon, Moon, Printer as PrinterIcon, Sun, Upload, Usb as UsbIcon, Wifi as WifiIcon } from "@/components/icons";
 import { I18nProvider, m, msgText, tr, useI18n, type Msg } from "@/lib/i18n";
 import { LangSwitcher } from "@/components/lang-switcher";
 import { AppErrorBoundary } from "@/components/error-boundary";
@@ -1889,12 +1889,16 @@ function AtlasMain() {
         />
       ) : null}
       {step === "print" ? (
-        <button type="button" onClick={backToConnect} disabled={sending} className="card flex w-full items-center justify-between px-4 py-3 text-left disabled:opacity-40">
-          <span className="min-w-0">
-            <span className="block text-xs font-medium text-muted">{tr("ap.printer")}</span>
-            <span className="mt-1 block truncate text-base font-medium text-fg">{selectedName || tr("ap.stPreview")}</span>
+        <button type="button" onClick={backToConnect} disabled={sending} className="help-row disabled:opacity-40">
+          <span className="link-avatar" aria-hidden="true">
+            {statusDot.includes("usb") ? <UsbIcon className="size-6" /> : statusDot.includes("wifi") ? <WifiIcon className="size-6" /> : statusDot.includes("helper") ? <MonitorIcon className="size-6" /> : <PrinterIcon className="size-6" />}
+            <span className={`link-avatar-dot ${statusDot}`} />
           </span>
-          <span className="shrink-0 text-sm font-semibold text-accent">{tr("ap.change")}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] text-muted">{tr("ap.printer")}</span>
+            <span className="mt-0.5 block truncate text-[16px] font-semibold text-fg">{selectedName || tr("ap.stPreview")}</span>
+          </span>
+          <span className="shrink-0 rounded-full px-1 text-sm font-semibold text-accent">{tr("ap.change")}</span>
         </button>
       ) : null}
       {step === "print" && (printer.status || printer.loading) ? <PrinterStatusCard status={printer.status} loading={printer.loading} error={printer.error} onRefresh={() => void printer.refresh()} compact /> : null}
@@ -1949,7 +1953,7 @@ function AtlasMain() {
               ) : (
                 <h2 className="text-2xl font-semibold">{tr("ap.whatToPrint")}</h2>
               )}
-              <p className="mb-3 mt-2 inline-flex rounded-full border border-line bg-subtle px-3 py-1 text-xs font-medium text-fg">{routeLabel}</p>
+              <p className="route-badge mb-4 mt-2.5">{routeLabel}</p>
               {(effNup !== 1 || (reverse && docKind !== "test") || secureOn || pageMode !== "all" || orient !== "auto" || (docKind === "pdf" && marginMm > 0) || stampActive) ? (
                 <p className="mb-3 text-xs text-muted">
                   {tr("ap.adv")}{" "}

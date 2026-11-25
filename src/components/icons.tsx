@@ -27,6 +27,7 @@ import {
   MagnifyingGlass,
   MagnifyingGlassMinus,
   MagnifyingGlassPlus,
+  Minus as PhMinus,
   Moon as PhMoon,
   NotePencil,
   PencilSimple,
@@ -78,6 +79,7 @@ export const Monitor = round(Desktop);
 export const Moon = round(PhMoon);
 export const Pencil = round(PencilSimple);
 export const Plus = round(PhPlus);
+export const Minus = round(PhMinus);
 export const Printer = round(PhPrinter);
 export const QrCode = round(PhQrCode);
 export const RefreshCw = round(ArrowsClockwise);

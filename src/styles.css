@@ -394,6 +394,102 @@ html:not([data-theme="light"]) .doc-chev {
   }
 }
 
+/* ───────── 인쇄 옵션 — 토스 설정 화면: 줄 이름 + 분절 버튼 ───────── */
+.opt-group {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.opt-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.opt-row.is-inline {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.opt-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  color: var(--text-secondary);
+}
+
+.opt-note {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* 연결 전이라 아직 못 고르는 줄 — 흐리게만 */
+.opt-row.is-idle .seg,
+.opt-row.is-idle .stepper {
+  opacity: 0.45;
+}
+
+.seg-btn:disabled {
+  cursor: not-allowed;
+}
+
+/* 장수 캡슐 — − 값 + (토스 numeric-spinner) */
+.stepper {
+  display: inline-flex;
+  height: 44px;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--fill);
+}
+
+.stepper button {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--text-primary);
+  transition: background-color 120ms var(--ease), transform 120ms var(--ease);
+}
+
+.stepper button:not(:disabled):active {
+  background: var(--press);
+  transform: scale(0.92);
+}
+
+.stepper button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.stepper-value {
+  min-width: 36px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+/* 인쇄 경로 배지 — 토스 badge (옅은 블루) */
+.route-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding-inline: 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 /* 문서 타일 아이콘 칩 */
 .tile-icon {
   display: grid;

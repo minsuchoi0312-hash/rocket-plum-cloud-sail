@@ -106,7 +106,7 @@ export function PrintOptions(props: PrintOptionsProps) {
     <OfficeOptions paper={paper} gray={gray} duplex={duplex} copies={copies} route={route} locked={sending} controls={jobControls} copyMax={99} onPaper={setPaper} onGray={setGray} onDuplex={setDuplex} onCopies={setCopies} />
     {docKind === "pdf" ? (
       <div className="mt-3 space-y-2">
-        <p className="text-xs font-medium text-muted">{pdfCount ? tr("po.rangeOf", { total: pdfCount, n: chosenPages.length }) : tr("po.range")}</p>
+        <p className="opt-label">{pdfCount ? tr("po.rangeOf", { total: pdfCount, n: chosenPages.length }) : tr("po.range")}</p>
         <div className="chip-row flex gap-1.5 overflow-x-auto pb-1">
           {(
             [
@@ -160,7 +160,7 @@ export function PrintOptions(props: PrintOptionsProps) {
     ) : null}
     {docKind === "photo" ? (
       <div className="mt-3 space-y-2">
-        <p className="text-xs font-medium text-muted">{tr("po.filter")}</p>
+        <p className="opt-label">{tr("po.filter")}</p>
         <div className="flex flex-wrap gap-1.5">
           {(["none", "doc", "pencil"] as const).map((value) => (
             <button key={value} type="button" disabled={sending} onClick={() => onPhotoFilter(value)} aria-pressed={photoFilter === value} className={`chip h-9 rounded-full px-3 text-sm ${photoFilter === value ? "is-on" : ""}`}>
@@ -174,7 +174,7 @@ export function PrintOptions(props: PrintOptionsProps) {
             {tr("po.idWarn")}
           </p>
         ) : null}
-        <p className="text-xs font-medium text-muted">{tr("po.layout")}</p>
+        <p className="opt-label">{tr("po.layout")}</p>
         <div className="flex flex-wrap gap-1.5">
           {(
             [
@@ -216,7 +216,7 @@ export function PrintOptions(props: PrintOptionsProps) {
             }}
           />
         </label>
-        <p className="text-xs font-medium text-muted">{tr("po.fontSize")}</p>
+        <p className="opt-label">{tr("po.fontSize")}</p>
         <div className="flex gap-1.5">
           {(["small", "normal", "large"] as const).map((value) => (
             <button key={value} type="button" disabled={sending} onClick={() => setMemoSize(value)} className={`chip h-9 rounded-full px-3 text-sm ${memoSize === value ? "is-on" : ""}`}>
