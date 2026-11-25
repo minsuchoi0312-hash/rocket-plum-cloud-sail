@@ -1819,17 +1819,10 @@ function AtlasMain() {
           </button>
         </div>
       ) : null}
-      <header className="app-header flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <h1 className="whitespace-nowrap text-[1.35rem] font-medium leading-tight tracking-tight sm:text-2xl">{tr("app.title")}</h1>
-          <p className="mt-0.5 text-sm text-muted">{tr("ap.tagline")}</p>
-          {online === false ? (
-            <p className="offline-badge mt-1 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold" role="status">
-              {tr("ap.offline")}
-            </p>
-          ) : null}
-        </div>
-        <div className="flex shrink-0 gap-1.5">
+      {/* 상단바 — 큰 제목 + 테두리 없는 아이콘 버튼, 스크롤하면 반투명 유리 */}
+      <header className="app-header">
+        <h1 className="min-w-0 flex-1 truncate">{tr("app.title")}</h1>
+        <div className="-mr-2 flex shrink-0 items-center">
           <LangSwitcher />
           <button
             type="button"
@@ -1837,16 +1830,31 @@ function AtlasMain() {
               setSupportTab("help");
               setShowDiag(true);
             }}
-            className="icon-btn inline-flex size-10 items-center sm:size-11 justify-center rounded-full"
+            className="icon-btn inline-flex size-10 items-center justify-center rounded-full"
             aria-label={tr("ap.helpAria")}
+            title={tr("ap.helpAria")}
           >
-            <CircleHelp className="size-4" />
+            <CircleHelp className="size-6" />
           </button>
-          <button type="button" onClick={toggleTheme} className="icon-btn inline-flex size-10 items-center sm:size-11 justify-center rounded-full" aria-label={tr(theme === "dark" ? "ap.light" : "ap.dark")}>
-            {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="icon-btn inline-flex size-10 items-center justify-center rounded-full"
+            aria-label={tr(theme === "dark" ? "ap.light" : "ap.dark")}
+            title={tr(theme === "dark" ? "ap.light" : "ap.dark")}
+          >
+            {theme === "dark" ? <Sun className="size-6" /> : <Moon className="size-6" />}
           </button>
         </div>
       </header>
+      <div className="app-sub">
+        <p className="text-[15px] text-muted">{tr("ap.tagline")}</p>
+        {online === false ? (
+          <p className="offline-badge mt-1.5 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold" role="status">
+            {tr("ap.offline")}
+          </p>
+        ) : null}
+      </div>
       {zoom ? <PreviewZoomModal pages={zoom.pages} start={zoom.index} onClose={closeZoom} /> : null}
       {qrTarget ? <PrinterQrModal target={qrTarget} onClose={() => setQrTarget(null)} /> : null}
       {showDiag ? (

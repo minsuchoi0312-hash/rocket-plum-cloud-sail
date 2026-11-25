@@ -52,9 +52,10 @@ export function LangSwitcher() {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={t("lang.aria", { v: current.label })}
-        className="icon-btn lang-btn inline-flex h-10 min-w-10 items-center justify-center gap-1 rounded-full px-2 text-xs font-semibold sm:h-11 sm:min-w-11 sm:px-2.5"
+        title={t("lang.aria", { v: current.label })}
+        className="icon-btn lang-btn inline-flex h-10 min-w-10 items-center justify-center gap-1 rounded-full px-2 text-[13px] font-bold"
       >
-        <Globe className="size-4" aria-hidden="true" />
+        <Globe className="size-[22px]" aria-hidden="true" />
         <span>{current.short}</span>
       </button>
       {open ? (

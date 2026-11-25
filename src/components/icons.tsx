@@ -10,7 +10,9 @@ import {
   ArrowsClockwise,
   ArrowsOutSimple,
   BookmarkSimple,
+  CaretDown,
   CaretLeft,
+  CaretUp,
   Check as PhCheck,
   CheckCircle,
   ClockCounterClockwise,
@@ -58,6 +60,8 @@ export const ArrowLeft = round(CaretLeft);
 export const ArrowRight = round(PhArrowRight);
 export const Bookmark = round(BookmarkSimple);
 export const Check = round(PhCheck);
+export const ChevronDown = round(CaretDown);
+export const ChevronUp = round(CaretUp);
 export const CircleCheck = round(CheckCircle, "fill");
 export const CircleHelp = round(Question);
 export const Copy = round(PhCopy);

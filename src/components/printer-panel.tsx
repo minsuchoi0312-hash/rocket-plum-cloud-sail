@@ -3,7 +3,7 @@
  * atlas-app.tsx에서 분리. 상태는 부모가 갖고 여기서는 그리기만 한다.
  */
 import { useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
-import { Copy, FileText, Stethoscope, History, Image as ImageIcon, Monitor, Pencil, QrCode, Search, Sheet, StickyNote, Trash2, Upload, Usb, Wifi, X } from "@/components/icons";
+import { ChevronDown, ChevronUp, Copy, FileText, History, Image as ImageIcon, Monitor, Pencil, Printer, QrCode, Search, Sheet, StickyNote, Trash2, Upload, Usb, Wifi, X } from "@/components/icons";
 import { helperPing } from "@/lib/helper-send";
 import { SUBNET_PRESETS, type ScanProgress } from "@/lib/lan-find";
 import { printerLabel, type SavedPrinter } from "@/lib/printer-store";
@@ -131,41 +131,57 @@ export function PrinterPanel(props: PrinterPanelProps) {
   const isCurrent = (item: SavedPrinter) => Boolean(selected && ((item.host && selected.host === item.host) || (!item.host && selected.usbKey && selected.title === item.title)));
   return (
     <section className="flex flex-col gap-3">
-      <div className="card p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-muted">{t("pp.step1")}</p>
-            <p className="mt-1 flex items-center gap-2 text-base font-medium text-fg">
-              <span className={`inline-block size-2.5 rounded-full ${statusDot}`} />
-              {statusText}
-            </p>
-            {helperStatus ? <HelperPill status={helperStatus} /> : null}
-            <p className="mt-0.5 flex items-center gap-2 text-sm text-muted">
-              <span className="min-w-0 truncate">{selectedName || t("pp.noPrinter")}</span>
-              {selected?.host ? (
-                <button type="button" onClick={() => setQrTarget({ name: selectedName || selected.title, ip: selected.host || "", helper: helperShare })} className="chip inline-flex h-7 shrink-0 items-center gap-1 rounded-full px-2.5 text-[11px] font-semibold">
-                  <QrCode className="size-3" aria-hidden="true" />
-                  {t("pp.qrShare")}
-                </button>
-              ) : null}
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-col items-end gap-1.5">
-            <button type="button" onClick={() => setLinkOpen((value) => !value)} className="chip rounded-full px-3 py-2 text-sm font-semibold text-accent">
-              {linkOpen ? t("pp.collapse") : t("pp.change")}
-            </button>
+      <div className="card p-5">
+        {/* 머리글 — 제목 + 아이콘만 있는 버튼 (자가진단 · 접기/펼치기) */}
+        <div className="card-head">
+          <h2 className="card-title">{t("pp.step1")}</h2>
+          <div className="-mr-2 flex items-center">
             <button
               type="button"
               onClick={() => {
                 setSupportTab("diag");
                 setShowDiag(true);
               }}
-              className="chip inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold"
+              className="ghost-btn"
+              aria-label={t("pp.selfCheck")}
+              title={t("pp.selfCheck")}
             >
-              <Stethoscope className="size-3.5" aria-hidden="true" />
-              {t("pp.selfCheck")}
+              <Search className="size-[22px]" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setLinkOpen((value) => !value)}
+              className="ghost-btn"
+              aria-expanded={linkOpen}
+              aria-label={linkOpen ? t("pp.collapse") : t("pp.change")}
+              title={linkOpen ? t("pp.collapse") : t("pp.change")}
+            >
+              {linkOpen ? <ChevronUp className="size-[22px]" aria-hidden="true" /> : <ChevronDown className="size-[22px]" aria-hidden="true" />}
             </button>
           </div>
+        </div>
+        {/* 지금 연결 상태 — 연결 방식 아이콘 칩 + 상태 점 */}
+        <div className="mt-3 flex items-center gap-3.5">
+          <span className="link-avatar" aria-hidden="true">
+            {statusDot.includes("usb") ? <Usb className="size-6" /> : statusDot.includes("wifi") ? <Wifi className="size-6" /> : statusDot.includes("helper") ? <Monitor className="size-6" /> : <Printer className="size-6" />}
+            <span className={`link-avatar-dot ${statusDot}`} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[16px] font-semibold text-fg">{statusText}</p>
+            <p className="mt-0.5 truncate text-sm text-muted">{selectedName || t("pp.noPrinter")}</p>
+            {helperStatus ? <HelperPill status={helperStatus} /> : null}
+          </div>
+          {selected?.host ? (
+            <button
+              type="button"
+              onClick={() => setQrTarget({ name: selectedName || selected.title, ip: selected.host || "", helper: helperShare })}
+              className="ghost-btn -mr-2"
+              aria-label={t("pp.qrShare")}
+              title={t("pp.qrShare")}
+            >
+              <QrCode className="size-[22px]" aria-hidden="true" />
+            </button>
+          ) : null}
         </div>
         {linkOpen ? (
           <div className="mt-3 space-y-3">
@@ -435,9 +451,9 @@ export function PrinterPanel(props: PrinterPanelProps) {
       {statusCard}
 
       {recentPrinters.length > 0 ? (
-        <div className="card p-4">
-          <p className="text-xs font-medium text-muted">{t("pp.recent")}</p>
-          <ul className="mt-1">
+        <div className="card p-5">
+          <h2 className="card-title">{t("pp.recent")}</h2>
+          <ul className="mt-2">
             {recentPrinters.map((item) => (
               <li key={item.uid} className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-line py-2 last:border-b-0">
                 {editingUid === item.uid ? (
@@ -527,26 +543,28 @@ export function PrinterPanel(props: PrinterPanelProps) {
         </div>
       ) : null}
 
-      <div className="card p-4">
-        <p className="text-xs font-medium text-muted">{t("pp.step2")}</p>
+      <div className="card p-5">
+        <div className="card-head">
+          <h2 className="card-title">{t("pp.step2")}</h2>
+        </div>
         {pdfName || photoUrl || album.length || memo.trim() ? (
-          <button type="button" onClick={openChooser} className="btn-solid mt-2.5 h-11 w-full rounded-2xl text-sm font-medium">
+          <button type="button" onClick={openChooser} className="btn-solid mt-3 h-12 w-full rounded-2xl text-[15px]">
             {t("pp.continue", { v: pdfName || (album.length ? t("pp.photos", { n: album.length }) : photoUrl ? t("pp.photo") : t("pp.memo")) })}
           </button>
         ) : null}
-        <div className="mt-2.5 grid grid-cols-2 gap-2">
+        <div className="mt-3 grid grid-cols-2 gap-2.5">
           {(
             [
-              ["pdf", <FileText key="p" className="size-5 text-accent" />, "pp.hintPdf"],
-              ["photo", <ImageIcon key="i" className="size-5 text-accent" />, "pp.hintPhoto"],
-              ["memo", <StickyNote key="s" className="size-5 text-accent" />, "pp.hintMemo"],
-              ["test", <Sheet key="t" className="size-5 text-accent" />, "pp.hintTest"],
+              ["pdf", <FileText key="p" className="size-6" />, "pp.hintPdf"],
+              ["photo", <ImageIcon key="i" className="size-6" />, "pp.hintPhoto"],
+              ["memo", <StickyNote key="s" className="size-6" />, "pp.hintMemo"],
+              ["test", <Sheet key="t" className="size-6" />, "pp.hintTest"],
             ] as const
           ).map(([kind, icon, hint]) => (
-            <button key={kind} type="button" onClick={() => startWith(kind)} className="tile flex min-h-[76px] flex-col items-start justify-center px-3 py-2.5 text-left">
-              {icon}
-              <span className="mt-1.5 font-medium text-fg">{docLabel(kind)}</span>
-              <span className="text-xs text-muted">{t(hint)}</span>
+            <button key={kind} type="button" onClick={() => startWith(kind)} className="tile flex min-h-[124px] flex-col items-start justify-start p-4 text-left">
+              <span className="tile-icon" aria-hidden="true">{icon}</span>
+              <span className="mt-3 text-[16px] font-semibold text-fg">{docLabel(kind)}</span>
+              <span className="mt-0.5 text-xs leading-snug text-muted">{t(hint)}</span>
             </button>
           ))}
         </div>
