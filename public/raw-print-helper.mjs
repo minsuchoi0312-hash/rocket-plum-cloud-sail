@@ -1188,7 +1188,12 @@ export function createHelper(opts = {}) {
   const allowedPorts = opts.allowedPorts ?? new Set([9100, 9101, 9102]);
   const allowLoopback = opts.allowLoopback ?? false;
   const code = opts.code ?? "";
-  let fails = [];
+  /* 틀린 코드는 보낸 기기(IP)마다 따로 센다 — 예전처럼 한데 세면 같은 와이파이의 누군가가
+     틀린 코드만 보내 모든 사람의 인쇄를 1분씩 막을 수 있었다 */
+  const fails = new Map();
+  const FAIL_LIMIT = 10;
+  const FAIL_WINDOW = 60_000;
+  const MAX_TRACKED = 1000;
 
   return http.createServer(async (req, res) => {
     // 모든 응답(오류·프리플라이트 포함)에 같은 CORS + PNA(Private Network Access) 헤더를 붙인다.
@@ -1208,14 +1213,24 @@ export function createHelper(opts = {}) {
     }
 
     // 연결 코드를 모르는 웹페이지는 프린터에 아무것도 보낼 수 없다.
-    const now = Date.now();
-    fails = fails.filter((t) => now - t < 60_000);
     if (code) {
-      if (fails.length >= 10) return send(429, { ok: false, error: "too many tries" });
+      const now = Date.now();
+      const who = String(req.socket.remoteAddress ?? "");
+      const mine = (fails.get(who) ?? []).filter((t) => now - t < FAIL_WINDOW);
+      if (mine.length >= FAIL_LIMIT) {
+        fails.set(who, mine);
+        return send(429, { ok: false, error: "too many tries" });
+      }
       if (!sameCode(String(req.headers["x-helper-code"] ?? ""), code)) {
-        fails.push(now);
+        mine.push(now);
+        fails.delete(who);
+        fails.set(who, mine);
+        /* 기록이 끝없이 늘지 않게 가장 오래된 기기부터 지운다 */
+        while (fails.size > MAX_TRACKED) fails.delete(fails.keys().next().value);
         return send(401, { ok: false, error: "code required" });
       }
+      if (mine.length) fails.set(who, mine);
+      else fails.delete(who);
     }
     if (url.pathname === "/check") return send(200, { ok: true });
 
