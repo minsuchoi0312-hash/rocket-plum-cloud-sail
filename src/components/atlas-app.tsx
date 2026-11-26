@@ -45,6 +45,7 @@ import { isInkjet, PrintChooser, ReadyCard } from "@/components/print-parts";
 import { PackSheet } from "@/components/pack-sheet";
 import { escprEndPage, escprJobFooter, escprJobHeader, escprPageCommands } from "@/lib/escpr";
 import { splJobFooter, splJobHeader, splPageCommands, splProfile } from "@/lib/spl";
+import { pcl3JobFooter, pcl3JobHeader, pcl3PageCommands, pcl3Profile } from "@/lib/pcl3";
 import { laserCmd, packFor, packInstalled, PACKS, type PackChoice, type PackDef, type PackId } from "@/lib/print-packs";
 import { isPhoneHelper } from "@/lib/phone-helper";
 import type { WifiExtra } from "@/components/app-effects";
@@ -819,7 +820,11 @@ function AtlasMain() {
   const splModel = match ? `${match.printer.brand} ${match.printer.model}` : selected?.title || "";
   const splJob = Boolean(phoneHelper && helperLive && activePack?.route === "spl" && splProfile(splModel));
   /** 레이저 팩(PCL) 이 아닌 래스터 팩: 머리 · 꼬리를 따로 만들고 양면은 단면만 */
-  const ownRaster = escprJob || splJob;
+  /* HP 잉크젯 팩: PCL3 컬러 래스터 */
+  const pcl3Job = Boolean(phoneHelper && helperLive && activePack?.route === "pcl3" && pcl3Profile(splModel));
+  /** 컬러로 보낼 수 있는 래스터 팩(엡손 · HP 잉크젯) */
+  const colorJob = escprJob || pcl3Job;
+  const ownRaster = escprJob || splJob || pcl3Job;
   const marginMm = MARGIN_MM[margin];
   /* 여백을 넣으면 원본 PDF를 그대로 넘길 수 없으니(PDF Direct 불가) 래스터로 보낸다 */
   /* 복사기 실제 상태 (도우미 /status 또는 USB 장치 정보) */
@@ -937,7 +942,7 @@ function AtlasMain() {
       link: linkText(),
       paper,
       orient: orient === "landscape" ? "landscape" : "portrait",
-      gray: forceGray || gray || (route === "usb-pcl" && !escprJob),
+      gray: forceGray || gray || (route === "usb-pcl" && !colorJob),
       at: Date.now(),
     };
   }
@@ -1283,7 +1288,13 @@ function AtlasMain() {
     /* 페이지 캔버스 → 쪽 명령 (레이저 팩 PCL / 엡손 팩 ESC/P-R) */
     const splOpts = { paper, profile: splProfile(splModel)!, copies: jobCopies };
     const encodeSheet = (canvas: HTMLCanvasElement, mode: "dither" | "threshold") =>
-      escprJob ? escprPageCommands(canvas, escprOpts) : splJob ? splPageCommands(canvas, { ...splOpts, mode }) : canvasPclCommands(canvas, mode);
+      escprJob
+        ? escprPageCommands(canvas, escprOpts)
+        : splJob
+          ? splPageCommands(canvas, { ...splOpts, mode })
+          : pcl3Job
+            ? pcl3PageCommands(canvas, { paper, color: !gray, profile: pcl3Profile(splModel)! })
+            : canvasPclCommands(canvas, mode);
     const sendPackets = async (commands: Uint8Array[], progress: (percent: number) => void) => {
       if (ownRaster) {
         escprPages.push(commands);
@@ -1440,7 +1451,7 @@ function AtlasMain() {
           canvas.width = size.width;
           canvas.height = size.height;
           /* 점검용 테스트 시트: 농도 막대가 살도록 디더링으로 보낸다 */
-          drawTestSheet(canvas, testInfo(!escprJob));
+          drawTestSheet(canvas, testInfo(!colorJob));
           if (stopRef.current) throw new Error(tr("ap.stopped"));
           const commands = encodeSheet(canvas, "dither");
           canvas.width = 0;
@@ -1452,7 +1463,13 @@ function AtlasMain() {
           }
         }
         if (stopRef.current) throw new Error(tr("ap.stopped"));
-        if (splJob) {
+        if (pcl3Job) {
+          /* HP 잉크젯: 리셋 · 용지 · 부수 → 쪽들 → 리셋 */
+          const parts: Uint8Array[] = [pcl3JobHeader({ paper, copies: jobCopies })];
+          for (const pageCommands of escprPages) parts.push(...pageCommands);
+          parts.push(pcl3JobFooter());
+          await write(concatBytes(parts), () => setProgress(100), () => false, true);
+        } else if (splJob) {
           /* 삼성 SPL: PJL 머리 → 쪽들(쪽 머리에 부수가 들어 있어 되풀이하지 않음) → 꼬리 */
           const parts: Uint8Array[] = [splJobHeader({ name: "nuguna" })];
           for (const pageCommands of escprPages) parts.push(...pageCommands);
@@ -2160,7 +2177,7 @@ function AtlasMain() {
                     onSheet={(index) => setPreviewSheet(index + 1)}
                   />
                 }
-                extras={<PrintOptions {...{ docKind, sending, route, colorRaster: escprJob, simplexOnly: ownRaster, jobControls, presetCurrent, activePresetId, applyPreset, onPresetSaved, setNotice, paper, setPaper, gray, setGray, duplex, setDuplex, copies, setCopies, pdfCount, chosenPages, currentPage, pageChip, pickPages, pageList, setPageList, onTogglePage, reverse, setReverse, evenReverse, photoFilter, onPhotoFilter, photoLayout, onPhotoLayout, idLayout, cutLines, setCutLines, memoSize, setMemoSize, memoHeader, setMemoHeader, memoTitle, setMemoTitle, onTextFile, advancedOpen, setAdvancedOpen, margin, setMargin, marginMm, pageNumber, setPageNumber, wmChoice, setWmChoice, wmCustom, setWmCustom, stampActive, nup, setNup, orient, setOrient, photoFit, setPhotoFit, photoTurn, setPhotoTurn, secureOn, setSecureOn, pin, setPin, pinRef, jobUser, setJobUser, }} />}
+                extras={<PrintOptions {...{ docKind, sending, route, colorRaster: colorJob, simplexOnly: ownRaster, jobControls, presetCurrent, activePresetId, applyPreset, onPresetSaved, setNotice, paper, setPaper, gray, setGray, duplex, setDuplex, copies, setCopies, pdfCount, chosenPages, currentPage, pageChip, pickPages, pageList, setPageList, onTogglePage, reverse, setReverse, evenReverse, photoFilter, onPhotoFilter, photoLayout, onPhotoLayout, idLayout, cutLines, setCutLines, memoSize, setMemoSize, memoHeader, setMemoHeader, memoTitle, setMemoTitle, onTextFile, advancedOpen, setAdvancedOpen, margin, setMargin, marginMm, pageNumber, setPageNumber, wmChoice, setWmChoice, wmCustom, setWmCustom, stampActive, nup, setNup, orient, setOrient, photoFit, setPhotoFit, photoTurn, setPhotoTurn, secureOn, setSecureOn, pin, setPin, pinRef, jobUser, setJobUser, }} />}
                 onKind={setDocKind}
                 onMemo={setMemo}
                 onPhotos={choosePhotos}

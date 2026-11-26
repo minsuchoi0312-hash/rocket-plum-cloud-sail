@@ -860,7 +860,7 @@ export const ja: Record<MsgKey, string> = {
   "pk.spl": "サムスン SPL パック",
   "pk.splSub": "SPL · QPDL",
   "pk.inkjet": "インクジェットパック",
-  "pk.inkjetSub": "Gutenprint 系",
+  "pk.inkjetSub": "HP PCL3 · カラー",
   "pk.canon": "キヤノンパック",
   "pk.canonSub": "BJNP · キヤノン ラスター",
   "pk.need": "{pack}が必要です",

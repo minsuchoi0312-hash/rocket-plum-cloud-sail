@@ -860,7 +860,7 @@ export const en: Record<MsgKey, string> = {
   "pk.spl": "Samsung SPL pack",
   "pk.splSub": "SPL · QPDL",
   "pk.inkjet": "Inkjet pack",
-  "pk.inkjetSub": "Gutenprint family",
+  "pk.inkjetSub": "HP PCL3 · color",
   "pk.canon": "Canon pack",
   "pk.canonSub": "BJNP · Canon raster",
   "pk.need": "This printer needs the {pack}",

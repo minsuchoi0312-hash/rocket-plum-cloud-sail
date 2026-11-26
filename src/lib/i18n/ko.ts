@@ -858,7 +858,7 @@ export const ko = {
   "pk.spl": "삼성 SPL 팩",
   "pk.splSub": "SPL · QPDL",
   "pk.inkjet": "잉크젯 팩",
-  "pk.inkjetSub": "Gutenprint 계열",
+  "pk.inkjetSub": "HP PCL3 · 컬러",
   "pk.canon": "캐논 팩",
   "pk.canonSub": "BJNP · 캐논 래스터",
   "pk.need": "{pack}이 필요해요",

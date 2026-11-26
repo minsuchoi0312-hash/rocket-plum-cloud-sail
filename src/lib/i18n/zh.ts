@@ -860,7 +860,7 @@ export const zh: Record<MsgKey, string> = {
   "pk.spl": "三星 SPL 包",
   "pk.splSub": "SPL · QPDL",
   "pk.inkjet": "喷墨包",
-  "pk.inkjetSub": "Gutenprint 系列",
+  "pk.inkjetSub": "HP PCL3 · 彩色",
   "pk.canon": "佳能包",
   "pk.canonSub": "BJNP · 佳能光栅",
   "pk.need": "需要{pack}",

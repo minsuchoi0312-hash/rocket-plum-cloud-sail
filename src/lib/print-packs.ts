@@ -5,12 +5,15 @@
  *  - laser    : PCL 5e · PDF 직접 (9100) — 사무실 레이저 · 복합기
  *  - epson    : ESC/P-R (9100) — 엡손 잉크젯, 컬러 가능 (src/lib/escpr.ts)
  *  - spl      : 삼성 SPL/QPDL (9100) — 삼성 · 제록스 GDI 레이저, 흑백 (src/lib/spl.ts)
- *  - inkjet / canon : 전용 팩 (아직 준비 중 → 가능하면 표준 · 레이저 팩으로 대신 보낸다)
+ *  - inkjet   : HP 잉크젯 PCL3 (9100) — DeskJet · OfficeJet · Business Inkjet, 컬러 (src/lib/pcl3.ts)
+ *               옛 엡손 Stylus(ESC/P2) 등 그 밖의 잉크젯은 아직 준비 중
+ *  - canon    : 전용 팩 (아직 준비 중 → 가능하면 표준 · 레이저 팩으로 대신 보낸다)
  */
 import type { MsgKey } from "./i18n/core.ts";
 import { DRIVER_ROWS } from "./driver-pack.ts";
 import { lookupDriver, type DriverFamily } from "./drivers.ts";
 import { splProfile } from "./spl.ts";
+import { pcl3Profile } from "./pcl3.ts";
 
 export type PackId = "standard" | "laser" | "epson" | "spl" | "inkjet" | "canon";
 
@@ -24,7 +27,7 @@ export type PackDef = {
   /** 설치 없이 들어 있는 팩 */
   builtin: boolean;
   /** 인쇄 경로: ipp = 631 IPP, raw = 9100 (PCL 5e · PDF 직접), escpr = 9100 (엡손 ESC/P-R) */
-  route: "ipp" | "raw" | "escpr" | "spl" | null;
+  route: "ipp" | "raw" | "escpr" | "spl" | "pcl3" | null;
   families: DriverFamily[];
   /** 기종 표에서 고를 행 (families 안에서 한 번 더 거른다) */
   pick?: RegExp;
@@ -35,7 +38,7 @@ export const PACKS: Record<PackId, PackDef> = {
   laser: { id: "laser", name: "pk.laser", sub: "pk.laserSub", version: "1.4", ready: true, builtin: false, route: "raw", families: ["hplip", "gutenprint", "splix"], pick: /pcl|laserjet|postscript|ps\b|hp |kyocera|ricoh|sindoh|xerox|lexmark|brother hl|brother mfc-l|brother dcp-l|samsung (m|c|sl|clx|ml)/i },
   epson: { id: "epson", name: "pk.epson", sub: "pk.epsonSub", version: "1.7", ready: true, builtin: false, route: "escpr", families: ["escpr"] },
   spl: { id: "spl", name: "pk.spl", sub: "pk.splSub", version: "2.0", ready: true, builtin: false, route: "spl", families: ["splix"] },
-  inkjet: { id: "inkjet", name: "pk.inkjet", sub: "pk.inkjetSub", version: "5.3", ready: false, builtin: false, route: null, families: ["gutenprint"] },
+  inkjet: { id: "inkjet", name: "pk.inkjet", sub: "pk.inkjetSub", version: "5.3", ready: true, builtin: false, route: "pcl3", families: ["hplip", "gutenprint"], pick: /deskjet|officejet|photosmart|business inkjet|\bpsc\b/i },
   canon: { id: "canon", name: "pk.canon", sub: "pk.canonSub", version: "1.0", ready: false, builtin: false, route: null, families: ["gutenprint"], pick: /canon/i },
 };
 
@@ -65,23 +68,34 @@ export function packFor(input: PackInput): PackChoice {
     fallback: need.ready ? null : input.ipp ? PACKS.standard : input.raw9100 && pclKnown ? PACKS.laser : null,
     matched: hit?.name || "",
   });
-  /* 1) 9100이 열려 있고 PCL · PDF 를 말하는 기기 = 레이저 팩 */
-  if (input.raw9100 && (pclKnown || family === "hplip")) return wrap(PACKS.laser);
-  /* 2) 전용 언어 기기 */
-  /* 삼성 SPL: 9100 이 열려 있고 0x11 압축 기종이면 SPL 팩, 0x0D · JBIG · 컬러 기종은 아직(대신 보낼 길을 권한다) */
+  /* 잉크젯 이름(엡손 · 캐논 · HP 등) — IPP 가 PDF 를 받는다고 레이저로 오인하지 않게 레이저 판정보다 먼저 본다 */
+  const inkjetName = /stylus|pixma|maxify|selphy|\bbjc?\b|inkjet|deskjet|officejet|envy|smart tank|ink tank|photosmart|artisan|ecotank|workforce|expression/i.test(input.model);
+  const driverless = Boolean(input.ipp && DRIVERLESS.test(langs));
+  /* 0) HP 잉크젯: 드라이버 없이 받는 신형(IPP)은 표준 팩, 9100 만 열린 기종은 잉크젯 팩(PCL3 컬러) */
+  if (pcl3Profile(input.model)) {
+    if (driverless) return wrap(PACKS.standard);
+    if (input.raw9100) return wrap(PACKS.inkjet);
+    if (input.ipp) return wrap(PACKS.standard);
+  }
+  /* 1) 삼성 SPL: 9100 이 열려 있고 0x11 압축 기종이면 SPL 팩, 0x0D · JBIG · 컬러 기종은 아직(대신 보낼 길을 권한다) */
   if (family === "splix" || /\bGDI\b|QPDL|\bSPL\b/i.test(langs)) {
     if (input.raw9100 && splProfile(input.model)) return wrap(PACKS.spl);
     return wrap({ ...PACKS.spl, ready: false, route: null });
   }
-  /* 엡손: 1284 CMD 에 ESCPR 이 있거나 기종 표 · 이름이 엡손이면, 9100 이 열려 있을 때 엡손 잉크 팩 */
-  const epson = family === "escpr" || /escpr/i.test(langs) || /epson/i.test(input.model);
+  /* 2) 엡손: 1284 CMD 에 ESCPR 이 있거나 기종 표 · 이름이 엡손이면 엡손 잉크 팩.
+        옛 Stylus 처럼 ESC/P-R 를 모르는 엡손(기종 표가 gutenprint)은 아래 4) 로 */
+  const epson = family === "escpr" || /escpr/i.test(langs) || (/epson/i.test(input.model) && family !== "gutenprint" && !/aculaser|\bal-|actionlaser/i.test(input.model));
   if (epson && input.raw9100) return wrap(PACKS.epson);
   if (epson) return wrap(input.ipp ? PACKS.standard : PACKS.epson);
-  if (input.canon || /canon/i.test(input.model)) return wrap(input.ipp && DRIVERLESS.test(langs) ? PACKS.standard : PACKS.canon);
-  /* 3) 드라이버 없이 말하는 신형(IPP) */
+  /* 3) 캐논 잉크젯(BJNP 로 찾았거나 PIXMA 등): 신형은 표준 팩, 아니면 캐논 팩(준비 중) */
+  if (input.canon || (/canon/i.test(input.model) && inkjetName)) return wrap(driverless ? PACKS.standard : PACKS.canon);
+  /* 4) 그 밖의 옛 잉크젯(gutenprint 표): 신형 IPP 면 표준 팩, 아니면 잉크젯 팩(준비 중) */
+  if (inkjetName) return wrap(driverless ? PACKS.standard : { ...PACKS.inkjet, ready: false, route: null });
+  /* 5) 9100이 열려 있고 PCL · PDF 를 말하는 레이저 = 레이저 팩 */
+  if (input.raw9100 && (pclKnown || family === "hplip")) return wrap(PACKS.laser);
+  /* 6) 드라이버 없이 말하는 신형(IPP) */
   if (input.ipp) return wrap(PACKS.standard);
-  if (family === "gutenprint") return wrap(PACKS.inkjet);
-  /* 4) 모르는 9100 기기: 범용 PCL 로 */
+  /* 7) 모르는 9100 기기(gutenprint 표의 교세라 · 리코 · 제록스 레이저 등): 범용 PCL 로 */
   if (input.raw9100) return wrap(PACKS.laser);
   return wrap(PACKS.standard);
 }
