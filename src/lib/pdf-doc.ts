@@ -11,7 +11,72 @@ type PdfDoc = {
   getPage: (pageNumber: number) => Promise<PdfPage>;
   cleanup?: () => Promise<void> | void;
   destroy?: () => Promise<void> | void;
+  /** 앱(APK): 안드로이드 내장 PDF 엔진으로 그리는 문서 */
+  native?: NativeRef;
 };
+
+/* ───── 안드로이드 내장 PDF 엔진(pdfium) ─────
+ * 앱에서는 폰 내장 도우미(/pdf/*)가 android.graphics.pdf.PdfRenderer 로 쪽을 그려 PNG로 준다.
+ * 크롬 · 안드로이드 · 프린터쉐어와 같은 엔진이라, 글꼴이 안 들어간 한글 PDF 같은 문서도 원본과 똑같이 나온다.
+ * 암호 PDF · 엔진이 못 여는 PDF · 웹 버전은 지금처럼 pdf.js로 그린다. */
+type NativeHelper = { url: string; code: string };
+type NativeRef = { helper: NativeHelper; id: string };
+
+function nativeHelper(): NativeHelper | null {
+  if (typeof window === "undefined" || !(window as { __nugunaPhone?: boolean }).__nugunaPhone) return null;
+  try {
+    const saved = JSON.parse(localStorage.getItem("nuguna-helper") || "null") as { url?: string; code?: string } | null;
+    if (saved?.url && saved.code && /^http:\/\/127\.0\.0\.1:47631\/?$/.test(saved.url)) return { url: saved.url.replace(/\/$/, ""), code: saved.code };
+  } catch {
+    /* 저장소를 못 읽으면 pdf.js로 */
+  }
+  return null;
+}
+
+async function openNative(data: Uint8Array, helper: NativeHelper): Promise<OpenedPdf | null> {
+  const res = await fetch(`${helper.url}/pdf/open`, {
+    method: "POST",
+    headers: { "Content-Type": "application/pdf", "X-Helper-Code": helper.code },
+    body: data as unknown as BodyInit,
+  });
+  if (!res.ok) return null;
+  const info = (await res.json()) as { id?: string; pages?: { w: number; h: number }[] };
+  if (!info.id || !info.pages?.length) return null;
+  const id = info.id;
+  const sizes = info.pages;
+  const doc: PdfDoc = {
+    numPages: sizes.length,
+    native: { helper, id },
+    getPage: async (pageNumber: number) => {
+      const size = sizes[pageNumber - 1] || sizes[0];
+      return {
+        getViewport: ({ scale }: { scale: number }) => ({ width: size.w * scale, height: size.h * scale }),
+        render: () => {
+          throw new Error("native page");
+        },
+        cleanup: () => undefined,
+      };
+    },
+  };
+  return {
+    doc,
+    destroy: async () => {
+      try {
+        await fetch(`${helper.url}/pdf/close?id=${encodeURIComponent(id)}`, { method: "POST", headers: { "X-Helper-Code": helper.code } });
+      } catch {
+        /* 앱이 닫히면 도우미가 알아서 정리 */
+      }
+    },
+  };
+}
+
+/** 내장 엔진으로 쪽 하나를 width × height 그림으로 받아 온다 */
+async function nativeShot(ref: NativeRef, pageNumber: number, width: number, height: number, signal?: AbortSignal) {
+  const query = `id=${encodeURIComponent(ref.id)}&i=${pageNumber - 1}&w=${Math.max(1, Math.round(width))}&h=${Math.max(1, Math.round(height))}`;
+  const res = await fetch(`${ref.helper.url}/pdf/page?${query}`, { headers: { "X-Helper-Code": ref.helper.code }, signal });
+  if (!res.ok) throw new Error(tr("pdf.makeFail"));
+  return createImageBitmap(await res.blob());
+}
 type PdfTask = {
   promise: Promise<PdfDoc>;
   destroy: () => Promise<void> | void;
@@ -36,6 +101,11 @@ async function loadPdfjs() {
 }
 
 export async function openPdf(data: Uint8Array, password?: string): Promise<OpenedPdf> {
+  /*
+   * pdf.js가 먼저: 글꼴이 안 들어간 한글 PDF 시험 4종을 모두 제대로 그렸다.
+   * 안드로이드 내장 엔진(pdfium)은 그중 하나(글리프 번호만 있는 바탕체)에서 한글을 비워 버려서 보조로만 쓴다:
+   * pdf.js가 파일 자체를 못 열 때(손상 · 지원 안 하는 구조) 앱에서만 내장 엔진으로 다시 연다. 암호 문제는 그대로 알린다.
+   */
   const pdfjs = await loadPdfjs();
   const copy = data.slice();
   const task = pdfjs.getDocument({
@@ -45,7 +115,23 @@ export async function openPdf(data: Uint8Array, password?: string): Promise<Open
     cMapPacked: true,
     standardFontDataUrl: "/pdfjs/standard_fonts/",
   }) as unknown as PdfTask;
-  const doc = await task.promise;
+  let doc: PdfDoc;
+  try {
+    doc = await task.promise;
+  } catch (error) {
+    const name = error instanceof Error ? error.name : "";
+    const helper = name !== "PasswordException" && !password && !pdfLooksEncrypted(data) ? nativeHelper() : null;
+    if (helper) {
+      try {
+        await task.destroy();
+      } catch {
+        /* worker already gone */
+      }
+      const native = await openNative(data, helper).catch(() => null);
+      if (native) return native;
+    }
+    throw error;
+  }
   return {
     doc,
     destroy: async () => {
@@ -109,6 +195,29 @@ export async function renderPdfPage(
   const base = page.getViewport({ scale: 1 });
   const plan = pageDrawPlan(base.width, base.height, width, height, mode);
   const viewport = page.getViewport({ scale: plan.scale });
+  const destW = plan.landscape ? plan.drawHeight : plan.drawWidth;
+  const destH = plan.landscape ? plan.drawWidth : plan.drawHeight;
+  const place = (source: CanvasImageSource) => {
+    ctx.save();
+    ctx.translate(width / 2, height / 2);
+    if (plan.landscape) ctx.rotate(Math.PI / 2);
+    ctx.drawImage(source, -destW / 2, -destH / 2, destW, destH);
+    ctx.restore();
+  };
+  /* 앱: 내장 엔진(pdfium)이 그린 그림을 같은 자리에 놓는다 */
+  if (doc.native) {
+    const abort = new AbortController();
+    if (slot) slot.current = { cancel: () => abort.abort() };
+    try {
+      const shot = await nativeShot(doc.native, pageNumber, viewport.width, viewport.height, abort.signal);
+      place(shot);
+      shot.close();
+      return canvas;
+    } catch (error) {
+      if (abort.signal.aborted) return null;
+      throw error;
+    }
+  }
   const shot = document.createElement("canvas");
   shot.width = Math.max(1, Math.ceil(viewport.width));
   shot.height = Math.max(1, Math.ceil(viewport.height));
@@ -126,13 +235,7 @@ export async function renderPdfPage(
     }
     await task.promise;
     if (dropped) return null;
-    ctx.save();
-    ctx.translate(width / 2, height / 2);
-    if (plan.landscape) ctx.rotate(Math.PI / 2);
-    const destW = plan.landscape ? plan.drawHeight : plan.drawWidth;
-    const destH = plan.landscape ? plan.drawWidth : plan.drawHeight;
-    ctx.drawImage(shot, -destW / 2, -destH / 2, destW, destH);
-    ctx.restore();
+    place(shot);
   } catch (error) {
     const name = error instanceof Error ? error.name : "";
     if (dropped || name === "RenderingCancelledException") return null;
