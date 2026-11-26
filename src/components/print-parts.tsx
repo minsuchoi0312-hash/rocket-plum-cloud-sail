@@ -4,7 +4,7 @@
  */
 import { phoneApp } from "@/lib/phone-helper";
 import { useState, type ReactNode } from "react";
-import { ArrowLeft, ArrowRight, Bookmark, ChevronDown, Minus, Plus, Printer, RotateCw, Trash2, Upload, X } from "@/components/icons";
+import { ArrowLeft, ArrowRight, Bookmark, ChevronDown, FileText, Minus, Plus, Printer, RotateCw, Trash2, Upload, X } from "@/components/icons";
 import type { MatchResult } from "@/lib/atlas";
 import { MAIN_PAPERS, MORE_PAPERS, paperHint, paperLabel, type DuplexMode, type OfficePaper } from "@/lib/office-job";
 import type { PrintRoute } from "@/lib/print-route";
@@ -288,7 +288,7 @@ export function PrintChooser({
 }) {
   const tabs = (["pdf", "photo", "memo", "test"] as const).map((id) => [id, docLabel(id)] as const);
   return (
-    <div className="mt-4">
+    <div className="mt-3">
       <div className="doc-tabs grid grid-cols-4 gap-1 rounded-2xl p-1" role="tablist" aria-label={tr("ch.tabsAria")}>
         {tabs.map(([id, text]) => (
           <button
@@ -313,7 +313,18 @@ export function PrintChooser({
             {tr("ch.pickPdf")} <span className="hidden text-xs text-muted sm:inline">{tr("ch.orDrop")}</span>
             <input type="file" accept="application/pdf,.pdf" disabled={sending} className="sr-only" onChange={(event) => onPdfFile(event.target.files?.[0])} />
           </label>
-          {pdfName ? <p className="break-all text-sm text-muted">{tr("ch.pdfInfo", { name: pdfName, n: pdfCount })}</p> : null}
+          {pdfName ? (
+            /* 고른 파일 — 아이콘 + 이름(굵게) + 쪽수 */
+            <div className="file-row" title={tr("ch.pdfInfo", { name: pdfName, n: pdfCount })}>
+              <span className="doc-ico is-pdf" aria-hidden="true">
+                <FileText className="size-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[15px] font-semibold text-fg">{pdfName}</span>
+                <span className="block text-sm text-muted tabular-nums">{tr("ch.pdfPages", { n: pdfCount })}</span>
+              </span>
+            </div>
+          ) : null}
           {pdfNeedsKey ? (
             <form
               className="flex gap-2"

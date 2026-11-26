@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight as ChevronRightIcon, CircleHelp, House as HouseIcon, Monitor as MonitorIcon, Moon, Printer as PrinterIcon, Sun, Upload, Usb as UsbIcon, Wifi as WifiIcon } from "@/components/icons";
+import { ChevronRight as ChevronRightIcon, CircleHelp, House as HouseIcon, Monitor as MonitorIcon, Moon, Printer as PrinterIcon, RefreshCw, Sun, Upload, Usb as UsbIcon, Wifi as WifiIcon } from "@/components/icons";
 import { I18nProvider, m, msgText, tr, useI18n, type Msg } from "@/lib/i18n";
 import { LangSwitcher } from "@/components/lang-switcher";
 import { AppErrorBoundary } from "@/components/error-boundary";
@@ -2182,9 +2182,13 @@ function AtlasMain() {
                   }}
                 />
               ) : (
-                <h2 className="text-2xl font-semibold">{tr("ap.whatToPrint")}</h2>
+                /* 토스 목록 머리글: 제목 왼쪽 · 경로 배지 오른쪽 한 줄 */
+                <div className="print-head">
+                  <h2 className="print-title">{tr("ap.whatToPrint")}</h2>
+                  <p className="route-badge">{routeLabel}</p>
+                </div>
               )}
-              <p className="route-badge mb-4 mt-2.5">{routeLabel}</p>
+              {match ? <p className="route-badge mb-1 mt-2.5">{routeLabel}</p> : null}
               {(effNup !== 1 || (reverse && docKind !== "test") || secureOn || pageMode !== "all" || orient !== "auto" || (docKind === "pdf" && marginMm > 0) || stampActive) ? (
                 <p className="mb-3 text-xs text-muted">
                   {tr("ap.adv")}{" "}
@@ -2294,7 +2298,9 @@ function AtlasMain() {
         <ChevronRightIcon className="doc-chev" aria-hidden="true" />
       </button>
       {saved.length > 0 ? (
-        <button type="button" onClick={() => setScanId((value) => value + 1)} className="self-center text-xs text-faint">
+        /* 토스 text-button: 누를 수 있다는 걸 보이게 파란 글자 + 다시 고침 아이콘 */
+        <button type="button" onClick={() => setScanId((value) => value + 1)} className="text-btn self-center">
+          <RefreshCw className="size-4" aria-hidden="true" />
           {tr("ap.reconnectPrev")}
         </button>
       ) : null}

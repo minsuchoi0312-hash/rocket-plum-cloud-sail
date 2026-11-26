@@ -956,4 +956,5 @@ export const zh: Record<MsgKey, string> = {
   "lg.loading": "加载中…",
   "lg.enNote": "此为韩文原文的英文译本。",
   "card.caps": "支持的功能",
+  "ch.pdfPages": "共 {n} 页",
 };

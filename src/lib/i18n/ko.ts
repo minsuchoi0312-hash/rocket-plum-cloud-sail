@@ -954,4 +954,5 @@ export const ko = {
   "lg.loading": "불러오는 중…",
   "lg.enNote": "",
   "card.caps": "지원 기능",
+  "ch.pdfPages": "전체 {n}쪽",
 } as const;

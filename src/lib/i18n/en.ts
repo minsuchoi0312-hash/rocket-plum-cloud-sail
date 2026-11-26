@@ -956,4 +956,5 @@ export const en: Record<MsgKey, string> = {
   "lg.loading": "Loading…",
   "lg.enNote": "",
   "card.caps": "Supported features",
+  "ch.pdfPages": "{n} pages",
 };

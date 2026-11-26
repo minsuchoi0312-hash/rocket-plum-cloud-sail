@@ -2654,3 +2654,64 @@ html[data-theme="light"] .status-card {
   padding: 14px;
   box-shadow: none;
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   한층 업그레이드 (2026-11-27 7차)
+   ════════════════════════════════════════════════════════════════════ */
+
+/* 인쇄 화면 머리글 — 제목 왼쪽, 경로 배지 오른쪽 한 줄 (빈 줄 없앰) */
+.print-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.print-title {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.route-badge {
+  height: 28px;
+  font-size: 13px;
+}
+
+/* 고른 PDF 파일 — 토스 list-row 한 줄 카드 */
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--fill);
+}
+
+/* 파일 고르기 버튼 — 조금 더 크게, 토스 weak 버튼 높이(48px) */
+.pick {
+  min-height: 48px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* 토스 text-button — 보더 없는 파란 글자 버튼, 손가락 높이 44px */
+.text-btn {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent);
+  transition: background-color 120ms var(--ease);
+}
+
+.text-btn:active {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
