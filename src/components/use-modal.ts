@@ -28,7 +28,8 @@ export function useModal(dialogRef: RefObject<HTMLElement | null>, onClose: () =
       stack.splice(stack.indexOf(me), 1);
       window.removeEventListener("keydown", onKey);
       body.style.overflow = prevOverflow;
-      if (opener?.isConnected) opener.focus({ preventScroll: true });
+      /* 폰의 뒤로 버튼도 '키보드'로 쳐서 파란 링이 남던 것 — 포커스만 돌려주고 링은 그리지 않는다 */
+      if (opener?.isConnected) opener.focus({ preventScroll: true, focusVisible: false } as FocusOptions);
     };
     // 한 번 열릴 때만 설정하고 닫힐 때 되돌린다
     // eslint-disable-next-line react-hooks/exhaustive-deps

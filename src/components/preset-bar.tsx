@@ -52,10 +52,10 @@ export function PresetBar({
   return (
     <div className="mt-3">
       <div className="flex flex-wrap items-center justify-between gap-x-2">
-        <p className="text-xs font-medium text-muted">{activeId ? t("pbar.title") : t("pbar.manual")}</p>
+        <p className="opt-label">{activeId ? t("pbar.title") : t("pbar.manual")}</p>
         {!naming && custom.length < CUSTOM_LIMIT ? (
-          <button type="button" disabled={disabled} onClick={() => setNaming(true)} className="inline-flex items-center gap-0.5 text-xs font-semibold text-accent disabled:opacity-50">
-            <Plus className="size-3" aria-hidden="true" />
+          <button type="button" disabled={disabled} onClick={() => setNaming(true)} className="inline-flex items-center gap-1 text-sm font-semibold text-accent disabled:opacity-50">
+            <Plus className="size-3.5" aria-hidden="true" />
             {t("pbar.saveCurrent")}
           </button>
         ) : null}

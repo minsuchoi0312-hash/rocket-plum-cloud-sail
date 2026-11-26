@@ -2199,3 +2199,89 @@ html:not([data-theme="light"]) .toast-dock .toast {
     animation: none;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   가독성 다듬기 (2026-11-26)
+   · 꺼진 버튼을 투명하게 지우지 않고 '점선 + 흐린 글자'로 — 무엇이 있는지는 읽히게
+   · 옵션 이름 · 분절 버튼 글자를 한 단계 진하고 크게
+   · 빠른 설정 카드는 위쪽 정렬로 줄 맞춤
+   ════════════════════════════════════════════════════════════════════ */
+
+/* 꺼진 칩: 30% 투명 → 글자는 읽히게(faint, 대비 4.5:1 이상), 점선으로 '아직'만 알림 */
+.chip:disabled {
+  opacity: 1;
+  border: 1px dashed var(--color-line);
+  background: transparent;
+  color: var(--color-faint);
+  -webkit-text-fill-color: var(--color-faint);
+}
+
+/* 선택된 칩은 꺼져 있어도 선택 표시 그대로 */
+.chip.is-on:disabled {
+  border: 1px solid var(--color-fg);
+  background: var(--color-fg);
+  color: var(--color-bg);
+  -webkit-text-fill-color: var(--color-bg);
+  opacity: 0.85;
+}
+
+/* 옵션 줄 이름(용지 · 색상 · 양면 …) — 토스 설정 화면처럼 또렷하게 */
+.opt-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.opt-note {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* 분절 버튼 — 안 고른 칸도 읽히게 한 단계 진하게, 손가락 높이 44px */
+.seg-btn {
+  min-height: 44px;
+  font-size: 15px;
+  color: var(--text-secondary);
+}
+
+.opt-row.is-idle .seg,
+.opt-row.is-idle .stepper {
+  opacity: 0.6;
+}
+
+/* 빠른 설정 카드 — 제목을 위에 붙여 두 줄 · 세 줄 카드도 줄이 맞게 */
+.preset-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  min-height: 72px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.preset-card .preset-hint {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.preset-card:not(.is-on) .preset-hint {
+  color: var(--text-secondary);
+  opacity: 1;
+}
+
+/* 옆으로 넘기는 칩 줄 — 오른쪽 끝을 부드럽게 흐려 '더 있음'을 알림(글자가 칼같이 잘려 보이지 않게) */
+.chip-row {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  padding-right: 24px;
+}
+
+/* 본문 글줄 — 한글은 단어 단위로 끊어 읽기 쉽게 */
+.shell p,
+.shell li,
+[role="dialog"] p {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
