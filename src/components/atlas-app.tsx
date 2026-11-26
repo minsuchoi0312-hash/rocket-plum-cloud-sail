@@ -1343,7 +1343,7 @@ function AtlasMain() {
               for (const number of group) {
                 const canvas = await renderPdfPage(opened.doc, number, cellW, cellH, undefined, orient === "auto" ? "auto" : "fit");
                 if (!canvas || stopRef.current) {
-                  canvas?.width && (canvas.width = 0);
+                  if (canvas?.width) canvas.width = 0;
                   throw new Error(tr("ap.stopped"));
                 }
                 rendered.push(canvas);
