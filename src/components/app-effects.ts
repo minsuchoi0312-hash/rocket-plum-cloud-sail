@@ -165,12 +165,17 @@ export function useFileDrop(handler: MutableRefObject<(files: File[], pasted: bo
     window.addEventListener("dragleave", onLeave);
     window.addEventListener("drop", onDrop);
     window.addEventListener("paste", onPaste);
+    /* 안드로이드 앱: 다른 앱의 '공유'로 받은 파일도 끌어놓기와 같은 길로 연다 (android-main.tsx 가 부른다) */
+    const host = window as { __nugunaOpenFiles?: (files: File[]) => void };
+    host.__nugunaOpenFiles = (files) => handler.current(files, false);
+    window.dispatchEvent(new Event("nuguna-files-ready"));
     return () => {
       window.removeEventListener("dragenter", onEnter);
       window.removeEventListener("dragover", onOver);
       window.removeEventListener("dragleave", onLeave);
       window.removeEventListener("drop", onDrop);
       window.removeEventListener("paste", onPaste);
+      delete host.__nugunaOpenFiles;
     };
   }, []);
 }
