@@ -31,6 +31,7 @@ import {
   Minus as PhMinus,
   Moon as PhMoon,
   NotePencil,
+  Package as PhPackage,
   PencilSimple,
   Plus as PhPlus,
   Printer as PhPrinter,
@@ -79,6 +80,7 @@ export const Mail = round(EnvelopeSimple);
 export const Maximize2 = round(ArrowsOutSimple);
 export const Monitor = round(Desktop);
 export const Moon = round(PhMoon);
+export const Package = round(PhPackage);
 export const Pencil = round(PencilSimple);
 export const Plus = round(PhPlus);
 export const Minus = round(PhMinus);

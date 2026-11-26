@@ -995,6 +995,26 @@ details.rounded-xl {
   max-height: min(88vh, 760px);
 }
 
+/* 인쇄 팩 설치 시트 — 토스식 큰 제목 + 앱 아이콘 같은 둥근 사각 */
+.pack-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+.pack-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--fill);
+}
+
 /* 드래그 앤 드롭 */
 .drop-veil {
   position: fixed;

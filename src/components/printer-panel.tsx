@@ -20,6 +20,7 @@ import type { DocKind } from "@/components/paper-preview";
 import { docLabel } from "@/components/print-parts";
 import type { QrTarget } from "@/components/printer-qr-modal";
 import { HistoryList, type SupportTab } from "@/components/support-center";
+import { isPhoneHelper } from "@/lib/phone-helper";
 
 type Set<T> = Dispatch<SetStateAction<T>>;
 
@@ -122,8 +123,10 @@ export type PrinterPanelProps = {
 
 export function PrinterPanel(props: PrinterPanelProps) {
   const { statusCard, addTypedIp, album, aliasDraft, setAliasDraft, appOrigin, checkPrinter, connectUsb, editingUid, setEditingUid, findOnWifi, findViaHelper, forget, foundList, helperCode, setHelperCode, helperOk, setHelperOk, helperShare, helperUrl, setHelperUrl, history, ipInput, setIpInput, lanBusy, lanNote, setLanNote, linkOpen, setLinkOpen, linkTab, setLinkTab, memo, notice, onPrint, openChooser, pdfName, photoUrl, pickPreset, probes, recentPrinters, reconnect, rememberHost, route, saveAlias, scanMode, scanProg, scanning, selected, selectedId, selectedName, sending, setAskName, setOverrideQuery, setQrTarget, setSelectedId, setShowDiag, setShowIpGuide, showIpGuide, setStep, setSubnetInput, subnetInput, setSupportTab, setUseHelper, useHelper, startWith, statusDot, statusText, stopScan, usbMissed, usbOk, helperStatus, onLauncher } = props;
-  const linkTabs = LINK_TABS;
   const { t } = useI18n();
+  /* 앱(APK): 폰이 직접 찾고 보내니 PC 도우미 탭 · 상태는 감춘다 */
+  const phone = useHelper && isPhoneHelper(helperUrl);
+  const linkTabs = phone ? LINK_TABS.filter(([id]) => id !== "helper") : LINK_TABS;
   /* 첫 화면 밀도: '찾은 프린터'는 직접 검색했거나 2대 이상일 때만 펼친다(링크로 1대 연결 시 위 상태와 중복) */
   const [searched, setSearched] = useState(false);
   const showFound = foundList.length > 0 && (searched || foundList.length >= 2 || !selected);
@@ -169,7 +172,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
           <div className="min-w-0 flex-1">
             <p className="truncate text-[16px] font-semibold text-fg">{statusText}</p>
             <p className="mt-0.5 truncate text-sm text-muted">{selectedName || t("pp.noPrinter")}</p>
-            {helperStatus ? <HelperPill status={helperStatus} /> : null}
+            {helperStatus && !phone ? <HelperPill status={helperStatus} /> : null}
           </div>
           {selected?.host ? (
             <button
@@ -212,7 +215,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
                     void findOnWifi("quick");
                   }} className="btn-solid flex h-[52px] items-center justify-center gap-2 rounded-2xl text-[16px] disabled:opacity-50">
                     <Search className="size-5" aria-hidden="true" />
-                    {lanBusy && scanMode === "quick" ? t("pp.findingQuick") : lanBusy && scanMode === "helper" ? t("pp.helperFinding") : useHelper && helperUrl.trim() ? t("pp.findHelper") : t("pp.findQuick")}
+                    {phone ? (lanBusy ? t("ph.finding") : t("ph.find")) : lanBusy && scanMode === "quick" ? t("pp.findingQuick") : lanBusy && scanMode === "helper" ? t("pp.helperFinding") : useHelper && helperUrl.trim() ? t("pp.findHelper") : t("pp.findQuick")}
                   </button>
                   <button type="button" disabled={lanBusy || sending} onClick={() => {
                     setSearched(true);
@@ -240,7 +243,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
                 ) : null}
                 {lanBusy && scanMode === "helper" ? (
                   <div className="scan-box flex items-center justify-between text-xs">
-                    <span className="text-fg">{t("pp.helperScan")}</span>
+                    <span className="text-fg">{t(phone ? "ph.scan" : "pp.helperScan")}</span>
                     <button type="button" onClick={stopScan} className="font-semibold text-accent">
                       {t("pp.stop")}
                     </button>

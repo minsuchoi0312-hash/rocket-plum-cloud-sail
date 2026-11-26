@@ -10,6 +10,7 @@ import type { LinkTab } from "@/lib/app-utils";
 import { m, tr, useI18n, type Msg } from "@/lib/i18n";
 import { cleanIPv4, cleanText, safeHttpOrigin } from "@/lib/sanitize";
 import type { HelperStatus } from "@/components/printer-panel";
+import { isPhoneHelper } from "@/lib/phone-helper";
 
 type Set<T> = Dispatch<SetStateAction<T>>;
 
@@ -190,7 +191,8 @@ export function useOnline() {
   return online;
 }
 
-type AddWifi = (host: string, answered: boolean, opts?: { title?: string; subtitle?: Msg; query?: string; select?: boolean }) => unknown;
+export type WifiExtra = { cmd?: string; ipp?: boolean; raw9100?: boolean; canon?: boolean };
+type AddWifi = (host: string, answered: boolean, opts?: { title?: string; subtitle?: Msg; query?: string; select?: boolean } & WifiExtra) => unknown;
 
 /** 와이파이 프린터 찾기(빠른/전체·대역 칩)와 PC 도우미 실제 검색. 렌더마다 최신 값으로 다시 만든다(훅 아님). */
 export function lanSearch(d: {
@@ -217,6 +219,11 @@ export function lanSearch(d: {
 
   async function findOnWifi(mode: "quick" | "full" = "quick", subnetOverride?: string) {
     if (lanBusy || sending) return;
+    /* 앱(APK): 폰 내장 도우미가 mDNS · SNMP · 포트로 직접 찾는다 — 빠른 · 전체 · 대역 칩 모두 */
+    if (useHelper && isPhoneHelper(helperUrl)) {
+      await findViaHelper(subnetOverride || (mode === "full" && isValidSubnet(subnetInput) ? subnetInput.trim() : ""));
+      return;
+    }
     if (mode === "quick" && !subnetOverride && useHelper && helperUrl.trim()) {
       await findViaHelper();
       return;
@@ -266,8 +273,9 @@ export function lanSearch(d: {
   }
 
   /** PC 도우미가 직접 9100/631을 훑고 모델명까지 읽어 온 실제 목록 */
-  async function findViaHelper() {
+  async function findViaHelper(subnetArg?: string) {
     if (lanBusy || sending) return;
+    const phone = isPhoneHelper(helperUrl);
     if (!helperUrl.trim()) {
       setLanNote(m("fx.needHelperUrl"));
       return;
@@ -277,28 +285,35 @@ export function lanSearch(d: {
     setLanBusy(true);
     setScanMode("helper");
     setScanProg(null);
-    const subnet = isValidSubnet(subnetInput) ? subnetInput.trim() : "";
-    setLanNote(m("fx.helperScanning", { where: subnet ? `${subnet}.1~254` : tr("fx.thisPcNet") }));
+    /* 폰은 지금 붙은 와이파이 대역을 직접 읽으니, 예전에 저장된 대역 대신 고른 대역만 쓴다 */
+    const pickedSubnet = subnetArg ?? (phone ? "" : subnetInput);
+    const subnet = isValidSubnet(pickedSubnet) ? pickedSubnet.trim() : "";
+    setLanNote(phone ? m("ph.scanning", { where: subnet ? `${subnet}.x` : tr("ph.thisWifi") }) : m("fx.helperScanning", { where: subnet ? `${subnet}.1~254` : tr("fx.thisPcNet") }));
     try {
       const result = await helperDiscover(helperUrl, helperCode, subnet, ac.signal);
       setHelperOk(true);
       setUseHelper(true);
       diag(tr("fx.logHelperScan", { nets: result.subnets.join(","), n: result.printers.length, ms: result.ms, list: result.printers.map((row) => `${row.host}=${row.model || "?"}`).join(" ") }));
       if (!result.printers.length) {
-        setLanNote(m("fx.helperNone", { where: result.subnets.join(", ") || tr("fx.thisPcNet") }));
+        setLanNote(phone ? m("ph.none", { where: result.subnets.map((net) => `${net}.x`).join(", ") || tr("ph.thisWifi") }) : m("fx.helperNone", { where: result.subnets.join(", ") || tr("fx.thisPcNet") }));
         return;
       }
       const ordered = [...result.printers].sort((a, b) => Number(b.raw9100) - Number(a.raw9100));
       ordered.forEach((row, index) => {
         addWifi(row.host, true, {
           title: row.model || tr("fx.printerIp", { ip: row.host }),
-          subtitle: m("fx.helperChecked", { host: row.host, raw: tr(row.raw9100 ? "fx.raw9100" : "fx.raw9100No"), ipp: row.ipp ? " · IPP" : "" }),
+          subtitle: phone ? m("ph.checked", { host: row.host, how: foundHow(row) }) : m("fx.helperChecked", { host: row.host, raw: tr(row.raw9100 ? "fx.raw9100" : "fx.raw9100No"), ipp: row.ipp ? " · IPP" : "" }),
           query: row.model || row.host,
           select: index === 0,
+          cmd: row.cmd || undefined,
+          ipp: row.ipp,
+          raw9100: row.raw9100,
+          canon: row.canon,
         });
       });
       const ready = result.printers.filter((row) => row.raw9100).length;
-      setLanNote(m("fx.helperFound", { n: result.printers.length, ready, sec: (result.ms / 1000).toFixed(1) }));
+      setLanNote(phone ? m("ph.found", { n: result.printers.length, sec: (result.ms / 1000).toFixed(1) }) : m("fx.helperFound", { n: result.printers.length, ready, sec: (result.ms / 1000).toFixed(1) }));
+      if (phone && result.subnets[0]) setSubnetInput(result.subnets[0]);
     } catch (error) {
       setLanNote(error instanceof Error ? error.message : tr("fx.helperFail"));
     } finally {
@@ -306,6 +321,11 @@ export function lanSearch(d: {
       setScanMode(null);
       scanAbortRef.current = null;
     }
+  }
+
+  /** 어떻게 찾았는지 짧게: "9100 · IPP" */
+  function foundHow(row: { raw9100: boolean; ipp: boolean; lpd?: boolean; canon?: boolean }) {
+    return [row.raw9100 ? "9100" : "", row.ipp ? "IPP" : "", row.lpd ? "LPD" : "", row.canon ? "BJNP" : ""].filter(Boolean).join(" · ") || "mDNS";
   }
 
   function pickPreset(subnet: string) {

@@ -2,6 +2,7 @@
  * 인쇄 화면 부품: 확인된 기종 카드 · 용지/양면/부수 옵션 · 문서 탭과 하단 버튼 묶음.
  * atlas-app.tsx에서 분리한 컴포넌트.
  */
+import { phoneApp } from "@/lib/phone-helper";
 import { useState, type ReactNode } from "react";
 import { ArrowLeft, ArrowRight, Bookmark, ChevronDown, Minus, Plus, Printer, RotateCw, Trash2, Upload } from "@/components/icons";
 import type { MatchResult } from "@/lib/atlas";
@@ -162,7 +163,7 @@ export function OfficeOptions({
             {tr("opt.gray")}
           </button>
         </div>
-        {monoUsb ? <p className="opt-note">{tr("opt.usbMono")}</p> : null}
+        {monoUsb ? <p className="opt-note">{tr(phoneApp() ? "ph.mono" : "opt.usbMono")}</p> : null}
       </div>
       <div className={`opt-row ${idle ? "is-idle" : ""}`}>
         <span className="opt-label">{tr("opt.sides")}</span>

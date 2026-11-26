@@ -42,6 +42,10 @@ export type Found = {
   live?: boolean;
   usbKey?: string;
   host?: string;
+  /** 검색이 확인한 포트 (앱 내장 도우미) — 모르면 undefined */
+  ipp?: boolean;
+  raw9100?: boolean;
+  canon?: boolean;
 };
 
 export function viaLabel(via: Via) {

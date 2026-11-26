@@ -41,6 +41,10 @@ import { downloadText, launcherFileName, macLauncher, windowsLauncher } from "@/
 import { DoneBanner, JobBanner, type JobPhase } from "@/components/job-banner";
 import { blobUrl, chunkLoadError, downloadBytes, humanError, inAppBrowser, isSure, loadImage, marginLabel, stageForQuery, uidOf, viaLabel, type Found, type LinkTab, type PageChip, type ProbeState, type Step } from "@/lib/app-utils";
 import { isInkjet, PrintChooser, ReadyCard } from "@/components/print-parts";
+import { PackSheet } from "@/components/pack-sheet";
+import { laserCmd, packFor, packInstalled, PACKS, type PackChoice, type PackDef, type PackId } from "@/lib/print-packs";
+import { isPhoneHelper } from "@/lib/phone-helper";
+import type { WifiExtra } from "@/components/app-effects";
 
 /** 언어 상자를 감싸 앱 전체가 같은 언어를 쓰게 한다 */
 export function AtlasApp() {
@@ -64,6 +68,9 @@ function AtlasMain() {
   const [scanId, setScanId] = useState(0);
   const [scanning, setScanning] = useState(true);
   const [hits, setHits] = useState<Found[]>([]);
+  /* 인쇄 팩: 설치 창 · 프린터(IP)별로 고른 팩 */
+  const [packAsk, setPackAsk] = useState<{ choice: PackChoice; model: string; trial: boolean; copies?: number } | null>(null);
+  const [packPicked, setPackPicked] = useState<Record<string, PackId>>({});
   const [extra, setExtra] = useState<Found[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [overrideQuery, setOverrideQuery] = useState<string | null>(null);
@@ -443,7 +450,7 @@ function AtlasMain() {
     setNotice("");
   }
 
-  function addWifi(host: string, answered: boolean, opts: { title?: string; subtitle?: Msg; query?: string; select?: boolean } = {}) {
+  function addWifi(host: string, answered: boolean, opts: { title?: string; subtitle?: Msg; query?: string; select?: boolean } & WifiExtra = {}) {
     const item: Found = {
       id: `wifi:${host}`,
       title: opts.title || tr("fx.printerIp", { ip: host }),
@@ -452,6 +459,10 @@ function AtlasMain() {
       query: opts.query || host,
       host,
       live: true,
+      cmd: opts.cmd,
+      ipp: opts.ipp,
+      raw9100: opts.raw9100,
+      canon: opts.canon,
     };
     setHits((prev) => [item, ...prev.filter((row) => row.id !== item.id)]);
     if (opts.select !== false) setSelectedId(item.id);
@@ -740,7 +751,21 @@ function AtlasMain() {
   }
 
   const catalogPcl5 = Boolean(match && sure && !isInkjet(match) && languageIsPcl5((match.printer.languages || []).join(" ")));
-  const helperLive = Boolean(useHelper && selected?.host && helperUrl.trim());
+  /* 앱(APK): 찾은 프린터에 맞는 인쇄 팩 — 표준(IPP) 팩이면 631로, 레이저 팩이면 내장 도우미 9100으로 */
+  const phoneHelper = useHelper && isPhoneHelper(helperUrl);
+  const packChoice: PackChoice | null = phoneHelper && selected?.host && !selected.usbKey
+    ? packFor({
+        model: match ? `${match.printer.brand} ${match.printer.model}` : selected.title,
+        cmd: selected.cmd,
+        ipp: selected.ipp,
+        /* 직접 넣은 IP처럼 아무것도 모르면 예전처럼 9100(PCL 5e · PDF)으로 */
+        raw9100: selected.raw9100 ?? selected.ipp === undefined,
+        canon: selected.canon,
+      })
+    : null;
+  const pickedPackId = selected?.host ? packPicked[selected.host] : undefined;
+  const activePack: PackDef | null = packChoice ? (pickedPackId ? PACKS[pickedPackId] : packChoice.need.ready ? packChoice.need : packChoice.fallback) : null;
+  const helperLive = Boolean(useHelper && selected?.host && helperUrl.trim() && !(phoneHelper && activePack?.route === "ipp"));
   const marginMm = MARGIN_MM[margin];
   /* 여백을 넣으면 원본 PDF를 그대로 넘길 수 없으니(PDF Direct 불가) 래스터로 보낸다 */
   /* 복사기 실제 상태 (도우미 /status 또는 USB 장치 정보) */
@@ -753,7 +778,7 @@ function AtlasMain() {
   const rasterForced = pdfDirectBlocked || Boolean(pdfKey) || nup !== 1 || reverse || pageMode !== "all" || secureOn || orient === "landscape" || marginMm > 0 || stampActive;
   const route: PrintRoute = resolvePrintRoute({
     liveUsb: Boolean(selected?.live && selected.usbKey) || helperLive,
-    cmd: selected?.cmd || (helperLive ? "PCL5e,PDF" : ""),
+    cmd: phoneHelper && helperLive && activePack?.route === "raw" ? laserCmd(selected?.cmd) : selected?.cmd || (helperLive ? "PCL5e,PDF" : ""),
     catalogPcl5,
     catalogSure: Boolean(match && sure),
     pdfBytes: Boolean(pdfBytes),
@@ -1029,8 +1054,28 @@ function AtlasMain() {
     return { pin: safePin, user: pjlToken(jobUser) };
   }
 
-  async function onPrint(trial = false, copiesOverride?: number) {
+  /** 앱: 이 프린터에 맞는 팩이 아직 없으면 설치 창부터 띄운다 */
+  function packGate(trial: boolean, copiesOverride?: number) {
+    if (!packChoice || !selected?.host) return false;
+    const picked = packPicked[selected.host];
+    if (picked && packInstalled(picked)) return false;
+    if (packChoice.need.ready && packInstalled(packChoice.need.id)) return false;
+    setPackAsk({ choice: packChoice, model: selected.title, trial, copies: copiesOverride });
+    return true;
+  }
+
+  function onPackReady(pack: PackDef) {
+    const ask = packAsk;
+    const host = selected?.host;
+    if (host) setPackPicked((prev) => ({ ...prev, [host]: pack.id }));
+    if (!pack.builtin) diag(tr("pk.log", { pack: tr(pack.name), n: 0 }));
+    setPackAsk(null);
+    if (ask) window.setTimeout(() => void onPrint(ask.trial, ask.copies, true), 0);
+  }
+
+  async function onPrint(trial = false, copiesOverride?: number, packChecked = false) {
     if (sending || printLock.current) return;
+    if (!packChecked && packGate(trial, copiesOverride)) return;
     printLock.current = true;
     try {
       await runPrint(trial, copiesOverride);
@@ -1358,7 +1403,7 @@ function AtlasMain() {
         learnSubnetFromIp(selected.host);
       }
       recordHistory(viaHelper ? "helper9100" : effective === "usb-pdf" ? "usb-pdf" : "usb-pcl", jobPageCount);
-      const doneMsg = `${tr(secure ? (viaHelper ? "ap.secureHelper" : "ap.secureUsb") : viaHelper ? "ap.sentHelper" : "ap.sentUsb")}${jobCopies > 1 ? ` ${tr("ap.copiesN", { n: jobCopies })}` : ""}`;
+      const doneMsg = `${tr(secure ? (viaHelper ? "ap.secureHelper" : "ap.secureUsb") : viaHelper ? (phoneHelper ? "ph.sent" : "ap.sentHelper") : "ap.sentUsb")}${jobCopies > 1 ? ` ${tr("ap.copiesN", { n: jobCopies })}` : ""}`;
       setNotice(doneMsg);
       if (!trial) setDoneText(doneMsg);
     } catch (error) {
@@ -1724,7 +1769,7 @@ function AtlasMain() {
 
   const helperShare = useHelper && helperUrl.trim() && helperCode ? { url: helperUrl.trim(), code: helperCode } : null;
 
-  const routeLabel = helperLive && route !== "preview-only" ? tr("ap.rHelper") : route === "usb-pdf" ? "USB PDF Direct" : route === "usb-pcl" ? tr("ap.rUsbPcl") : selected?.host ? tr("ap.routeIpp") : tr("ap.rSave");
+  const routeLabel = helperLive && route !== "preview-only" ? tr(phoneHelper ? "ph.route" : "ap.rHelper") : route === "usb-pdf" ? "USB PDF Direct" : route === "usb-pcl" ? tr("ap.rUsbPcl") : selected?.host ? tr("ap.routeIpp") : tr("ap.rSave");
   const recentPrinters = saved.slice(0, 6);
   const foundList = list.filter((item) => !item.id.startsWith("saved:"));
 
@@ -1796,8 +1841,8 @@ function AtlasMain() {
     }
   }
 
-  const statusDot = selected?.live && selected.usbKey ? "dot-usb" : helperLive ? "dot-helper" : selected?.host ? "dot-wifi" : "dot-idle";
-  const statusText = tr(selected?.live && selected.usbKey ? "ap.stUsb" : helperLive ? "ap.stHelper" : selected?.host ? "ap.stWifi" : "ap.stPreview");
+  const statusDot = selected?.live && selected.usbKey ? "dot-usb" : helperLive && !phoneHelper ? "dot-helper" : selected?.host ? "dot-wifi" : "dot-idle";
+  const statusText = tr(selected?.live && selected.usbKey ? "ap.stUsb" : phoneHelper && selected?.host ? "ph.st" : helperLive ? "ap.stHelper" : selected?.host ? "ap.stWifi" : "ap.stPreview");
   const selectedName = selected ? (saved.find((row) => (row.host && row.host === selected.host) || `saved:${row.uid}` === selected.id)?.alias || selected.title) : "";
 
   return (
@@ -1873,6 +1918,7 @@ function AtlasMain() {
       ) : null}
       {zoom ? <PreviewZoomModal pages={zoom.pages} start={zoom.index} onClose={closeZoom} /> : null}
       {qrTarget ? <PrinterQrModal target={qrTarget} onClose={() => setQrTarget(null)} /> : null}
+      {packAsk ? <PackSheet choice={packAsk.choice} model={packAsk.model} onReady={onPackReady} onClose={() => setPackAsk(null)} /> : null}
       {showDiag ? (
         <SupportCenter
           tab={supportTab}
@@ -1992,7 +2038,7 @@ function AtlasMain() {
                 progress={progress}
                 ready={readyDoc}
                 showPages={false}
-                label={route === "usb-pdf" ? tr("ap.btnUsbPdf") : route === "usb-pcl" ? tr(helperLive ? "ap.btnHelper" : "ap.btnUsbPcl") : selected?.host ? tr("ap.btnHost", { host: selected.host }) : tr("ap.btnConnect")}
+                label={phoneHelper && helperLive && selected?.host && route !== "preview-only" ? tr("ap.btnHost", { host: selected.host }) : route === "usb-pdf" ? tr("ap.btnUsbPdf") : route === "usb-pcl" ? tr(helperLive ? "ap.btnHelper" : "ap.btnUsbPcl") : selected?.host ? tr("ap.btnHost", { host: selected.host }) : tr("ap.btnConnect")}
                 canSend={Boolean((selected?.live && selected.usbKey) || helperLive || selected?.host)}
                 summary={summaryText}
                 preflight={

@@ -36,7 +36,11 @@ export type HelperPrinter = {
   raw9100: boolean;
   ipp: boolean;
   model: string;
-  via: "ipp" | "pjl" | null;
+  via: "ipp" | "pjl" | "mdns" | "snmp" | "http" | null;
+  /** 폰 내장 도우미: 프린터가 알려 준 인쇄 언어(IEEE 1284 CMD · IPP 형식 · mDNS pdl) */
+  cmd?: string;
+  lpd?: boolean;
+  canon?: boolean;
 };
 
 export type HelperDiscovery = { subnets: string[]; printers: HelperPrinter[]; ms: number };
@@ -61,7 +65,7 @@ export async function helperDiscover(base: string, code: string, subnet = "", si
   const body = (await response.json()) as Partial<HelperDiscovery> & { ok?: boolean };
   /* 복사기가 알려 준 모델명·이름은 정화하고, 주소는 엄격한 IPv4만 남긴다 */
   const printers = (Array.isArray(body.printers) ? body.printers : [])
-    .map((row) => ({ ...row, host: cleanIPv4(row?.host), model: cleanText(row?.model, 80) }))
+    .map((row) => ({ ...row, host: cleanIPv4(row?.host), model: cleanText(row?.model, 80), cmd: cleanText(row?.cmd, 400) }))
     .filter((row) => row.host);
   const subnets = (Array.isArray(body.subnets) ? body.subnets : []).filter((s): s is string => typeof s === "string" && /^\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(s));
   return { subnets, printers, ms: typeof body.ms === "number" ? body.ms : 0 };
