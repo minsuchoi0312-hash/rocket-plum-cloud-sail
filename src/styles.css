@@ -2454,3 +2454,73 @@ html:not([data-theme="light"]) .tds-check {
   border-color: var(--accent);
   background: var(--accent);
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   토스 목록 묶음 (2026-11-26 5차): 프린터 카드의 보조 행동을 한 묶음 · 여러 줄로
+   ════════════════════════════════════════════════════════════════════ */
+.opt-list {
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--fill);
+}
+
+.opt-list > * + * {
+  border-top: 1px solid color-mix(in srgb, var(--color-line) 80%, transparent);
+}
+
+.opt-item {
+  display: flex;
+  width: 100%;
+  min-height: 56px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  text-align: left;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 120ms var(--ease);
+}
+
+.opt-item:active:not(:disabled) {
+  background: var(--press);
+}
+
+.opt-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.opt-item-title {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.opt-item-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.opt-item-meta {
+  flex: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 접는 줄 — 오른쪽 꺾쇠는 details 기본 스타일(아래 방향)을 그대로 쓰고, 펼치면 뒤집는다 */
+.opt-fold > summary {
+  list-style: none;
+}
+
+.opt-fold-body {
+  padding: 0 16px 16px;
+}
+
+.opt-fold-body .field {
+  background: var(--surface);
+}

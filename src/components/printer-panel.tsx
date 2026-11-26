@@ -212,22 +212,14 @@ export function PrinterPanel(props: PrinterPanelProps) {
 
             {linkTab === "wifi" ? (
               <div className="space-y-2.5">
-                <div className="grid grid-cols-[1fr_auto] gap-2">
-                  <button type="button" disabled={lanBusy || sending} onClick={() => {
-                    setSearched(true);
-                    void findOnWifi("quick");
-                  }} className="btn-solid flex h-[52px] items-center justify-center gap-2 rounded-2xl text-[16px] disabled:opacity-50">
-                    <Search className="size-5" aria-hidden="true" />
-                    {phone ? (lanBusy ? t("ph.finding") : t("ph.find")) : lanBusy && scanMode === "quick" ? t("pp.findingQuick") : lanBusy && scanMode === "helper" ? t("pp.helperFinding") : useHelper && helperUrl.trim() ? t("pp.findHelper") : t("pp.findQuick")}
-                  </button>
-                  <button type="button" disabled={lanBusy || sending} onClick={() => {
-                    setSearched(true);
-                    void findOnWifi("full");
-                  }} className="chip h-[52px] rounded-2xl px-3.5 text-sm disabled:opacity-50" title={t("pp.fullTitle")}>
-                    {t("pp.full")}
-                    <span className="block text-xs font-normal text-muted">1~254</span>
-                  </button>
-                </div>
+                {/* 토스식: 주요 행동은 큰 버튼 하나, 나머지(전체 검색 · 다른 네트워크 · IP 입력)는 아래 목록에 접어 둔다 */}
+                <button type="button" disabled={lanBusy || sending} onClick={() => {
+                  setSearched(true);
+                  void findOnWifi("quick");
+                }} className="btn-solid btn-cta flex w-full items-center justify-center gap-2 disabled:opacity-50">
+                  <Search className="size-5" aria-hidden="true" />
+                  {phone ? (lanBusy ? t("ph.finding") : t("ph.find")) : lanBusy && scanMode === "quick" ? t("pp.findingQuick") : lanBusy && scanMode === "helper" ? t("pp.helperFinding") : useHelper && helperUrl.trim() ? t("pp.findHelper") : t("pp.findQuick")}
+                </button>
                 {lanBusy && scanProg && scanProg.total > 0 ? (
                   <div className="scan-box" aria-live="polite">
                     <div className="flex items-center justify-between gap-2 text-sm">
@@ -253,9 +245,27 @@ export function PrinterPanel(props: PrinterPanelProps) {
                     </button>
                   </div>
                 ) : null}
-                <details className="rounded-2xl border border-line px-3 py-2">
-                  <summary className="text-sm font-medium text-fg">{t("pp.otherNets")}{subnetInput ? ` · ${subnetInput}` : ""}</summary>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
+                <div className="opt-list">
+                <button type="button" disabled={lanBusy || sending} onClick={() => {
+                  setSearched(true);
+                  void findOnWifi("full");
+                }} className="opt-item">
+                  <span className="min-w-0 flex-1">
+                    <span className="opt-item-title">{t("pp.full")}</span>
+                    <span className="opt-item-sub">{t("pp.fullTitle")}</span>
+                  </span>
+                  <span className="opt-item-meta">1~254</span>
+                  <ChevronRight className="doc-chev" aria-hidden="true" />
+                </button>
+                <details className="opt-fold">
+                  <summary className="opt-item">
+                    <span className="min-w-0 flex-1">
+                      <span className="opt-item-title">{t("pp.otherNets")}</span>
+                      {subnetInput ? <span className="opt-item-sub tabular-nums">{subnetInput}</span> : null}
+                    </span>
+                  </summary>
+                  <div className="opt-fold-body">
+                  <div className="flex flex-wrap gap-1.5">
                     {SUBNET_PRESETS.map((preset) => (
                       <button key={preset.subnet} type="button" disabled={lanBusy || sending} onClick={() => pickPreset(preset.subnet)} className={`chip preset rounded-full px-2.5 py-1 text-left disabled:opacity-50 ${subnetInput === preset.subnet ? "is-on" : ""}`}>
                         <span className="block text-xs font-semibold tabular-nums">{preset.subnet}</span>
@@ -267,7 +277,15 @@ export function PrinterPanel(props: PrinterPanelProps) {
                     {t("pp.subnetManual")}
                   </label>
                   <input id="subnet-field" value={subnetInput} onChange={(event) => setSubnetInput(event.target.value)} inputMode="decimal" placeholder="192.168.50" aria-label={t("pp.subnetAria")} className="field mt-1 h-11 w-full rounded-xl px-3 text-sm outline-none" />
+                  </div>
                 </details>
+                <details className="opt-fold" open={Boolean(ipInput) || showIpGuide}>
+                  <summary className="opt-item">
+                    <span className="min-w-0 flex-1">
+                      <span className="opt-item-title">{t("pp.ipLabel")}</span>
+                    </span>
+                  </summary>
+                  <div className="opt-fold-body">
                 <form
                   className="space-y-1"
                   onSubmit={(event) => {
@@ -275,11 +293,8 @@ export function PrinterPanel(props: PrinterPanelProps) {
                     addTypedIp();
                   }}
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-x-2">
-                    <label className="block text-xs font-medium text-muted" htmlFor="printer-ip">
-                      {t("pp.ipLabel")}
-                    </label>
-                    <button type="button" onClick={() => setShowIpGuide((value) => !value)} aria-expanded={showIpGuide} className="text-xs font-semibold text-accent">
+                  <div className="flex flex-wrap items-center justify-end gap-x-2">
+                    <button type="button" onClick={() => setShowIpGuide((value) => !value)} aria-expanded={showIpGuide} className="text-sm font-semibold text-accent">
                       {showIpGuide ? t("pp.ipGuideClose") : t("pp.ipGuide")}
                     </button>
                   </div>
@@ -306,6 +321,9 @@ export function PrinterPanel(props: PrinterPanelProps) {
                     <li className="text-faint">{t("pp.ipGuideNote")}</li>
                   </ul>
                 ) : null}
+                  </div>
+                </details>
+                </div>
                 {lanNote ? <p className="text-sm text-muted">{msgText(lanNote)}</p> : null}
               </div>
             ) : null}
