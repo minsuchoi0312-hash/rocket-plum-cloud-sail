@@ -4,11 +4,13 @@
  *  - standard : IPP Everywhere · AirPrint · Mopria (기본 포함, 설치 필요 없음)
  *  - laser    : PCL 5e · PDF 직접 (9100) — 사무실 레이저 · 복합기
  *  - epson    : ESC/P-R (9100) — 엡손 잉크젯, 컬러 가능 (src/lib/escpr.ts)
- *  - spl / inkjet / canon : 전용 팩 (아직 준비 중 → 가능하면 표준 · 레이저 팩으로 대신 보낸다)
+ *  - spl      : 삼성 SPL/QPDL (9100) — 삼성 · 제록스 GDI 레이저, 흑백 (src/lib/spl.ts)
+ *  - inkjet / canon : 전용 팩 (아직 준비 중 → 가능하면 표준 · 레이저 팩으로 대신 보낸다)
  */
 import type { MsgKey } from "./i18n/core.ts";
 import { DRIVER_ROWS } from "./driver-pack.ts";
 import { lookupDriver, type DriverFamily } from "./drivers.ts";
+import { splProfile } from "./spl.ts";
 
 export type PackId = "standard" | "laser" | "epson" | "spl" | "inkjet" | "canon";
 
@@ -22,7 +24,7 @@ export type PackDef = {
   /** 설치 없이 들어 있는 팩 */
   builtin: boolean;
   /** 인쇄 경로: ipp = 631 IPP, raw = 9100 (PCL 5e · PDF 직접), escpr = 9100 (엡손 ESC/P-R) */
-  route: "ipp" | "raw" | "escpr" | null;
+  route: "ipp" | "raw" | "escpr" | "spl" | null;
   families: DriverFamily[];
   /** 기종 표에서 고를 행 (families 안에서 한 번 더 거른다) */
   pick?: RegExp;
@@ -32,7 +34,7 @@ export const PACKS: Record<PackId, PackDef> = {
   standard: { id: "standard", name: "pk.standard", sub: "pk.standardSub", version: "2.0", ready: true, builtin: true, route: "ipp", families: [] },
   laser: { id: "laser", name: "pk.laser", sub: "pk.laserSub", version: "1.4", ready: true, builtin: false, route: "raw", families: ["hplip", "gutenprint", "splix"], pick: /pcl|laserjet|postscript|ps\b|hp |kyocera|ricoh|sindoh|xerox|lexmark|brother hl|brother mfc-l|brother dcp-l|samsung (m|c|sl|clx|ml)/i },
   epson: { id: "epson", name: "pk.epson", sub: "pk.epsonSub", version: "1.7", ready: true, builtin: false, route: "escpr", families: ["escpr"] },
-  spl: { id: "spl", name: "pk.spl", sub: "pk.splSub", version: "2.0", ready: false, builtin: false, route: null, families: ["splix"] },
+  spl: { id: "spl", name: "pk.spl", sub: "pk.splSub", version: "2.0", ready: true, builtin: false, route: "spl", families: ["splix"] },
   inkjet: { id: "inkjet", name: "pk.inkjet", sub: "pk.inkjetSub", version: "5.3", ready: false, builtin: false, route: null, families: ["gutenprint"] },
   canon: { id: "canon", name: "pk.canon", sub: "pk.canonSub", version: "1.0", ready: false, builtin: false, route: null, families: ["gutenprint"], pick: /canon/i },
 };
@@ -66,7 +68,11 @@ export function packFor(input: PackInput): PackChoice {
   /* 1) 9100이 열려 있고 PCL · PDF 를 말하는 기기 = 레이저 팩 */
   if (input.raw9100 && (pclKnown || family === "hplip")) return wrap(PACKS.laser);
   /* 2) 전용 언어 기기 */
-  if (family === "splix") return wrap(PACKS.spl);
+  /* 삼성 SPL: 9100 이 열려 있고 0x11 압축 기종이면 SPL 팩, 0x0D · JBIG · 컬러 기종은 아직(대신 보낼 길을 권한다) */
+  if (family === "splix" || /\bGDI\b|QPDL|\bSPL\b/i.test(langs)) {
+    if (input.raw9100 && splProfile(input.model)) return wrap(PACKS.spl);
+    return wrap({ ...PACKS.spl, ready: false, route: null });
+  }
   /* 엡손: 1284 CMD 에 ESCPR 이 있거나 기종 표 · 이름이 엡손이면, 9100 이 열려 있을 때 엡손 잉크 팩 */
   const epson = family === "escpr" || /escpr/i.test(langs) || /epson/i.test(input.model);
   if (epson && input.raw9100) return wrap(PACKS.epson);

@@ -4,6 +4,7 @@ import { I18nProvider, m, msgText, tr, useI18n, type Msg } from "@/lib/i18n";
 import { LangSwitcher } from "@/components/lang-switcher";
 import { AppErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "@/components/toaster";
+import { toast } from "@/lib/toast";
 import { syncThemeColor } from "@/lib/theme-color";
 import { cleanPin, cleanText, pjlToken } from "@/lib/sanitize";
 import { matchQuery, type MatchResult } from "@/lib/atlas";
@@ -43,6 +44,7 @@ import { blobUrl, chunkLoadError, downloadBytes, humanError, inAppBrowser, isSur
 import { isInkjet, PrintChooser, ReadyCard } from "@/components/print-parts";
 import { PackSheet } from "@/components/pack-sheet";
 import { escprEndPage, escprJobFooter, escprJobHeader, escprPageCommands } from "@/lib/escpr";
+import { splJobFooter, splJobHeader, splPageCommands, splProfile } from "@/lib/spl";
 import { laserCmd, packFor, packInstalled, PACKS, type PackChoice, type PackDef, type PackId } from "@/lib/print-packs";
 import { isPhoneHelper } from "@/lib/phone-helper";
 import type { WifiExtra } from "@/components/app-effects";
@@ -286,6 +288,37 @@ function AtlasMain() {
 
   /* 폰 브라우저 주소창 색을 앱 테마와 맞춘다(라이트 웜 페이퍼 / 다크 슬레이트) */
   useEffect(() => syncThemeColor(theme), [theme]);
+
+  /* 안드로이드 뒤로가기(앱): 열린 창 닫기 → 이전 화면 → 홈에서는 두 번 눌러 종료.
+     앱(MainActivity)이 window.__nugunaBack() 을 부르고, false 면 안드로이드 기본 동작(앱 닫기)을 한다. */
+  const backRef = useRef<() => boolean>(() => false);
+  const exitArmed = useRef(0);
+  backRef.current = () => {
+    if (document.querySelector('[role="dialog"][aria-modal="true"], [role="menu"]')) {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      return true;
+    }
+    if (sending) {
+      toast(m("ph.backBusy"));
+      return true;
+    }
+    if (step !== "connect") {
+      backToConnect();
+      window.scrollTo({ top: 0 });
+      return true;
+    }
+    if (Date.now() - exitArmed.current < 2000) return false;
+    exitArmed.current = Date.now();
+    toast(m("ph.exit"));
+    return true;
+  };
+  useEffect(() => {
+    const host = window as { __nugunaBack?: () => boolean };
+    host.__nugunaBack = () => backRef.current();
+    return () => {
+      delete host.__nugunaBack;
+    };
+  }, []);
 
   useEffect(() => {
     let stop = false;
@@ -782,6 +815,11 @@ function AtlasMain() {
   const helperLive = Boolean(useHelper && selected?.host && helperUrl.trim() && !(phoneHelper && activePack?.route === "ipp"));
   /* 엡손 잉크 팩: 래스터 경로를 그대로 쓰되 PCL 대신 ESC/P-R 로 만든다 */
   const escprJob = Boolean(phoneHelper && helperLive && activePack?.route === "escpr");
+  /* 삼성 SPL 팩: 같은 래스터 경로, 쪽 인코더만 QPDL */
+  const splModel = match ? `${match.printer.brand} ${match.printer.model}` : selected?.title || "";
+  const splJob = Boolean(phoneHelper && helperLive && activePack?.route === "spl" && splProfile(splModel));
+  /** 레이저 팩(PCL) 이 아닌 래스터 팩: 머리 · 꼬리를 따로 만들고 양면은 단면만 */
+  const ownRaster = escprJob || splJob;
   const marginMm = MARGIN_MM[margin];
   /* 여백을 넣으면 원본 PDF를 그대로 넘길 수 없으니(PDF Direct 불가) 래스터로 보낸다 */
   /* 복사기 실제 상태 (도우미 /status 또는 USB 장치 정보) */
@@ -794,7 +832,7 @@ function AtlasMain() {
   const rasterForced = pdfDirectBlocked || Boolean(pdfKey) || nup !== 1 || reverse || pageMode !== "all" || secureOn || orient === "landscape" || marginMm > 0 || stampActive;
   const route: PrintRoute = resolvePrintRoute({
     liveUsb: Boolean(selected?.live && selected.usbKey) || helperLive,
-    cmd: escprJob ? "PCL5e" : phoneHelper && helperLive && activePack?.route === "raw" ? laserCmd(selected?.cmd) : selected?.cmd || (helperLive ? "PCL5e,PDF" : ""),
+    cmd: ownRaster ? "PCL5e" : phoneHelper && helperLive && activePack?.route === "raw" ? laserCmd(selected?.cmd) : selected?.cmd || (helperLive ? "PCL5e,PDF" : ""),
     catalogPcl5,
     catalogSure: Boolean(match && sure),
     pdfBytes: Boolean(pdfBytes),
@@ -1243,9 +1281,11 @@ function AtlasMain() {
     const escprPages: Uint8Array[][] = [];
     const escprOpts = { paper, color: !gray, name: "NUGUNA" };
     /* 페이지 캔버스 → 쪽 명령 (레이저 팩 PCL / 엡손 팩 ESC/P-R) */
-    const encodeSheet = (canvas: HTMLCanvasElement, mode: "dither" | "threshold") => (escprJob ? escprPageCommands(canvas, escprOpts) : canvasPclCommands(canvas, mode));
+    const splOpts = { paper, profile: splProfile(splModel)!, copies: jobCopies };
+    const encodeSheet = (canvas: HTMLCanvasElement, mode: "dither" | "threshold") =>
+      escprJob ? escprPageCommands(canvas, escprOpts) : splJob ? splPageCommands(canvas, { ...splOpts, mode }) : canvasPclCommands(canvas, mode);
     const sendPackets = async (commands: Uint8Array[], progress: (percent: number) => void) => {
-      if (escprJob) {
+      if (ownRaster) {
         escprPages.push(commands);
         progress(100);
         return;
@@ -1273,7 +1313,7 @@ function AtlasMain() {
         const photoGroups = idSheet ? [[1]] : nupGroups(sources.map((_, index) => index + 1), nup, reverse);
         const pdfGroups = nupGroups(pages, nup, reverse);
         const jobPages = trial ? 1 : docKind === "pdf" ? Math.max(1, pdfGroups.length) : memoChunks?.length || photoGroups.length || 1;
-        if (!escprJob) await write(pclJobHeader({ copies: jobCopies, duplex, paper, pages: jobPages, secure, orient: orient === "landscape" ? "landscape" : "portrait" }), () => setProgress(2), stop, true);
+        if (!ownRaster) await write(pclJobHeader({ copies: jobCopies, duplex, paper, pages: jobPages, secure, orient: orient === "landscape" ? "landscape" : "portrait" }), () => setProgress(2), stop, true);
         started = true;
         if (stopRef.current) throw new Error(tr("ap.stopped"));
         if (!trial && docKind === "pdf" && pdfBytes) {
@@ -1312,7 +1352,7 @@ function AtlasMain() {
               }
               await sendPackets(commands, () => setProgress(Math.round(4 + ((index + 1) / pdfGroups.length) * 90)));
             }
-            if (!escprJob && needsBlankBack(pdfGroups.length, duplex)) {
+            if (!ownRaster && needsBlankBack(pdfGroups.length, duplex)) {
               await sendPackets(pclPageCommands(new Uint8Array(size.width * size.height), size.width, size.height), () => setProgress(96));
             }
           } finally {
@@ -1348,7 +1388,7 @@ function AtlasMain() {
             }
             await sendPackets(commands, () => setProgress(Math.round(8 + ((index + 1) / groups.length) * 84)));
           }
-          if (!escprJob && needsBlankBack(groups.length, duplex)) {
+          if (!ownRaster && needsBlankBack(groups.length, duplex)) {
             await sendPackets(pclPageCommands(new Uint8Array(size.width * size.height), size.width, size.height), () => setProgress(96));
           }
         } else if (docKind === "photo" && sources.length) {
@@ -1392,7 +1432,7 @@ function AtlasMain() {
               await sendPackets(commands, () => setProgress(Math.round(8 + ((index + 1) / photoGroups.length) * 84)));
             }
           }
-          if (!escprJob && needsBlankBack(photoGroups.length, duplex)) {
+          if (!ownRaster && needsBlankBack(photoGroups.length, duplex)) {
             await sendPackets(pclPageCommands(new Uint8Array(size.width * size.height), size.width, size.height), () => setProgress(96));
           }
         } else {
@@ -1407,12 +1447,18 @@ function AtlasMain() {
           canvas.height = 0;
           sendStage(1);
           await sendPackets(commands, (percent) => setProgress(8 + Math.round(percent * 0.84)));
-          if (!escprJob && needsBlankBack(1, duplex)) {
+          if (!ownRaster && needsBlankBack(1, duplex)) {
             await sendPackets(pclPageCommands(new Uint8Array(size.width * size.height), size.width, size.height), () => setProgress(96));
           }
         }
         if (stopRef.current) throw new Error(tr("ap.stopped"));
-        if (escprJob) {
+        if (splJob) {
+          /* 삼성 SPL: PJL 머리 → 쪽들(쪽 머리에 부수가 들어 있어 되풀이하지 않음) → 꼬리 */
+          const parts: Uint8Array[] = [splJobHeader({ name: "nuguna" })];
+          for (const pageCommands of escprPages) parts.push(...pageCommands);
+          parts.push(splJobFooter());
+          await write(concatBytes(parts), () => setProgress(100), () => false, true);
+        } else if (escprJob) {
           /* 엡손: 머리말 → (부수만큼) 쪽들 → 꼬리말. 쪽 끝(endp)은 다음 쪽이 있는지 알고 붙인다 */
           const sheets: Uint8Array[][] = [];
           for (let copy = 0; copy < Math.max(1, jobCopies); copy++) sheets.push(...escprPages);
@@ -2114,7 +2160,7 @@ function AtlasMain() {
                     onSheet={(index) => setPreviewSheet(index + 1)}
                   />
                 }
-                extras={<PrintOptions {...{ docKind, sending, route, colorRaster: escprJob, jobControls, presetCurrent, activePresetId, applyPreset, onPresetSaved, setNotice, paper, setPaper, gray, setGray, duplex, setDuplex, copies, setCopies, pdfCount, chosenPages, currentPage, pageChip, pickPages, pageList, setPageList, onTogglePage, reverse, setReverse, evenReverse, photoFilter, onPhotoFilter, photoLayout, onPhotoLayout, idLayout, cutLines, setCutLines, memoSize, setMemoSize, memoHeader, setMemoHeader, memoTitle, setMemoTitle, onTextFile, advancedOpen, setAdvancedOpen, margin, setMargin, marginMm, pageNumber, setPageNumber, wmChoice, setWmChoice, wmCustom, setWmCustom, stampActive, nup, setNup, orient, setOrient, photoFit, setPhotoFit, photoTurn, setPhotoTurn, secureOn, setSecureOn, pin, setPin, pinRef, jobUser, setJobUser, }} />}
+                extras={<PrintOptions {...{ docKind, sending, route, colorRaster: escprJob, simplexOnly: ownRaster, jobControls, presetCurrent, activePresetId, applyPreset, onPresetSaved, setNotice, paper, setPaper, gray, setGray, duplex, setDuplex, copies, setCopies, pdfCount, chosenPages, currentPage, pageChip, pickPages, pageList, setPageList, onTogglePage, reverse, setReverse, evenReverse, photoFilter, onPhotoFilter, photoLayout, onPhotoLayout, idLayout, cutLines, setCutLines, memoSize, setMemoSize, memoHeader, setMemoHeader, memoTitle, setMemoTitle, onTextFile, advancedOpen, setAdvancedOpen, margin, setMargin, marginMm, pageNumber, setPageNumber, wmChoice, setWmChoice, wmCustom, setWmCustom, stampActive, nup, setNup, orient, setOrient, photoFit, setPhotoFit, photoTurn, setPhotoTurn, secureOn, setSecureOn, pin, setPin, pinRef, jobUser, setJobUser, }} />}
                 onKind={setDocKind}
                 onMemo={setMemo}
                 onPhotos={choosePhotos}

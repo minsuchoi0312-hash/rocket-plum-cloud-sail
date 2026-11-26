@@ -80,7 +80,10 @@ export function OfficeOptions({
   onDuplex,
   onCopies,
   colorRaster = false,
+  simplexOnly = false,
 }: {
+  /** 엡손 · SPL 팩: 양면은 아직 단면만 */
+  simplexOnly?: boolean;
   /** 엡손 잉크 팩: 래스터지만 컬러로 보낼 수 있고, 양면은 아직 단면만 */
   colorRaster?: boolean;
   paper: OfficePaper;
@@ -173,7 +176,7 @@ export function OfficeOptions({
         <span className="opt-label">{tr("opt.sides")}</span>
         <div className="seg" role="radiogroup" aria-label={tr("opt.sides")}>
           {sides.map(([id, text]) => (
-            <button key={id} type="button" role="radio" aria-checked={duplex === id && liveJob} disabled={idle || (colorRaster && id !== "simplex")} onClick={() => onDuplex(id)} className={`seg-btn ${duplex === id && liveJob ? "is-on" : ""}`}>
+            <button key={id} type="button" role="radio" aria-checked={duplex === id && liveJob} disabled={idle || (simplexOnly && id !== "simplex")} onClick={() => onDuplex(id)} className={`seg-btn ${duplex === id && liveJob ? "is-on" : ""}`}>
               {text}
             </button>
           ))}

@@ -481,7 +481,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
                       <span className="block truncate text-sm font-medium text-fg">{printerLabel(item)}</span>
                       <span className="block truncate text-xs text-muted">
                         {item.alias ? `${item.title} · ` : ""}
-                        {item.link === "helper" ? t("pp.tabHelper") : item.link === "wifi" ? t("pp.linkWifi") : item.link === "usb" ? "USB" : item.via}
+                        {item.link === "helper" && !phone ? t("pp.tabHelper") : item.link === "wifi" || item.link === "helper" ? t("pp.linkWifi") : item.link === "usb" ? "USB" : item.via}
                         {item.host && !item.title.includes(item.host) ? ` · ${item.host}` : ""}
                       </span>
                     </button>

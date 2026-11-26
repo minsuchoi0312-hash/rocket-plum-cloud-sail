@@ -890,4 +890,6 @@ export const zh: Record<MsgKey, string> = {
   "ph.mono": "直接打印到此打印机仅支持黑白。",
   "ph.ready": "通过 Wi‑Fi 直接发送到打印机。",
   "ph.readyDirect": "由本机直接发送，不会打开其他打印应用。",
+  "ph.exit": "再按一次返回键退出",
+  "ph.backBusy": "正在发送，完成后即可返回",
 };

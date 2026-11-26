@@ -888,4 +888,6 @@ export const ko = {
   "ph.mono": "이 프린터로 바로 보낼 때는 흑백만 돼요.",
   "ph.ready": "와이파이로 프린터에 바로 보내요.",
   "ph.readyDirect": "이 폰이 직접 보내요. 다른 인쇄 앱은 열지 않아요.",
+  "ph.exit": "뒤로 버튼을 한 번 더 누르면 종료돼요",
+  "ph.backBusy": "보내는 중이에요. 끝나면 뒤로 갈 수 있어요",
 } as const;

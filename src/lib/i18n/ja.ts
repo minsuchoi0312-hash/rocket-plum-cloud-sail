@@ -890,4 +890,6 @@ export const ja: Record<MsgKey, string> = {
   "ph.mono": "このプリンターへの直接印刷は白黒のみです。",
   "ph.ready": "Wi‑Fiでプリンターに直接送ります。",
   "ph.readyDirect": "このスマホから直接送ります。他の印刷アプリは開きません。",
+  "ph.exit": "もう一度戻るを押すと終了します",
+  "ph.backBusy": "送信中です。終わったら戻れます",
 };
