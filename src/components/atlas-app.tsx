@@ -13,7 +13,7 @@ import { clearPrintRoot, printSheet, type PrintJob } from "@/lib/print-sheet";
 import { downloadCanvasPdf, grayCanvas, renderSheetCanvas, sheetMemoChunks } from "@/lib/pdf-page";
 import { bundleCommands, canvasPclCommands, drawOfficePage, needsBlankBack, officeMemoChunks, osRasterSize, paperPoints, pclAbortFooter, pclJobFooter, pclJobHeader, pclPageCommands, previewSize, printPixelSize, printableSize, wrapPdfJob, type DuplexMode, type OfficePaper } from "@/lib/office-job";
 import { canPdfDirect, imagesToPdf, nupGroups, openPdf, pageSpan, parsePageRange, renderPdfPage, slicePdf, type OpenedPdf } from "@/lib/pdf-doc";
-import { pdfFontsEmbedded } from "@/lib/pdf-fonts";
+import { directSafe, pdfFontsEmbedded } from "@/lib/pdf-fonts";
 import { languageIsPcl5, resolvePrintRoute, type PrintRoute } from "@/lib/print-route";
 import { isValidIPv4, learnSubnetFromIp, type ScanProgress } from "@/lib/lan-find";
 import { sendIppPdf } from "@/lib/ipp-send";
@@ -109,6 +109,9 @@ function AtlasMain() {
   const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null);
   /* PDF 안에 글꼴이 다 들어 있는지 — 아니면 PDF Direct 대신 폰에서 그림으로 바꿔 보낸다(복사기에 한글 글꼴이 없어 깨짐) */
   const [pdfFontsOk, setPdfFontsOk] = useState<{ bytes: Uint8Array; ok: boolean } | null>(null);
+  /* 양면은 PDF Direct로 보내지 않는다: 복사기의 PDF 해석기가 PJL 양면 지시를 무시하고 단면으로 찍는 기종이 있다.
+     폰에서 그린 PCL 래스터에는 양면 지시(PJL DUPLEX + PCL ESC&l#S)가 확실히 들어간다. */
+  const duplexWanted = duplex !== "simplex";
   const [pdfKey, setPdfKey] = useState("");
   const [pdfNeedsKey, setPdfNeedsKey] = useState(false);
   const [pdfName, setPdfName] = useState("");
@@ -891,8 +894,8 @@ function AtlasMain() {
     docKind,
     pageMode: pageMode === "list" ? "list" : pageMode,
     gray,
-    /* 글꼴 검사가 끝나 '모두 들어 있음'으로 확인된 PDF만 원본 직통. 검사 전 · 실패는 그림(래스터)으로 */
-    pdfDirect: Boolean(pdfBytes && canPdfDirect(pdfBytes) && !rasterForced && pdfFontsOk?.bytes === pdfBytes && pdfFontsOk.ok),
+    /* 원본 직통은: 글꼴이 모두 들어 있고 한글 · 한자 복합 글꼴이 없으며(검사 완료) 단면일 때만. 나머지는 폰에서 그림(래스터)으로 */
+    pdfDirect: Boolean(pdfBytes && canPdfDirect(pdfBytes) && !rasterForced && !duplexWanted && pdfFontsOk?.bytes === pdfBytes && pdfFontsOk.ok),
   });
 
   useEffect(() => {
@@ -900,8 +903,9 @@ function AtlasMain() {
     let alive = true;
     void pdfFontsEmbedded(pdfBytes).then((check) => {
       if (!alive) return;
-      setPdfFontsOk({ bytes: pdfBytes, ok: check.embedded });
+      setPdfFontsOk({ bytes: pdfBytes, ok: directSafe(check) });
       if (!check.embedded) diag(`PDF 글꼴 미포함 → 래스터로 인쇄: ${check.missing.slice(0, 4).join(", ")}`);
+      else if (check.cjk) diag("PDF 한글 · 한자 글꼴 → 래스터로 인쇄");
     });
     return () => {
       alive = false;

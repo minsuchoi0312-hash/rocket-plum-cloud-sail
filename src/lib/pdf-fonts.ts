@@ -18,13 +18,24 @@ const STANDARD_14 = new Set([
   "Symbol", "ZapfDingbats",
 ]);
 
-export type FontCheck = { embedded: boolean; missing: string[] };
+/**
+ * embedded: 모든 글꼴이 들어 있음 / missing: 빠진 글꼴 이름
+ * cjk: 한글 · 한자 · 일본어용 복합 글꼴(Type0 · CID)이 있음 — 들어 있어도 복사기 PDF 해석기가 잘못 그리는 일이 있어
+ *      PDF Direct를 쓰지 않는다(프린터쉐어처럼 폰에서 그림으로 보낸다)
+ */
+export type FontCheck = { embedded: boolean; missing: string[]; cjk: boolean };
+
+/** PDF Direct(원본 직통)로 보내도 되는 문서인지: 글꼴이 모두 들어 있고 CJK 복합 글꼴이 없을 때만 */
+export function directSafe(check: FontCheck | null | undefined) {
+  return Boolean(check && check.embedded && !check.cjk);
+}
 
 /** pdf-lib으로 이미 연 문서를 검사한다 (테스트 · 재사용용) */
 export function checkFontsEmbedded(doc: PDFDocument, lib: { PDFDict: typeof PDFDict; PDFName: typeof PDFName }): FontCheck {
   const { PDFDict: Dict, PDFName: Name } = lib;
   const ctx = doc.context;
   const missing: string[] = [];
+  let cjk = false;
   const asDict = (value: PDFObject | undefined): PDFDict | undefined => {
     const resolved = value === undefined ? undefined : ctx.lookup(value);
     return resolved instanceof Dict ? resolved : undefined;
@@ -41,6 +52,7 @@ export function checkFontsEmbedded(doc: PDFDocument, lib: { PDFDict: typeof PDFD
     const base = nameOf(font, "BaseFont").replace(/^[A-Z]{6}\+/, "");
     if (subtype === "Type3") return; // 글자 모양을 PDF 안에 그림으로 갖고 있다
     if (subtype === "Type0") {
+      cjk = true;
       const kids = ctx.lookup(font.get(Name.of("DescendantFonts")));
       const list = kids && "asArray" in kids ? (kids as unknown as { asArray(): PDFObject[] }).asArray() : [];
       if (!list.length) missing.push(base || "Type0");
@@ -61,10 +73,11 @@ export function checkFontsEmbedded(doc: PDFDocument, lib: { PDFDict: typeof PDFD
     const type = nameOf(object, "Type");
     const subtype = nameOf(object, "Subtype");
     /* Type0의 하위(CIDFontType0/2)는 Type0을 볼 때 함께 본다 */
+    if (type === "Font" && (subtype === "CIDFontType0" || subtype === "CIDFontType2")) cjk = true;
     if (type !== "Font" || subtype === "CIDFontType0" || subtype === "CIDFontType2") continue;
     checkFont(object);
   }
-  return { embedded: missing.length === 0, missing: [...new Set(missing)] };
+  return { embedded: missing.length === 0, missing: [...new Set(missing)], cjk };
 }
 
 /** PDF 바이트를 열어 검사한다. 열지 못하면(손상 · 암호 등) 안전하게 '안 들어 있음'으로 본다. */
@@ -74,6 +87,6 @@ export async function pdfFontsEmbedded(data: Uint8Array): Promise<FontCheck> {
     const doc = await lib.PDFDocument.load(data, { ignoreEncryption: true, updateMetadata: false });
     return checkFontsEmbedded(doc, lib);
   } catch {
-    return { embedded: false, missing: ["(unreadable)"] };
+    return { embedded: false, missing: ["(unreadable)"], cjk: false };
   }
 }

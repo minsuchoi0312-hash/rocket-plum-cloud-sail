@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { PDFDocument, StandardFonts } from "pdf-lib";
-import { pdfFontsEmbedded } from "./pdf-fonts.ts";
+import { directSafe, pdfFontsEmbedded } from "./pdf-fonts.ts";
 
 /** 객체 목록으로 최소 PDF를 만든다 (1: Catalog, 2: Pages, 3: Page, 4: Contents, 5~: 글꼴들) */
 function rawPdf(objects: string[]) {
@@ -49,7 +49,11 @@ test("한글 CID 글꼴이 들어 있으면(FontFile2) true", async () => {
     descriptor("ABCDEF+Gulim", "/FontFile2 7 0 R"),
     "<< /Length 0 >>\nstream\n\nendstream",
   ]);
-  assert.equal((await pdfFontsEmbedded(pdf)).embedded, true);
+  const r = await pdfFontsEmbedded(pdf);
+  assert.equal(r.embedded, true);
+  /* 들어 있어도 한글 복합 글꼴이면 PDF Direct는 쓰지 않는다 */
+  assert.equal(r.cjk, true);
+  assert.equal(directSafe(r), false);
 });
 
 test("들어 있는 글꼴과 안 들어 있는 글꼴이 섞이면 false", async () => {
@@ -70,7 +74,27 @@ test("영문 표준 14 글꼴(Helvetica)만 쓰면 true", async () => {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   doc.addPage().drawText("Hello 2026", { font, x: 50, y: 700 });
-  assert.equal((await pdfFontsEmbedded(await doc.save())).embedded, true);
+  const r = await pdfFontsEmbedded(await doc.save());
+  assert.equal(r.embedded, true);
+  assert.equal(r.cjk, false);
+  /* 영문 문서만 PDF Direct 허용 */
+  assert.equal(directSafe(r), true);
+});
+
+test("영문 TrueType 글꼴이 들어 있으면(FontFile2) PDF Direct 허용", async () => {
+  const pdf = rawPdf([
+    ...head("/F1 5 0 R"),
+    "<< /Type /Font /Subtype /TrueType /BaseFont /ABCDEF+Arial /FontDescriptor 6 0 R >>",
+    descriptor("ABCDEF+Arial", "/FontFile2 7 0 R"),
+    "<< /Length 0 >>\nstream\n\nendstream",
+  ]);
+  const r = await pdfFontsEmbedded(pdf);
+  assert.deepEqual([r.embedded, r.cjk, directSafe(r)], [true, false, true]);
+});
+
+test("검사 전(null) · 읽기 실패는 PDF Direct 안 함", () => {
+  assert.equal(directSafe(null), false);
+  assert.equal(directSafe({ embedded: false, missing: ["x"], cjk: false }), false);
 });
 
 test("글꼴이 없는 PDF(사진만)는 true", async () => {
