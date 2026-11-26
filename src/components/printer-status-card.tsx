@@ -3,7 +3,7 @@
  * USB면 GET_DEVICE_ID의 지원 언어와 인터페이스 상태를 같은 모양으로 보여 준다.
  */
 import { RefreshCw } from "@/components/icons";
-import { ifaceLabel, reasonLabel, stateBadge, tonerLabel, type PrinterStatus } from "@/lib/printer-status";
+import { displayLabel, ifaceLabel, reasonLabel, stateBadge, tonerLabel, type PrinterStatus } from "@/lib/printer-status";
 import { useI18n } from "@/lib/i18n";
 
 function timeLabel(iso: string) {
@@ -53,7 +53,7 @@ export function PrinterStatusCard({ status, loading, error, onRefresh, compact =
             <span className={`state-badge is-${badge.tone}`}>{loading && !status ? t("card.checking") : badge.label}</span>
             {status?.checkedAt ? <span className="text-xs text-faint">{t("card.checkedAt", { time: timeLabel(status.checkedAt) })}{status.latencyMs ? ` · ${status.latencyMs}ms` : ""}</span> : null}
           </p>
-          {status?.display && status.display.toUpperCase() !== "READY" ? <p className="mt-1 break-words text-xs text-muted">{t("card.display", { v: status.display })}</p> : null}
+          {status?.display && status.display.toUpperCase() !== "READY" ? <p className="mt-1 break-words text-xs text-muted">{t("card.display", { v: displayLabel(status.display) })}</p> : null}
           {status?.source === "usb" ? <p className="mt-1 text-xs text-muted">{t("card.iface", { v: ifaceLabel(status) })}</p> : null}
         </div>
         {onRefresh ? (

@@ -33,17 +33,54 @@ export type PrinterStatus = {
   iface?: string;
 };
 
-const REASONS = ["media-empty", "media-jam", "toner-low", "toner-empty", "cover-open", "input-tray-missing", "output-area-full", "paused", "offline", "warming-up", "attention", "printer-error", "hardware-error"] as const;
+/* IPP printer-state-reasons(RFC 8011 · PWG 5100.9) + PJL 에서 오는 사유 — 사전(reason.*)에 있는 것만 */
+const REASONS = [
+  "media-empty", "media-jam", "media-low", "media-needed", "toner-low", "toner-empty", "cover-open", "door-open",
+  "input-tray-missing", "output-tray-missing", "output-area-full", "output-area-almost-full",
+  "marker-supply-low", "marker-supply-empty", "marker-waste-almost-full", "marker-waste-full",
+  "developer-low", "developer-empty", "opc-near-eol", "opc-life-over", "fuser-over-temp", "fuser-under-temp",
+  "paused", "moving-to-paused", "stopping", "stopped-partly", "shutdown", "offline", "timed-out", "connecting-to-device",
+  "warming-up", "power-save", "processing", "attention", "spool-area-full", "interpreter-resource-unavailable",
+  "identify-printer-requested", "printer-error", "hardware-error", "other",
+] as const;
 
-/** 상태 사유를 지금 언어로. 모르는 사유는 원래 값 그대로 */
+/** 상태 사유를 지금 언어로. -report · -warning · -error 꼬리는 떼고 보고, 모르는 사유는 원래 값 그대로 */
 export function reasonLabel(reason: string) {
+  const base = reason.replace(/-(report|warning|error)$/, "");
+  if ((REASONS as readonly string[]).includes(base)) return tr(`reason.${base}` as MsgKey);
   return (REASONS as readonly string[]).includes(reason) ? tr(`reason.${reason}` as MsgKey) : reason;
+}
+
+/* 복사기 화면(PJL DISPLAY)의 흔한 영어 문구 → 사유·화면 사전. 모르는 문구(모델 고유 문구)는 그대로 둔다 */
+const DISPLAY: [RegExp, MsgKey][] = [
+  [/^warming ?up/i, "reason.warming-up"],
+  [/^(sleep|sleep mode|power ?sav(e|ing)|energy ?sav(e|er|ing)|low power)/i, "reason.power-save"],
+  [/^(processing|printing|busy|processing job)/i, "reason.processing"],
+  [/(load|add|out of|no) paper|paper (out|empty)|tray \d+ empty/i, "reason.media-empty"],
+  [/paper ?jam|^jam/i, "reason.media-jam"],
+  [/toner (is )?low|low toner/i, "reason.toner-low"],
+  [/toner (empty|out)|replace toner/i, "reason.toner-empty"],
+  [/(cover|door) (is )?open/i, "reason.cover-open"],
+  [/^off ?line/i, "reason.offline"],
+  [/^paused?/i, "reason.paused"],
+  [/^initiali[sz]ing/i, "disp.init"],
+  [/^cancel+ing/i, "disp.cancel"],
+  [/^cooling/i, "disp.cool"],
+  [/^(data received|receiving data)/i, "disp.data"],
+];
+
+/** 복사기 화면 문구를 지금 언어로 (모르면 원문) */
+export function displayLabel(text: string) {
+  const clean = text.trim();
+  const hit = DISPLAY.find(([re]) => re.test(clean));
+  return hit ? tr(hit[1]) : clean;
 }
 
 /** 요약 문구는 도우미가 보낸 한국어 대신 상태·사유로 다시 만들어 지금 언어를 따르게 해요. */
 export function statusSummary(status: PrinterStatus): string {
   if (status.source === "usb") return tr(status.state === "error" ? "st.usbGone" : status.state === "ready" ? "st.usbOk" : "st.usbUnknown");
-  const list = status.reasons.map(reasonLabel).join(", ");
+  /* '기타(other)'는 뜻이 없어 요약 배지에서는 빼고 아래 칩으로만 보여 준다 */
+  const list = status.reasons.filter((r) => r.replace(/-(report|warning|error)$/, "") !== "other").map(reasonLabel).join(", ");
   if (status.state === "ready") return tr("st.ready");
   if (status.state === "busy") return tr(status.reasons.includes("warming-up") ? "st.busyWarm" : "st.busy");
   if (status.state === "warning") return list ? tr("st.warnList", { list }) : tr("st.warn");
