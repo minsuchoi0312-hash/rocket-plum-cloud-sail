@@ -2355,3 +2355,50 @@ html:not([data-theme="light"]) {
   --color-muted: #d0d0d4;
   --text-secondary: #d0d0d4;
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   토스처럼 (2026-11-26 3차)
+   ════════════════════════════════════════════════════════════════════ */
+
+/* 큰 버튼 — 토스 BottomCTA: 56px · 둥근 16px · 17px 굵게 */
+.btn-cta {
+  min-height: 56px;
+  border-radius: 16px;
+  padding: 8px 16px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* 인쇄 버튼 줄 — 스크롤해도 화면 아래에 붙어 있고, 위쪽은 카드 색으로 부드럽게 사라진다 */
+.bottom-cta {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  margin: 8px -16px -16px;
+  padding: 20px 16px calc(16px + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--surface) 72%, color-mix(in srgb, var(--surface) 0%, transparent));
+  border-radius: 0 0 24px 24px;
+}
+
+@media (min-width: 640px) {
+  .bottom-cta {
+    margin: 8px -20px -20px;
+    padding-inline: 20px;
+  }
+}
+
+/* 꺼진 인쇄 버튼 — 토스 disabled: 옅은 파랑 + 흰 글자(무거운 회색 막대 대신) */
+button.btn-send:disabled {
+  background: color-mix(in srgb, var(--accent) 38%, var(--surface));
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+}
+
+/* 보조 버튼(화면 미리보기 · PDF 저장)이 켜지면 토스 'weak' 버튼: 옅은 파랑 바탕 + 파란 글자 */
+
+.chip.weak:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  -webkit-text-fill-color: var(--accent);
+}

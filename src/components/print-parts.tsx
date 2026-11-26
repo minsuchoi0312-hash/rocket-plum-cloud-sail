@@ -434,32 +434,35 @@ export function PrintChooser({
       ) : null}
       {sending ? (
         busyBanner || (
-          <button type="button" onClick={onCancel} className="chip mt-3 h-14 w-full rounded-2xl text-base font-medium">
+          <div className="bottom-cta mt-3"><button type="button" onClick={onCancel} className="chip btn-cta w-full">
             {tr("ch.cancel", { p: progress })}
-          </button>
+          </button></div>
         )
       ) : (
-        <div className="mt-3 flex flex-col gap-2">
-          {canSend ? (
-            <button type="button" onClick={onPrint} disabled={!ready} className="btn-send btn-solid flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-base font-semibold">
-              <Printer className="size-5" aria-hidden="true" />
-              {label}
-            </button>
-          ) : (
-            <button type="button" onClick={onConnect} className="btn-solid flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-base font-semibold">
-              <Printer className="size-5" aria-hidden="true" />
-              {tr("ch.connect")}
-            </button>
-          )}
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={onColorPrint} disabled={!ready || !onColorPrint} className="chip h-11 rounded-2xl text-sm font-medium">
+        <>
+          {/* 보조 버튼은 위, 큰 인쇄 버튼은 토스 BottomCTA처럼 화면 아래에 붙어 따라온다 */}
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button type="button" onClick={onColorPrint} disabled={!ready || !onColorPrint} className="chip weak h-12 rounded-2xl text-[15px] font-semibold">
               {tr("ch.preview")}
             </button>
-            <button type="button" onClick={onPdf} disabled={!ready} className="chip h-11 rounded-2xl text-sm font-medium">
+            <button type="button" onClick={onPdf} disabled={!ready} className="chip weak h-12 rounded-2xl text-[15px] font-semibold">
               {tr("ch.pdf")}
             </button>
           </div>
-        </div>
+          <div className="bottom-cta">
+            {canSend ? (
+              <button type="button" onClick={onPrint} disabled={!ready} className="btn-send btn-solid btn-cta flex w-full items-center justify-center gap-2">
+                <Printer className="size-5" aria-hidden="true" />
+                {label}
+              </button>
+            ) : (
+              <button type="button" onClick={onConnect} className="btn-solid btn-cta flex w-full items-center justify-center gap-2">
+                <Printer className="size-5" aria-hidden="true" />
+                {tr("ch.connect")}
+              </button>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
