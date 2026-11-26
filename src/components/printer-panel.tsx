@@ -60,6 +60,7 @@ export type PrinterPanelProps = {
   findViaHelper: () => Promise<void>;
   forget: (uid: string) => void;
   registerPrinter: (name: string, host: string) => string | null;
+  disconnect: () => void;
   foundList: Found[];
   helperCode: string;
   setHelperCode: Set<string>;
@@ -124,7 +125,7 @@ export type PrinterPanelProps = {
 };
 
 export function PrinterPanel(props: PrinterPanelProps) {
-  const { statusCard, addTypedIp, album, aliasDraft, setAliasDraft, appOrigin, checkPrinter, connectUsb, editingUid, setEditingUid, findOnWifi, findViaHelper, forget, registerPrinter, foundList, helperCode, setHelperCode, helperOk, setHelperOk, helperShare, helperUrl, setHelperUrl, history, ipInput, setIpInput, lanBusy, lanNote, setLanNote, linkOpen, setLinkOpen, linkTab, setLinkTab, memo, notice, onPrint, openChooser, pdfName, photoUrl, pickPreset, probes, recentPrinters, reconnect, rememberHost, route, saveAlias, scanMode, scanProg, scanning, selected, selectedId, selectedName, sending, setAskName, setOverrideQuery, setQrTarget, setSelectedId, setShowDiag, setShowIpGuide, showIpGuide, setStep, setSubnetInput, subnetInput, setSupportTab, setUseHelper, useHelper, startWith, statusDot, statusText, stopScan, usbMissed, usbOk, helperStatus, onLauncher } = props;
+  const { statusCard, addTypedIp, album, aliasDraft, setAliasDraft, appOrigin, checkPrinter, connectUsb, editingUid, setEditingUid, findOnWifi, findViaHelper, forget, registerPrinter, disconnect, foundList, helperCode, setHelperCode, helperOk, setHelperOk, helperShare, helperUrl, setHelperUrl, history, ipInput, setIpInput, lanBusy, lanNote, setLanNote, linkOpen, setLinkOpen, linkTab, setLinkTab, memo, notice, onPrint, openChooser, pdfName, photoUrl, pickPreset, probes, recentPrinters, reconnect, rememberHost, route, saveAlias, scanMode, scanProg, scanning, selected, selectedId, selectedName, sending, setAskName, setOverrideQuery, setQrTarget, setSelectedId, setShowDiag, setShowIpGuide, showIpGuide, setStep, setSubnetInput, subnetInput, setSupportTab, setUseHelper, useHelper, startWith, statusDot, statusText, stopScan, usbMissed, usbOk, helperStatus, onLauncher } = props;
   const { t } = useI18n();
   /* 앱(APK): 폰이 직접 찾고 보내니 PC 도우미 탭 · 상태는 감춘다 */
   const phone = useHelper && isPhoneHelper(helperUrl);
@@ -413,31 +414,40 @@ export function PrinterPanel(props: PrinterPanelProps) {
             {notice ? <p className="text-sm text-warn">{msgText(notice)}</p> : null}
             {showFound ? (
               <div>
-                <p className="text-xs font-medium text-muted">{t("pp.found")}</p>
+                <p className="text-sm font-medium text-muted">
+                  {t("pp.found")} <span className="text-faint">{foundList.length}</span>
+                </p>
                 <ul className="mt-1">
                   {foundList.map((item) => {
                     const on = item.id === selectedId;
+                    const connect = () => {
+                      if (sending) return;
+                      setSelectedId(item.id);
+                      setOverrideQuery(null);
+                      setAskName("");
+                      if (item.host) {
+                        rememberHost(item.host, item.title, useHelper);
+                        toast(m("pp.connected", { name: deviceText(item.title) }));
+                      } else setStep(stageForQuery(item.query, item.cmd));
+                    };
                     return (
-                      <li key={item.id}>
-                        <button
-                          type="button"
-                          disabled={sending && !on}
-                          onClick={() => {
-                            if (sending) return;
-                            setSelectedId(item.id);
-                            setOverrideQuery(null);
-                            setAskName("");
-                            if (item.host) rememberHost(item.host, item.title, useHelper);
-                            setStep(item.host ? "print" : stageForQuery(item.query, item.cmd));
-                          }}
-                          className={`flex w-full items-center gap-3 border-b border-line py-2.5 text-left ${on ? "text-accent" : ""}`}
-                        >
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate font-medium">{deviceText(item.title)}</span>
-                            <span className="mt-0.5 block truncate text-xs text-muted">{deviceText(item.subtitle)}</span>
+                      <li key={item.id} className="flex items-center gap-3 border-b border-line py-3 last:border-b-0">
+                        <button type="button" disabled={sending && !on} onClick={on ? undefined : connect} className="min-w-0 flex-1 text-left">
+                          <span className={`block truncate text-[16px] font-semibold ${on ? "text-accent" : "text-fg"}`}>{deviceText(item.title)}</span>
+                          <span className="mt-0.5 block truncate text-sm text-muted">
+                            {on ? <span className="font-semibold text-ok">{t("pp.live")} · </span> : null}
+                            {deviceText(item.subtitle) || viaLabel(item.via)}
                           </span>
-                          <span className={`text-xs ${item.live ? "text-ok" : "text-faint"}`}>{item.live ? t("pp.live") : viaLabel(item.via)}</span>
                         </button>
+                        {on ? (
+                          <button type="button" disabled={sending} onClick={disconnect} className="chip h-10 shrink-0 rounded-full px-4 text-[15px] font-semibold disabled:opacity-50">
+                            {t("pp.disconnect")}
+                          </button>
+                        ) : (
+                          <button type="button" disabled={sending} onClick={connect} className="btn-solid h-10 shrink-0 rounded-full px-4 text-[15px] font-semibold disabled:opacity-50">
+                            {t("pp.connect")}
+                          </button>
+                        )}
                       </li>
                     );
                   })}
@@ -464,6 +474,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
         reconnect={reconnect}
         forget={forget}
         registerPrinter={registerPrinter}
+        disconnect={disconnect}
         editingUid={editingUid}
         setEditingUid={setEditingUid}
         aliasDraft={aliasDraft}

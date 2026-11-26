@@ -19,6 +19,7 @@ export type MyPrintersProps = {
   forget: (uid: string) => void;
   /** 이름 + IP로 등록. 성공하면 null, 실패하면 오류 문구 */
   registerPrinter: (name: string, host: string) => string | null;
+  disconnect: () => void;
   editingUid: string | null;
   setEditingUid: (uid: string | null) => void;
   aliasDraft: string;
@@ -29,7 +30,7 @@ export type MyPrintersProps = {
 };
 
 export function MyPrinters(props: MyPrintersProps) {
-  const { items, isCurrent, phone, probes, checkPrinter, reconnect, forget, registerPrinter, editingUid, setEditingUid, aliasDraft, setAliasDraft, saveAlias, openQr, helperShare } = props;
+  const { items, isCurrent, phone, probes, checkPrinter, reconnect, forget, registerPrinter, disconnect, editingUid, setEditingUid, aliasDraft, setAliasDraft, saveAlias, openQr, helperShare } = props;
   const { t } = useI18n();
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
@@ -169,10 +170,15 @@ export function MyPrinters(props: MyPrintersProps) {
                     </span>
                     <button type="button" onClick={() => reconnect(item)} className="min-w-0 flex-1 text-left">
                       <span className="block truncate text-[16px] font-semibold text-fg">{printerLabel(item)}</span>
-                      <span className="mt-0.5 block truncate text-sm text-muted">{linkText(item)}</span>
+                      <span className="mt-0.5 block truncate text-sm text-muted">
+                        {current ? <span className="font-semibold text-ok">{t("pp.live")} · </span> : null}
+                        {linkText(item)}
+                      </span>
                     </button>
                     {current ? (
-                      <span className="current-badge shrink-0 rounded-full px-3 py-1.5 text-[13px] font-semibold">{t("pp.current")}</span>
+                      <button type="button" onClick={disconnect} className="chip h-10 shrink-0 rounded-full px-4 text-[15px] font-semibold">
+                        {t("pp.disconnect")}
+                      </button>
                     ) : (
                       <button type="button" onClick={() => reconnect(item)} className="btn-solid h-10 shrink-0 rounded-full px-4 text-[15px] font-semibold">
                         {t("pp.connect")}

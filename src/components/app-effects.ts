@@ -192,7 +192,7 @@ export function useOnline() {
 }
 
 export type WifiExtra = { cmd?: string; ipp?: boolean; raw9100?: boolean; canon?: boolean };
-type AddWifi = (host: string, answered: boolean, opts?: { title?: string; subtitle?: Msg; query?: string; select?: boolean } & WifiExtra) => unknown;
+type AddWifi = (host: string, answered: boolean, opts?: { title?: string; subtitle?: Msg; query?: string; select?: boolean; viaHelper?: boolean } & WifiExtra) => unknown;
 
 /** 와이파이 프린터 찾기(빠른/전체·대역 칩)와 PC 도우미 실제 검색. 렌더마다 최신 값으로 다시 만든다(훅 아님). */
 export function lanSearch(d: {
@@ -244,7 +244,7 @@ export function lanSearch(d: {
         onStatus: setLanNote,
         onProgress: setScanProg,
         onFound: (hit) => {
-          addWifi(hit.host, true, { select: first });
+          addWifi(hit.host, true, { select: first, viaHelper: false });
           first = false;
         },
       });
@@ -305,6 +305,7 @@ export function lanSearch(d: {
           subtitle: phone ? m("ph.checked", { host: row.host, how: foundHow(row) }) : m("fx.helperChecked", { host: row.host, raw: tr(row.raw9100 ? "fx.raw9100" : "fx.raw9100No"), ipp: row.ipp ? " · IPP" : "" }),
           query: row.model || row.host,
           select: index === 0,
+          viaHelper: true,
           cmd: row.cmd || undefined,
           ipp: row.ipp,
           raw9100: row.raw9100,
