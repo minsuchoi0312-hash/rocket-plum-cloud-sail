@@ -191,14 +191,14 @@ export function MyPrinters(props: MyPrintersProps) {
                       <span>{probe.state === "checking" ? t("pp.probeChecking") : probe.state === "on" ? t("pp.probeOn", { ms: probe.ms ?? "?", via: probe.via ?? "" }) : t("pp.probeOff", { via: probe.via || "-" })}</span>
                     </p>
                   ) : null}
-                  <div className="mt-1.5 flex items-center justify-end gap-1 pl-[52px]">
+                  <div className="mp-acts">
                     {item.host && !current ? (
                       <>
-                        <button type="button" onClick={() => void checkPrinter(item)} disabled={probe?.state === "checking"} className="ghost-btn text-muted disabled:opacity-50" aria-label={t("pp.probeBtn")} title={t("pp.probeBtn")}>
-                          <RefreshCw className="size-5" aria-hidden="true" />
+                        <button type="button" onClick={() => void checkPrinter(item)} disabled={probe?.state === "checking"} className="mp-act" aria-label={t("pp.probeBtn")} title={t("pp.probeBtn")}>
+                          <RefreshCw className="size-[18px]" aria-hidden="true" />
                         </button>
-                        <button type="button" onClick={() => openQr({ name: printerLabel(item), ip: item.host || "", helper: helperShare })} className="ghost-btn text-muted" aria-label={t("pp.qrAria", { name: printerLabel(item) })} title={t("pp.qrShare")}>
-                          <QrCode className="size-5" aria-hidden="true" />
+                        <button type="button" onClick={() => openQr({ name: printerLabel(item), ip: item.host || "", helper: helperShare })} className="mp-act" aria-label={t("pp.qrAria", { name: printerLabel(item) })} title={t("pp.qrShare")}>
+                          <QrCode className="size-[18px]" aria-hidden="true" />
                         </button>
                       </>
                     ) : null}
@@ -208,14 +208,14 @@ export function MyPrinters(props: MyPrintersProps) {
                         setEditingUid(item.uid);
                         setAliasDraft(item.alias || "");
                       }}
-                      className="ghost-btn text-muted"
+                      className="mp-act"
                       aria-label={t("pp.aliasEdit", { name: printerLabel(item) })}
                       title={t("pp.aliasEdit", { name: printerLabel(item) })}
                     >
-                      <Pencil className="size-5" aria-hidden="true" />
+                      <Pencil className="size-[18px]" aria-hidden="true" />
                     </button>
-                    <button type="button" onClick={() => setAskDelete(item.uid)} className="ghost-btn text-muted" aria-label={t("pp.delete", { name: printerLabel(item) })} title={t("pp.delete", { name: printerLabel(item) })}>
-                      <Trash2 className="size-5" aria-hidden="true" />
+                    <button type="button" onClick={() => setAskDelete(item.uid)} className="mp-act" aria-label={t("pp.delete", { name: printerLabel(item) })} title={t("pp.delete", { name: printerLabel(item) })}>
+                      <Trash2 className="size-[18px]" aria-hidden="true" />
                     </button>
                   </div>
                 </>
