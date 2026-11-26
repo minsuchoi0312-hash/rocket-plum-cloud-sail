@@ -5,8 +5,9 @@
  * - 개인정보보호법 제30조(처리방침에 적을 내용)와 Google Play 사용자 데이터 정책에 맞춰 썼어요.
  *   앱이 개인정보를 모으지 않으므로 '개인정보 수집 동의'는 받지 않아요(필요 없는 동의를 받지 않는 게 원칙).
  */
-import { SUPPORT_EMAIL } from "@/lib/support";
-import type { Lang } from "@/lib/i18n/types";
+/* 상대 경로 + .ts: scripts/make-legal-pages.mjs가 Node로 바로 읽을 수 있게 (타입 import는 실행 때 지워진다) */
+import { SUPPORT_EMAIL } from "./contact.ts";
+import type { Lang } from "./i18n/types.ts";
 
 /** 시행일 — 약관 · 처리방침을 고치면 이 값을 바꾼다 */
 export const LEGAL_VERSION = "2026-11-26";
@@ -80,7 +81,7 @@ const KO: Record<LegalKind, LegalDoc> = {
           "· 내 프린터: 프린터 이름 · IP 주소 · 별명",
           "· 인쇄 기록: 파일 이름 · 쪽수 · 프린터 · 시각(최근 몇 건)",
           "· 설정: 인쇄 설정 · 언어 · 화면 테마 · 진단 기록",
-          "앱의 '기록 지우기'나 앱 삭제로 바로 지워져요. 기기 백업으로도 복사되지 않아요. '백업 내려받기'는 이용자가 직접 고른 곳에만 파일로 저장돼요.",
+          "앱의 '기록 지우기'나 앱 삭제로 바로 지워져요. 클라우드 백업이나 새 폰으로 옮기기(기기 간 이전)로도 복사되지 않아요. '백업 파일 받기'는 이용자가 직접 고른 곳에만 파일로 저장돼요.",
         ],
       },
       {
@@ -123,7 +124,7 @@ const KO: Record<LegalKind, LegalDoc> = {
         h: "9. 안전 조치",
         p: [
           "앱 안 프린터 도우미는 이 기기 안(127.0.0.1)에서만 열리고, 다른 앱 · 기기가 쓰지 못하게 코드로 잠가요.",
-          "앱 저장 공간은 기기 백업(클라우드)에 복사되지 않게 해 두었어요.",
+          "앱 저장 공간은 클라우드 백업과 기기 간 이전에서 빠지도록 해 두었어요.",
         ],
       },
       { h: "10. 쿠키 등 자동 수집 장치", p: ["쓰지 않아요. 설정은 기기 안 저장 공간(localStorage)에만 두고 밖으로 보내지 않아요."] },
@@ -188,7 +189,7 @@ const EN: Record<LegalKind, LegalDoc> = {
           "· My printers: name, IP address, nickname",
           "· Print history: file name, pages, printer, time (recent items)",
           "· Settings: print settings, language, theme, diagnostic log",
-          "It is erased by 'Clear history' or by uninstalling the App, and is excluded from device backups. 'Download backup' saves a file only where you choose.",
+          "It is erased by 'Clear history' or by uninstalling the App, and is excluded from cloud backups and device-to-device transfer. 'Download backup file' saves a file only where you choose.",
         ],
       },
       { h: "3. Files you print", p: ["Photos, PDFs and text you pick or share to the App are converted on your device and sent only to the printer you choose on the same Wi-Fi.", "Files are not copied and are released from memory after printing."] },
@@ -203,7 +204,7 @@ const EN: Record<LegalKind, LegalDoc> = {
       },
       { h: "7. Deletion", p: ["On-device data is gone as soon as you clear it or uninstall the App. Support emails are deleted without delay after replying."] },
       { h: "8. Your rights", p: ["You (or a legal guardian for children under 14) may request access, correction, deletion or suspension at any time. On-device data can be deleted in the App; email requests about support mail to the address below.", "Because the App collects no personal information, it collects none from children under 14."] },
-      { h: "9. Security", p: ["The built-in printer helper listens only on this device (127.0.0.1) and is locked with a code so other apps or devices cannot use it.", "App storage is excluded from cloud device backups."] },
+      { h: "9. Security", p: ["The built-in printer helper listens only on this device (127.0.0.1) and is locked with a code so other apps or devices cannot use it.", "App storage is excluded from cloud backups and device-to-device transfer."] },
       { h: "10. Cookies and trackers", p: ["None. Settings stay in on-device storage (localStorage) and are not sent anywhere."] },
       { h: "11. Privacy officer", p: [`Nuguna Print operator (individual developer) · Email ${SUPPORT_EMAIL || "via 'Contact' in the App"}`] },
       { h: "12. Remedies (Korea)", p: ["Personal Information Dispute Mediation Committee 1833-6972 (www.kopico.go.kr)", "Personal Information Infringement Report Center 118 (privacy.kisa.or.kr)", "Supreme Prosecutors' Office 1301 · Korean National Police Agency 182"] },
