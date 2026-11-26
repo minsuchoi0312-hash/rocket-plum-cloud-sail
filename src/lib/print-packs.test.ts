@@ -19,6 +19,8 @@ test("찾은 프린터 → 알맞은 팩", () => {
   assert.equal(pick("Epson Stylus C80", { ipp: true, cmd: "application/pdf" }), "standard");
   assert.equal(pick("Canon PIXMA MG3650", { ipp: true, cmd: "application/pdf,image/urf" }), "standard");
   assert.equal(pick("Canon PIXMA MP250"), "canon(준비 중)");
+  assert.equal(pick("Canon MX870 series", { raw9100: false }), "canon");
+  assert.equal(pick("Canon MG3600 series", { raw9100: false, ipp: true, cmd: "application/pdf,image/urf" }), "standard");
   assert.equal(pick("HP ENVY 6000"), "inkjet");
 });
 

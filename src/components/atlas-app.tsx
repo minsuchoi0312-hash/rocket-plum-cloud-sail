@@ -46,6 +46,7 @@ import { PackSheet } from "@/components/pack-sheet";
 import { escprEndPage, escprJobFooter, escprJobHeader, escprPageCommands } from "@/lib/escpr";
 import { splJobFooter, splJobHeader, splPageCommands, splProfile } from "@/lib/spl";
 import { pcl3JobFooter, pcl3JobHeader, pcl3PageCommands, pcl3Profile } from "@/lib/pcl3";
+import { canonJobFooter, canonJobHeader, canonPageCommands, canonProfile } from "@/lib/canon";
 import { laserCmd, packFor, packInstalled, PACKS, type PackChoice, type PackDef, type PackId } from "@/lib/print-packs";
 import { isPhoneHelper } from "@/lib/phone-helper";
 import type { WifiExtra } from "@/components/app-effects";
@@ -823,8 +824,10 @@ function AtlasMain() {
   /* HP 잉크젯 팩: PCL3 컬러 래스터 */
   const pcl3Job = Boolean(phoneHelper && helperLive && activePack?.route === "pcl3" && pcl3Profile(splModel));
   /** 컬러로 보낼 수 있는 래스터 팩(엡손 · HP 잉크젯) */
-  const colorJob = escprJob || pcl3Job;
-  const ownRaster = escprJob || splJob || pcl3Job;
+  /* 캐논 팩: PIXMA 래스터, 전송은 BJNP(8611) */
+  const canonJob = Boolean(phoneHelper && helperLive && activePack?.route === "bjnp" && canonProfile(splModel));
+  const colorJob = escprJob || pcl3Job || canonJob;
+  const ownRaster = escprJob || splJob || pcl3Job || canonJob;
   const marginMm = MARGIN_MM[margin];
   /* 여백을 넣으면 원본 PDF를 그대로 넘길 수 없으니(PDF Direct 불가) 래스터로 보낸다 */
   /* 복사기 실제 상태 (도우미 /status 또는 USB 장치 정보) */
@@ -1273,7 +1276,7 @@ function AtlasMain() {
       helperJob.length = 0;
       setPhase({ stage: "send", done: 1, total: 1, percent: 0 });
       setProgress(90);
-      await helperSend(helperUrl, helperCode, selected.host, job);
+      await helperSend(helperUrl, helperCode, selected.host, job, canonJob ? 8611 : 9100);
       diag(tr("ap.logHelperSend", { n: total }));
     };
     stopRef.current = false;
@@ -1294,7 +1297,9 @@ function AtlasMain() {
           ? splPageCommands(canvas, { ...splOpts, mode })
           : pcl3Job
             ? pcl3PageCommands(canvas, { paper, color: !gray, profile: pcl3Profile(splModel)! })
-            : canvasPclCommands(canvas, mode);
+            : canonJob
+              ? canonPageCommands(canvas, { paper, color: !gray, profile: canonProfile(splModel)!, first: escprPages.length === 0 })
+              : canvasPclCommands(canvas, mode);
     const sendPackets = async (commands: Uint8Array[], progress: (percent: number) => void) => {
       if (ownRaster) {
         escprPages.push(commands);
@@ -1463,7 +1468,14 @@ function AtlasMain() {
           }
         }
         if (stopRef.current) throw new Error(tr("ap.stopped"));
-        if (pcl3Job) {
+        if (canonJob) {
+          /* 캐논: [XML] → 쪽들(부수만큼 되풀이, 첫 쪽에만 리셋) → ESC @ [XML] */
+          const profile = canonProfile(splModel)!;
+          const parts: Uint8Array[] = [canonJobHeader(profile)];
+          for (let copy = 0; copy < Math.max(1, jobCopies); copy++) for (const pageCommands of escprPages) parts.push(...pageCommands);
+          parts.push(canonJobFooter(profile));
+          await write(concatBytes(parts), () => setProgress(100), () => false, true);
+        } else if (pcl3Job) {
           /* HP 잉크젯: 리셋 · 용지 · 부수 → 쪽들 → 리셋 */
           const parts: Uint8Array[] = [pcl3JobHeader({ paper, copies: jobCopies })];
           for (const pageCommands of escprPages) parts.push(...pageCommands);

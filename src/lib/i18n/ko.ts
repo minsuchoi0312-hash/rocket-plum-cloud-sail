@@ -860,7 +860,7 @@ export const ko = {
   "pk.inkjet": "잉크젯 팩",
   "pk.inkjetSub": "HP PCL3 · 컬러",
   "pk.canon": "캐논 팩",
-  "pk.canonSub": "BJNP · 캐논 래스터",
+  "pk.canonSub": "PIXMA · BJNP · 컬러",
   "pk.need": "{pack}이 필요해요",
   "pk.needSub": "{model}에 맞는 인쇄 팩이에요. 한 번만 설치하면 돼요.",
   "pk.soon": "전용 팩을 준비 중이에요",

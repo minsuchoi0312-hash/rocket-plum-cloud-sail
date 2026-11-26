@@ -1,12 +1,13 @@
 import { tr } from "@/lib/i18n/core";
 import { cleanIPv4, cleanText } from "@/lib/sanitize";
-export async function helperSend(base: string, code: string, host: string, bytes: Uint8Array) {
+/** port: 9100(Raw) 기본, 8611 이면 폰 내장 도우미가 캐논 BJNP 로 보낸다 */
+export async function helperSend(base: string, code: string, host: string, bytes: Uint8Array, port = 9100) {
   const root = base.replace(/\/$/, "");
   let response: Response;
   const copy = new Uint8Array(bytes.byteLength);
   copy.set(bytes);
   try {
-    response = await fetch(`${root}/print?host=${encodeURIComponent(host)}&port=9100`, {
+    response = await fetch(`${root}/print?host=${encodeURIComponent(host)}&port=${port}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/octet-stream",

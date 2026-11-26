@@ -862,7 +862,7 @@ export const ja: Record<MsgKey, string> = {
   "pk.inkjet": "インクジェットパック",
   "pk.inkjetSub": "HP PCL3 · カラー",
   "pk.canon": "キヤノンパック",
-  "pk.canonSub": "BJNP · キヤノン ラスター",
+  "pk.canonSub": "PIXMA · BJNP · カラー",
   "pk.need": "{pack}が必要です",
   "pk.needSub": "{model}用の印刷パックです。インストールは一度だけです。",
   "pk.soon": "専用パックを準備中です",

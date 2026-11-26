@@ -862,7 +862,7 @@ export const zh: Record<MsgKey, string> = {
   "pk.inkjet": "喷墨包",
   "pk.inkjetSub": "HP PCL3 · 彩色",
   "pk.canon": "佳能包",
-  "pk.canonSub": "BJNP · 佳能光栅",
+  "pk.canonSub": "PIXMA · BJNP · 彩色",
   "pk.need": "需要{pack}",
   "pk.needSub": "这是适用于 {model} 的打印包，只需安装一次。",
   "pk.soon": "专用包准备中",

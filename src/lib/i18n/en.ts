@@ -862,7 +862,7 @@ export const en: Record<MsgKey, string> = {
   "pk.inkjet": "Inkjet pack",
   "pk.inkjetSub": "HP PCL3 · color",
   "pk.canon": "Canon pack",
-  "pk.canonSub": "BJNP · Canon raster",
+  "pk.canonSub": "PIXMA · BJNP · color",
   "pk.need": "This printer needs the {pack}",
   "pk.needSub": "It's the print pack for {model}. You only install it once.",
   "pk.soon": "Dedicated pack coming soon",
