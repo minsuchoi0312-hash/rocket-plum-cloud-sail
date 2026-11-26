@@ -890,7 +890,7 @@ export const en: Record<MsgKey, string> = {
   "ph.find": "Find printers",
   "ph.finding": "Searching…",
   "ph.scan": "Searching this Wi‑Fi for printers… (mDNS · SNMP · ports)",
-  "ph.scanning": "Searching Wi‑Fi {where}… (usually 3–8 s)",
+  "ph.scanning": "Searching {where}… (usually 3–8 s)",
   "ph.thisWifi": "this Wi‑Fi",
   "ph.found": "Found {n} printers ({sec} s)",
   "ph.none": "No printers found on {where}. Check the printer is on and on the same Wi‑Fi, or enter its IP.",

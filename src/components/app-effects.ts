@@ -4,7 +4,7 @@
  */
 import { useEffect, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import { diag } from "@/lib/diag";
-import { helperDiscover, helperInfo, helperPing } from "@/lib/helper-send";
+import { helperDiscover, helperInfo, helperPing, helperProgress } from "@/lib/helper-send";
 import { isValidIPv4, isValidSubnet, scanLan, type ScanProgress } from "@/lib/lan-find";
 import type { LinkTab } from "@/lib/app-utils";
 import { m, tr, useI18n, type Msg } from "@/lib/i18n";
@@ -289,8 +289,24 @@ export function lanSearch(d: {
     const pickedSubnet = subnetArg ?? (phone ? "" : subnetInput);
     const subnet = isValidSubnet(pickedSubnet) ? pickedSubnet.trim() : "";
     setLanNote(phone ? m("ph.scanning", { where: subnet ? `${subnet}.x` : tr("ph.thisWifi") }) : m("fx.helperScanning", { where: subnet ? `${subnet}.1~254` : tr("fx.thisPcNet") }));
+    /* 폰 내장 도우미는 /progress 로 진행률을 알려 준다 — 웹 검색처럼 % 막대로 보여 주기 */
+    let polling = true;
+    const poll = async () => {
+      while (polling && !ac.signal.aborted) {
+        const prog = await helperProgress(helperUrl, helperCode);
+        if (!polling) break;
+        if (!prog) {
+          if (!phone) break;
+        } else if (prog.running && prog.total > 0) {
+          setScanProg({ done: Math.min(prog.done, prog.total), total: prog.total, found: prog.found });
+        }
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+    };
+    void poll();
     try {
       const result = await helperDiscover(helperUrl, helperCode, subnet, ac.signal);
+      polling = false;
       setHelperOk(true);
       setUseHelper(true);
       diag(tr("fx.logHelperScan", { nets: result.subnets.join(","), n: result.printers.length, ms: result.ms, list: result.printers.map((row) => `${row.host}=${row.model || "?"}`).join(" ") }));
@@ -318,6 +334,8 @@ export function lanSearch(d: {
     } catch (error) {
       setLanNote(error instanceof Error ? error.message : tr("fx.helperFail"));
     } finally {
+      polling = false;
+      setScanProg(null);
       setLanBusy(false);
       setScanMode(null);
       scanAbortRef.current = null;

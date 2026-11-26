@@ -890,7 +890,7 @@ export const zh: Record<MsgKey, string> = {
   "ph.find": "查找打印机",
   "ph.finding": "查找中…",
   "ph.scan": "正在 Wi‑Fi 中查找打印机…（mDNS · SNMP · 端口）",
-  "ph.scanning": "正在查找 Wi‑Fi {where}…（通常 3~8 秒）",
+  "ph.scanning": "正在查找 {where}…（通常 3~8 秒）",
   "ph.thisWifi": "此 Wi‑Fi",
   "ph.found": "找到 {n} 台打印机（{sec} 秒）",
   "ph.none": "在 {where} 中未找到打印机。请确认打印机已开机且在同一 Wi‑Fi，或直接输入 IP。",

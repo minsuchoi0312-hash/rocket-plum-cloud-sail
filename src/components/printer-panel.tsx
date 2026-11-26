@@ -230,9 +230,10 @@ export function PrinterPanel(props: PrinterPanelProps) {
                 </div>
                 {lanBusy && scanProg && scanProg.total > 0 ? (
                   <div className="scan-box" aria-live="polite">
-                    <div className="flex items-center justify-between gap-2 text-xs">
-                      <span className="tabular-nums text-fg">
-                        {t("pp.scanProg", { done: scanProg.done, total: scanProg.total, found: scanProg.found })}
+                    <div className="flex items-center justify-between gap-2 text-sm">
+                      <span className="flex min-w-0 items-baseline gap-2 tabular-nums text-fg">
+                        <b className="text-[18px] font-bold text-accent">{Math.round((scanProg.done / scanProg.total) * 100)}%</b>
+                        <span className="truncate text-muted">{t("pp.scanProg", { done: scanProg.done, total: scanProg.total, found: scanProg.found })}</span>
                       </span>
                       <button type="button" onClick={stopScan} className="inline-flex items-center gap-1 font-semibold text-accent">
                         <X className="size-3.5" aria-hidden="true" />
@@ -244,7 +245,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
                     </div>
                   </div>
                 ) : null}
-                {lanBusy && scanMode === "helper" ? (
+                {lanBusy && scanMode === "helper" && !(scanProg && scanProg.total > 0) ? (
                   <div className="scan-box flex items-center justify-between text-xs">
                     <span className="text-fg">{t(phone ? "ph.scan" : "pp.helperScan")}</span>
                     <button type="button" onClick={stopScan} className="font-semibold text-accent">

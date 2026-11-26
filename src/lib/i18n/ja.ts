@@ -890,7 +890,7 @@ export const ja: Record<MsgKey, string> = {
   "ph.find": "プリンターを探す",
   "ph.finding": "検索中…",
   "ph.scan": "Wi‑Fiでプリンターを検索中…(mDNS・SNMP・ポート)",
-  "ph.scanning": "Wi‑Fi {where} を検索中…(通常 3〜8 秒)",
+  "ph.scanning": "{where} を検索中…(通常 3〜8 秒)",
   "ph.thisWifi": "このWi‑Fi",
   "ph.found": "プリンターが {n} 台見つかりました({sec} 秒)",
   "ph.none": "{where} でプリンターが見つかりませんでした。電源と同じWi‑Fiか確認するか、IPを入力してください。",

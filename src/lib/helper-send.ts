@@ -72,7 +72,21 @@ export async function helperDiscover(base: string, code: string, subnet = "", si
   return { subnets, printers, ms: typeof body.ms === "number" ? body.ms : 0 };
 }
 
-export type HelperProbe = { open: boolean; ms: number | null };
+/** 도우미 검색 진행률 (폰 내장 도우미만 지원 — 없으면 null) */
+export async function helperProgress(base: string, code: string): Promise<{ done: number; total: number; found: number; running: boolean } | null> {
+  const root = base.replace(/\/$/, "");
+  try {
+    const response = await fetch(`${root}/progress`, { headers: code ? { "X-Helper-Code": code } : {} });
+    if (!response.ok) return null;
+    const body = (await response.json()) as { done?: unknown; total?: unknown; found?: unknown; running?: unknown };
+    const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0);
+    return { done: num(body.done), total: num(body.total), found: num(body.found), running: body.running === true };
+  } catch {
+    return null;
+  }
+}
+
+export type HelperProbe ={ open: boolean; ms: number | null };
 
 /** 도우미로 한 대의 9100 응답·지연시간 확인 */
 export async function helperProbe(base: string, code: string, ip: string, signal?: AbortSignal): Promise<HelperProbe> {

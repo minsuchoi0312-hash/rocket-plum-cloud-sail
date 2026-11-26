@@ -888,7 +888,7 @@ export const ko = {
   "ph.find": "프린터 찾기",
   "ph.finding": "찾는 중…",
   "ph.scan": "와이파이에서 프린터를 찾는 중… (mDNS · SNMP · 포트)",
-  "ph.scanning": "{where} 와이파이에서 찾는 중… (보통 3~8초)",
+  "ph.scanning": "{where}에서 찾는 중… (보통 3~8초)",
   "ph.thisWifi": "이 와이파이",
   "ph.found": "프린터 {n}대를 찾았어요 ({sec}초)",
   "ph.none": "{where}에서 프린터를 찾지 못했어요. 프린터 전원과 같은 와이파이인지 확인하거나 IP를 직접 입력해 주세요.",
