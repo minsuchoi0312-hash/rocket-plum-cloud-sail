@@ -666,6 +666,8 @@ function AtlasMain() {
       return next;
     });
     if (photoUrlRef.current === url) photoUrlRef.current = null;
+    /* "사진 N장을 추가했어요" 같은 지난 안내는 지운 뒤엔 맞지 않으니 비운다 */
+    setNotice("");
     setPhotoTurns((prev) => {
       const next = { ...prev };
       delete next[url];

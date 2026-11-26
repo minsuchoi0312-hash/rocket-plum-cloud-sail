@@ -1572,6 +1572,41 @@ button.btn-send:disabled {
   background: color-mix(in srgb, var(--color-bad) 10%, transparent);
 }
 
+/* 사진 썸네일 오른쪽 위 × — 보이는 원은 22px, 누르는 곳은 36px */
+.thumb-x {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 68%);
+  color: #fff;
+  box-shadow: 0 0 0 1.5px rgb(255 255 255 / 85%);
+  transition: transform 160ms var(--ease-out), background-color 160ms var(--ease-out);
+}
+
+.thumb-x::before {
+  content: "";
+  position: absolute;
+  inset: -7px;
+}
+
+.thumb-x:hover,
+.thumb-x:active:not(:disabled) {
+  background: var(--color-bad);
+}
+
+.thumb-x:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+.thumb-x:disabled {
+  opacity: 0.4;
+}
+
 .thumb-num {
   position: absolute;
   left: 2px;

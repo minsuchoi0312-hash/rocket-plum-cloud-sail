@@ -478,6 +478,7 @@ export const en: Record<MsgKey, string> = {
   "ch.paste": "· paste with Ctrl+V",
   "ch.photosAria": "Selected photos",
   "ch.photoN": "Select photo {n}",
+  "ch.removeN": "Remove photo {n}",
   "ch.photoGroup": "Selected photo {n}",
   "ch.forward": "Earlier",
   "ch.back": "Later",

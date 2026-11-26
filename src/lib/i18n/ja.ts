@@ -478,6 +478,7 @@ export const ja: Record<MsgKey, string> = {
   "ch.paste": "・Ctrl+Vで貼り付け",
   "ch.photosAria": "選択した写真",
   "ch.photoN": "{n}枚目の写真を選択",
+  "ch.removeN": "{n}枚目の写真を外す",
   "ch.photoGroup": "選択中の{n}枚目の写真",
   "ch.forward": "前へ",
   "ch.back": "後ろへ",

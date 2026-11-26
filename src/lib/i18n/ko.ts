@@ -476,6 +476,7 @@ export const ko = {
   "ch.paste": "· Ctrl+V로 붙여넣기",
   "ch.photosAria": "선택한 사진",
   "ch.photoN": "{n}번째 사진 선택",
+  "ch.removeN": "{n}번째 사진 빼기",
   "ch.photoGroup": "선택한 {n}번째 사진",
   "ch.forward": "앞으로",
   "ch.back": "뒤로",

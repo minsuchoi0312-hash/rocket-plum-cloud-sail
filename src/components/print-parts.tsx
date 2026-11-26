@@ -4,7 +4,7 @@
  */
 import { phoneApp } from "@/lib/phone-helper";
 import { useState, type ReactNode } from "react";
-import { ArrowLeft, ArrowRight, Bookmark, ChevronDown, Minus, Plus, Printer, RotateCw, Trash2, Upload } from "@/components/icons";
+import { ArrowLeft, ArrowRight, Bookmark, ChevronDown, Minus, Plus, Printer, RotateCw, Trash2, Upload, X } from "@/components/icons";
 import type { MatchResult } from "@/lib/atlas";
 import { MAIN_PAPERS, MORE_PAPERS, paperHint, paperLabel, type DuplexMode, type OfficePaper } from "@/lib/office-job";
 import type { PrintRoute } from "@/lib/print-route";
@@ -370,11 +370,15 @@ export function PrintChooser({
           {album.length ? (
             <ul className="flex gap-2 overflow-x-auto pb-1" aria-label={tr("ch.photosAria")}>
               {album.map((src, index) => (
-                <li key={src} className="shrink-0">
+                <li key={src} className="thumb-item relative shrink-0">
                   <button type="button" onClick={() => onFocusPhoto(src)} aria-pressed={src === photoUrl} aria-label={tr("ch.photoN", { n: index + 1 })} className={`relative block overflow-hidden rounded-lg border-2 ${src === photoUrl ? "border-accent" : "border-line"}`}>
                     <img src={src} alt="" className="h-[68px] w-[68px] object-cover" style={{ transform: `rotate(${photoTurns[src] || 0}deg)` }} />
                     <span className="thumb-num">{index + 1}</span>
                     {photoTurns[src] ? <span className="thumb-badge">{photoTurns[src]}°</span> : null}
+                  </button>
+                  {/* 실수로 넣은 사진은 × 한 번으로 빼기 */}
+                  <button type="button" disabled={sending} onClick={() => onRemovePhoto(src)} className="thumb-x" aria-label={tr("ch.removeN", { n: index + 1 })} title={tr("ch.removeN", { n: index + 1 })}>
+                    <X className="size-3.5" aria-hidden="true" />
                   </button>
                 </li>
               ))}

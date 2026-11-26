@@ -478,6 +478,7 @@ export const zh: Record<MsgKey, string> = {
   "ch.paste": "· Ctrl+V 粘贴",
   "ch.photosAria": "已选照片",
   "ch.photoN": "选择第 {n} 张照片",
+  "ch.removeN": "移除第 {n} 张照片",
   "ch.photoGroup": "已选第 {n} 张照片",
   "ch.forward": "前移",
   "ch.back": "后移",
