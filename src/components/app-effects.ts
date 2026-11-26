@@ -8,7 +8,7 @@ import { helperDiscover, helperInfo, helperPing, helperProgress } from "@/lib/he
 import { isValidIPv4, isValidSubnet, scanLan, type ScanProgress } from "@/lib/lan-find";
 import type { LinkTab } from "@/lib/app-utils";
 import { m, tr, useI18n, type Msg } from "@/lib/i18n";
-import { cleanIPv4, cleanText, safeHttpOrigin } from "@/lib/sanitize";
+import { cleanIPv4, cleanText, localHelperOrigin } from "@/lib/sanitize";
 import type { HelperStatus } from "@/components/printer-panel";
 import { isPhoneHelper } from "@/lib/phone-helper";
 
@@ -35,7 +35,7 @@ export function useLinkParams(h: {
     if (!ready) return;
     const params = new URLSearchParams(window.location.search);
     /* 쿼리 값은 모두 중앙 정화: 도우미는 http(s) origin만, IP는 엄격한 IPv4, 이름은 제어 문자 제거 */
-    const helper = safeHttpOrigin(params.get("helper"));
+    const helper = localHelperOrigin(params.get("helper"));
     const code = (params.get("code") || "").replace(/\D/g, "").slice(0, 6);
     const ip = cleanIPv4(params.get("ip"));
     const name = cleanText(params.get("name"), 40);

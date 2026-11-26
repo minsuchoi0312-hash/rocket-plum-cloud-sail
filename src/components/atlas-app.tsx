@@ -2097,7 +2097,7 @@ function AtlasMain() {
         />
       ) : null}
       {step === "print" ? (
-        <button type="button" onClick={backToConnect} disabled={sending} className="help-row disabled:opacity-40">
+        <button type="button" onClick={backToConnect} disabled={sending} className="help-row step-in disabled:opacity-40">
           <span className="link-avatar" aria-hidden="true">
             {statusDot.includes("usb") ? <UsbIcon className="size-6" /> : statusDot.includes("wifi") ? <WifiIcon className="size-6" /> : statusDot.includes("helper") ? <MonitorIcon className="size-6" /> : <PrinterIcon className="size-6" />}
             <span className={`link-avatar-dot ${statusDot}`} />
@@ -2113,7 +2113,7 @@ function AtlasMain() {
       {step === "connect" ? (
         <PrinterPanel {...{ addTypedIp, album, aliasDraft, setAliasDraft, appOrigin, checkPrinter, connectUsb, editingUid, setEditingUid, findOnWifi, findViaHelper, forget, registerPrinter, disconnect, foundList, helperCode, setHelperCode, helperOk, setHelperOk, helperShare, helperUrl, setHelperUrl, history, ipInput, setIpInput, lanBusy, lanNote, setLanNote, linkOpen, setLinkOpen, linkTab, setLinkTab, memo, notice, onPrint, openChooser, pdfName, photoUrl, pickPreset, probes, recentPrinters, reconnect, rememberHost, route, saveAlias, scanMode, scanProg, scanning, selected, selectedId, selectedName, sending, setAskName, setOverrideQuery, setQrTarget, setSelectedId, setShowDiag, setShowIpGuide, showIpGuide, setStep, setSubnetInput, subnetInput, setSupportTab, setUseHelper, useHelper, startWith, statusDot, statusText, stopScan, usbMissed, usbOk, helperStatus, onLauncher }} statusCard={selected?.host || selected?.usbKey ? <PrinterStatusCard status={printer.status} loading={printer.loading} error={printer.error} onRefresh={() => void printer.refresh()} helperNeeded={!helperAlive && !selected?.usbKey} /> : null} />
       ) : (
-        <section className="panel rounded-3xl p-4 sm:p-5">
+        <section className="panel step-in rounded-3xl p-4 sm:p-5">
           {step === "confirm" ? (
             <form
               onSubmit={(event) => {

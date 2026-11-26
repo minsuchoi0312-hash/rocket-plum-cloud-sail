@@ -16,7 +16,7 @@
     "preview:stop": "node scripts/preview.mjs stop",
     "typecheck": "tsc --noEmit",
     "check:auth": "node scripts/check-auth-invariant.mjs",
-    "test": "node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/preview-path-prefix.test.ts src/lib/escpr.test.ts src/lib/spl.test.ts src/lib/pcl3.test.ts src/lib/print-packs.test.ts src/lib/canon.test.ts",
+    "test": "node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/preview-path-prefix.test.ts src/lib/escpr.test.ts src/lib/spl.test.ts src/lib/pcl3.test.ts src/lib/print-packs.test.ts src/lib/canon.test.ts src/lib/sanitize.test.ts",
     "lint": "eslint .",
     "format": "prettier --write ."
   },

@@ -53,6 +53,21 @@ export function safeHttpOrigin(value: unknown): string {
   }
 }
 
+/**
+ * 링크(?helper=)로 받은 도우미 주소는 이 기기(127.0.0.1 · localhost) · 사설망 IPv4 · .local 만 허용.
+ * 남이 보낸 링크 하나로 인쇄 문서가 인터넷 서버로 새 나가지 않게 한다. 아니면 "".
+ */
+export function localHelperOrigin(value: unknown): string {
+  const origin = safeHttpOrigin(value);
+  if (!origin) return "";
+  const host = new URL(origin).hostname.toLowerCase();
+  if (host === "localhost" || host === "[::1]" || host.endsWith(".local")) return origin;
+  if (!IPV4.test(host)) return "";
+  const [a, b] = host.split(".").map(Number);
+  const local = a === 127 || a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254);
+  return local ? origin : "";
+}
+
 /** 문자열 안에 스크립트 URL 흔적이 있는지(백업 파일 검사용) */
 export function hasScriptUrl(value: string) {
   return /(^|[\s"'(=])(javascript|vbscript|data)\s*:/i.test(value);

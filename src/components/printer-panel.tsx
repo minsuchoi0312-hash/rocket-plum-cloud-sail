@@ -136,7 +136,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
   /* 최근 프린터 중 지금 연결된 것 */
   const isCurrent = (item: SavedPrinter) => Boolean(selected && ((item.host && selected.host === item.host) || (!item.host && selected.usbKey && selected.title === item.title)));
   return (
-    <section className="flex flex-col gap-3">
+    <section className="step-in flex flex-col gap-3">
       <div className="card p-5">
         {/* 머리글 — 제목 + 아이콘만 있는 버튼 (자가진단 · 접기/펼치기) */}
         <div className="card-head">
@@ -190,7 +190,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
           ) : null}
         </div>
         {linkOpen ? (
-          <div className="mt-3 space-y-3">
+          <div className="reveal mt-3 space-y-3">
             <div className="seg" role="tablist" aria-label={t("pp.linkAria")}>
               {linkTabs.map(([id, key, icon]) => (
                 <button
@@ -432,7 +432,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
                       } else setStep(stageForQuery(item.query, item.cmd));
                     };
                     return (
-                      <li key={item.id} className="flex items-center gap-3 border-b border-line py-3 last:border-b-0">
+                      <li key={item.id} className="reveal flex items-center gap-3 border-b border-line py-3 last:border-b-0">
                         <button type="button" disabled={sending && !on} onClick={on ? undefined : connect} className="min-w-0 flex-1 text-left">
                           <span className={`block truncate text-[16px] font-semibold ${on ? "text-accent" : "text-fg"}`}>{deviceText(item.title)}</span>
                           <span className="mt-0.5 block truncate text-sm text-muted">
