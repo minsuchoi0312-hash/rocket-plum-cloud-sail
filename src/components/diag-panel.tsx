@@ -145,7 +145,7 @@ export function DiagPanel({ ctx }: { ctx: DiagContext }) {
                   {index + 1}) {title}
                 </span>
               </div>
-              {step?.metric ? <p className="diag-metric mt-0.5 text-[11px] tabular-nums text-muted">{t("diag.metric", { v: step.metric })}</p> : null}
+              {step?.metric ? <p className="diag-metric mt-0.5 text-xs tabular-nums text-muted">{t("diag.metric", { v: step.metric })}</p> : null}
               {step ? <p className="mt-1 text-xs leading-relaxed text-muted">{step.detail}</p> : null}
               {step?.fix ? (
                 <button type="button" onClick={() => ctx.onFix(step.fix!.action)} className="chip mt-1.5 h-8 rounded-full px-3 text-xs font-semibold">

@@ -245,7 +245,7 @@ export function PrintOptions(props: PrintOptionsProps) {
               {(["normal", "narrow", "none"] as const).map((value) => (
                 <button key={value} type="button" disabled={sending} onClick={() => setMargin(value)} className={`chip h-10 rounded-full px-3 ${margin === value ? "is-on" : ""}`}>
                   {marginLabel(value)}
-                  <span className="ml-1 text-[11px] opacity-75">{MARGIN_MM[value] ? `${MARGIN_MM[value]}mm` : tr("po.original")}</span>
+                  <span className="ml-1 text-xs opacity-75">{MARGIN_MM[value] ? `${MARGIN_MM[value]}mm` : tr("po.original")}</span>
                 </button>
               ))}
             </div>

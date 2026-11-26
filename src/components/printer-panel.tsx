@@ -3,10 +3,10 @@
  * atlas-app.tsx에서 분리. 상태는 부모가 갖고 여기서는 그리기만 한다.
  */
 import { useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
-import { ChevronDown, ChevronRight, ChevronUp, Copy, FileText, History, Image as ImageIcon, Monitor, Pencil, Printer, QrCode, Search, Sheet, StickyNote, Trash2, Upload, Usb, Wifi, X } from "@/components/icons";
+import { ChevronDown, ChevronRight, ChevronUp, Copy, FileText, History, Image as ImageIcon, Monitor, Printer, QrCode, Search, Sheet, StickyNote, Upload, Usb, Wifi, X } from "@/components/icons";
 import { helperPing } from "@/lib/helper-send";
 import { SUBNET_PRESETS, type ScanProgress } from "@/lib/lan-find";
-import { printerLabel, type SavedPrinter } from "@/lib/printer-store";
+import { type SavedPrinter } from "@/lib/printer-store";
 import type { PrintRecord } from "@/lib/print-history";
 import type { PrintRoute } from "@/lib/print-route";
 import { HELPER_COMMAND, HELPER_FILE, ipGuide } from "@/lib/support";
@@ -21,6 +21,7 @@ import { docLabel } from "@/components/print-parts";
 import type { QrTarget } from "@/components/printer-qr-modal";
 import { HistoryList, type SupportTab } from "@/components/support-center";
 import { isPhoneHelper } from "@/lib/phone-helper";
+import { MyPrinters } from "@/components/my-printers";
 
 type Set<T> = Dispatch<SetStateAction<T>>;
 
@@ -58,6 +59,7 @@ export type PrinterPanelProps = {
   findOnWifi: (mode?: "quick" | "full", subnetOverride?: string) => Promise<void>;
   findViaHelper: () => Promise<void>;
   forget: (uid: string) => void;
+  registerPrinter: (name: string, host: string) => string | null;
   foundList: Found[];
   helperCode: string;
   setHelperCode: Set<string>;
@@ -122,7 +124,7 @@ export type PrinterPanelProps = {
 };
 
 export function PrinterPanel(props: PrinterPanelProps) {
-  const { statusCard, addTypedIp, album, aliasDraft, setAliasDraft, appOrigin, checkPrinter, connectUsb, editingUid, setEditingUid, findOnWifi, findViaHelper, forget, foundList, helperCode, setHelperCode, helperOk, setHelperOk, helperShare, helperUrl, setHelperUrl, history, ipInput, setIpInput, lanBusy, lanNote, setLanNote, linkOpen, setLinkOpen, linkTab, setLinkTab, memo, notice, onPrint, openChooser, pdfName, photoUrl, pickPreset, probes, recentPrinters, reconnect, rememberHost, route, saveAlias, scanMode, scanProg, scanning, selected, selectedId, selectedName, sending, setAskName, setOverrideQuery, setQrTarget, setSelectedId, setShowDiag, setShowIpGuide, showIpGuide, setStep, setSubnetInput, subnetInput, setSupportTab, setUseHelper, useHelper, startWith, statusDot, statusText, stopScan, usbMissed, usbOk, helperStatus, onLauncher } = props;
+  const { statusCard, addTypedIp, album, aliasDraft, setAliasDraft, appOrigin, checkPrinter, connectUsb, editingUid, setEditingUid, findOnWifi, findViaHelper, forget, registerPrinter, foundList, helperCode, setHelperCode, helperOk, setHelperOk, helperShare, helperUrl, setHelperUrl, history, ipInput, setIpInput, lanBusy, lanNote, setLanNote, linkOpen, setLinkOpen, linkTab, setLinkTab, memo, notice, onPrint, openChooser, pdfName, photoUrl, pickPreset, probes, recentPrinters, reconnect, rememberHost, route, saveAlias, scanMode, scanProg, scanning, selected, selectedId, selectedName, sending, setAskName, setOverrideQuery, setQrTarget, setSelectedId, setShowDiag, setShowIpGuide, showIpGuide, setStep, setSubnetInput, subnetInput, setSupportTab, setUseHelper, useHelper, startWith, statusDot, statusText, stopScan, usbMissed, usbOk, helperStatus, onLauncher } = props;
   const { t } = useI18n();
   /* 앱(APK): 폰이 직접 찾고 보내니 PC 도우미 탭 · 상태는 감춘다 */
   const phone = useHelper && isPhoneHelper(helperUrl);
@@ -222,7 +224,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
                     void findOnWifi("full");
                   }} className="chip h-[52px] rounded-2xl px-3.5 text-sm disabled:opacity-50" title={t("pp.fullTitle")}>
                     {t("pp.full")}
-                    <span className="block text-[11px] font-normal text-muted">1~254</span>
+                    <span className="block text-xs font-normal text-muted">1~254</span>
                   </button>
                 </div>
                 {lanBusy && scanProg && scanProg.total > 0 ? (
@@ -255,7 +257,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
                     {SUBNET_PRESETS.map((preset) => (
                       <button key={preset.subnet} type="button" disabled={lanBusy || sending} onClick={() => pickPreset(preset.subnet)} className={`chip preset rounded-full px-2.5 py-1 text-left disabled:opacity-50 ${subnetInput === preset.subnet ? "is-on" : ""}`}>
                         <span className="block text-xs font-semibold tabular-nums">{preset.subnet}</span>
-                        <span className="block text-[10px] opacity-80">{t(preset.labelKey)}</span>
+                        <span className="block text-[12px] opacity-80">{t(preset.labelKey)}</span>
                       </button>
                     ))}
                   </div>
@@ -398,7 +400,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
                       {t("pp.launcherMac")}
                     </button>
                   </div>
-                  <p className="mt-1.5 break-words text-[11px] leading-relaxed text-muted">
+                  <p className="mt-1.5 break-words text-xs leading-relaxed text-muted">
                     {t("pp.launcherNote")} <code>chmod +x {launcherFileName("mac")}</code>
                   </p>
                 </div>
@@ -453,98 +455,23 @@ export function PrinterPanel(props: PrinterPanelProps) {
 
       {statusCard}
 
-      {recentPrinters.length > 0 ? (
-        <div className="card p-5">
-          <h2 className="card-title">{t("pp.recent")}</h2>
-          <ul className="mt-2">
-            {recentPrinters.map((item) => (
-              <li key={item.uid} className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-line py-2 last:border-b-0">
-                {editingUid === item.uid ? (
-                  <form
-                    className="flex min-w-0 flex-1 gap-2"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      saveAlias(item.uid);
-                    }}
-                  >
-                    <input autoFocus value={aliasDraft} onChange={(event) => setAliasDraft(event.target.value)} maxLength={30} placeholder={t("pp.aliasPh")} aria-label={t("pp.aliasAria")} className="field h-10 min-w-0 flex-1 rounded-xl px-3 text-sm outline-none" />
-                    <button type="submit" className="btn-solid h-10 shrink-0 rounded-xl px-3 text-sm">
-                      {t("pp.save")}
-                    </button>
-                    <button type="button" onClick={() => setEditingUid(null)} className="chip h-10 shrink-0 rounded-xl px-3 text-sm">
-                      {t("pp.cancel")}
-                    </button>
-                  </form>
-                ) : (
-                  <>
-                    <button type="button" onClick={() => reconnect(item)} className="min-w-0 flex-1 text-left">
-                      <span className="block truncate text-sm font-medium text-fg">{printerLabel(item)}</span>
-                      <span className="block truncate text-xs text-muted">
-                        {item.alias ? `${item.title} · ` : ""}
-                        {item.link === "helper" && !phone ? t("pp.tabHelper") : item.link === "wifi" || item.link === "helper" ? t("pp.linkWifi") : item.link === "usb" ? "USB" : item.via}
-                        {item.host && !item.title.includes(item.host) ? ` · ${item.host}` : ""}
-                      </span>
-                    </button>
-                    {isCurrent(item) ? (
-                      <span className="current-badge shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold">{t("pp.current")}</span>
-                    ) : (
-                      <button type="button" onClick={() => reconnect(item)} className="btn-solid h-9 shrink-0 rounded-full px-3 text-xs font-semibold">
-                        {t("pp.connect")}
-                      </button>
-                    )}
-                    <div className="flex w-full flex-wrap items-center gap-1.5 pl-0.5">
-                      {item.host && !isCurrent(item) ? (
-                        <>
-                          {/* 상태 문구는 버튼에 밀려 잘리지 않게 단독 줄로 */}
-                          <span className="flex w-full min-w-0 items-center gap-1.5">
-                          <span className={`probe-dot ${probes[item.uid]?.state === "on" ? "is-on" : probes[item.uid]?.state === "checking" ? "is-wait" : ""}`} aria-hidden="true" />
-                          <span className="min-w-0 flex-1 break-words text-[11px] leading-snug text-muted" aria-live="polite">
-                            {probes[item.uid]?.state === "checking"
-                              ? t("pp.probeChecking")
-                              : probes[item.uid]?.state === "on"
-                                ? t("pp.probeOn", { ms: probes[item.uid]?.ms ?? "?", via: probes[item.uid]?.via ?? "" })
-                                : probes[item.uid]?.state === "off"
-                                  ? t("pp.probeOff", { via: probes[item.uid]?.via || "-" })
-                                  : useHelper && helperUrl.trim()
-                                    ? t("pp.probeHelper")
-                                    : t("pp.probeIdle")}
-                          </span>
-                          </span>
-                          <span className="flex-1" aria-hidden="true" />
-                          <button type="button" onClick={() => void checkPrinter(item)} disabled={probes[item.uid]?.state === "checking"} className="chip h-7 shrink-0 rounded-full px-2.5 text-[11px] font-semibold">
-                            {t("pp.probeBtn")}
-                          </button>
-                          <button type="button" onClick={() => setQrTarget({ name: printerLabel(item), ip: item.host || "", helper: helperShare })} className="icon-btn inline-flex size-7 shrink-0 items-center justify-center rounded-full" aria-label={t("pp.qrAria", { name: printerLabel(item) })}>
-                            <QrCode className="size-3.5" />
-                          </button>
-                        </>
-                      ) : item.host ? (
-                        <span className="flex-1 text-[11px] text-muted">{t("pp.currentHint")}</span>
-                      ) : (
-                        <span className="flex-1 text-[11px] text-muted">{t("pp.usbRemembered")}</span>
-                      )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingUid(item.uid);
-                        setAliasDraft(item.alias || "");
-                      }}
-                      className="icon-btn inline-flex size-7 shrink-0 items-center justify-center rounded-full"
-                      aria-label={t("pp.aliasEdit", { name: printerLabel(item) })}
-                    >
-                      <Pencil className="size-3.5" />
-                    </button>
-                    <button type="button" onClick={() => forget(item.uid)} className="icon-btn inline-flex size-7 shrink-0 items-center justify-center rounded-full" aria-label={t("pp.delete", { name: printerLabel(item) })}>
-                      <Trash2 className="size-3.5" />
-                    </button>
-                    </div>
-                  </>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+      <MyPrinters
+        items={recentPrinters}
+        isCurrent={isCurrent}
+        phone={phone}
+        probes={probes}
+        checkPrinter={checkPrinter}
+        reconnect={reconnect}
+        forget={forget}
+        registerPrinter={registerPrinter}
+        editingUid={editingUid}
+        setEditingUid={setEditingUid}
+        aliasDraft={aliasDraft}
+        setAliasDraft={setAliasDraft}
+        saveAlias={saveAlias}
+        openQr={setQrTarget}
+        helperShare={helperShare}
+      />
 
       <div className="card p-5">
         <div className="card-head">

@@ -21,7 +21,7 @@ export function JobBanner({ phase, onCancel }: { phase: JobPhase; onCancel: () =
       <div className="scan-track mt-2" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
         <span style={{ width: `${percent}%` }} />
       </div>
-      <div className="mt-1.5 flex justify-between text-[11px] text-muted">
+      <div className="mt-1.5 flex justify-between text-xs text-muted">
         <span className={phase.stage === "prep" ? "font-semibold text-fg" : ""}>{tr("jb.s1")}</span>
         <span className={phase.stage === "send" ? "font-semibold text-fg" : ""}>{tr("jb.s2")}</span>
         <span>{tr("jb.s3")}</span>

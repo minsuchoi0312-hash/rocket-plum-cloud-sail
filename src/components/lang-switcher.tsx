@@ -75,7 +75,7 @@ export function LangSwitcher() {
                 className={`lang-item flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-sm ${row.id === lang ? "is-on" : ""}`}
               >
                 <span>{row.label}</span>
-                {row.id === lang ? <Check className="size-4" aria-hidden="true" /> : <span className="text-[11px] opacity-60">{row.short}</span>}
+                {row.id === lang ? <Check className="size-4" aria-hidden="true" /> : <span className="text-xs opacity-60">{row.short}</span>}
               </button>
             </li>
           ))}

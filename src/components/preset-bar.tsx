@@ -45,7 +45,7 @@ export function PresetBar({
   const card = (preset: Preset) => (
     <button key={preset.id} type="button" disabled={disabled} onClick={() => onApply(preset)} aria-pressed={activeId === preset.id} className={`chip preset-card min-w-0 rounded-2xl px-3 py-2.5 text-left ${activeId === preset.id ? "is-on" : ""}`}>
       <span className="block truncate text-sm font-semibold">{preset.label}</span>
-      <span className="preset-hint mt-0.5 block text-[11px] leading-snug opacity-80">{describeSettings(preset.settings)}</span>
+      <span className="preset-hint mt-0.5 block text-xs leading-snug opacity-80">{describeSettings(preset.settings)}</span>
     </button>
   );
 

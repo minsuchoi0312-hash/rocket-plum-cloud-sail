@@ -51,10 +51,10 @@ export function PrinterStatusCard({ status, loading, error, onRefresh, compact =
           <p className="text-xs font-medium text-muted">{status?.source === "usb" ? t("card.usbTitle") : t("card.title")}</p>
           <p className="mt-1 flex flex-wrap items-center gap-1.5">
             <span className={`state-badge is-${badge.tone}`}>{loading && !status ? t("card.checking") : badge.label}</span>
-            {status?.checkedAt ? <span className="text-[11px] text-faint">{t("card.checkedAt", { time: timeLabel(status.checkedAt) })}{status.latencyMs ? ` · ${status.latencyMs}ms` : ""}</span> : null}
+            {status?.checkedAt ? <span className="text-xs text-faint">{t("card.checkedAt", { time: timeLabel(status.checkedAt) })}{status.latencyMs ? ` · ${status.latencyMs}ms` : ""}</span> : null}
           </p>
-          {status?.display && status.display.toUpperCase() !== "READY" ? <p className="mt-1 break-words text-[11px] text-muted">{t("card.display", { v: status.display })}</p> : null}
-          {status?.source === "usb" ? <p className="mt-1 text-[11px] text-muted">{t("card.iface", { v: ifaceLabel(status) })}</p> : null}
+          {status?.display && status.display.toUpperCase() !== "READY" ? <p className="mt-1 break-words text-xs text-muted">{t("card.display", { v: status.display })}</p> : null}
+          {status?.source === "usb" ? <p className="mt-1 text-xs text-muted">{t("card.iface", { v: ifaceLabel(status) })}</p> : null}
         </div>
         {onRefresh ? (
           <button type="button" onClick={onRefresh} disabled={loading} className="chip inline-flex h-8 shrink-0 items-center gap-1 rounded-full px-2.5 text-xs font-semibold" aria-label={t("card.refreshAria")}>

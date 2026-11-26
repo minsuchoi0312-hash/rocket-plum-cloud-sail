@@ -243,7 +243,7 @@ export function PaperPreview({
             </div>
           ) : (
             <div className="absolute inset-0 p-3 text-left">
-              <p className="text-[10px] tracking-wide">{tr("pv.testPage")}</p>
+              <p className="text-[12px] tracking-wide">{tr("pv.testPage")}</p>
               <p className="mt-1 text-sm">{title}</p>
             </div>
           )}

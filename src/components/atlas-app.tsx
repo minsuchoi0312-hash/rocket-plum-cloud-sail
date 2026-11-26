@@ -574,6 +574,27 @@ function AtlasMain() {
     setStep("print");
   }
 
+  /** '내 프린터'에 이름 + IP로 직접 등록 (연결은 하지 않음). 실패하면 오류 문구 */
+  function registerPrinter(name: string, rawHost: string): string | null {
+    const host = rawHost.trim();
+    if (!isValidIPv4(host)) return tr("ap.ipFormat");
+    const uid = `wifi-${host.replace(/\./g, "-")}`;
+    const before = saved.find((row) => row.uid === uid);
+    const viaHelper = useHelper && isPhoneHelper(helperUrl);
+    remember({
+      uid,
+      title: before?.title || tr("fx.printerIp", { ip: host }),
+      alias: name.trim() || before?.alias,
+      query: host,
+      host,
+      via: tr("via.wifi"),
+      link: viaHelper ? "helper" : "wifi",
+      savedAt: Date.now(),
+    });
+    toast(m("pp.added", { name: name.trim() || host }));
+    return null;
+  }
+
   function saveAlias(uid: string) {
     rename(uid, aliasDraft);
     setEditingUid(null);
@@ -1880,7 +1901,7 @@ function AtlasMain() {
   const helperShare = useHelper && helperUrl.trim() && helperCode ? { url: helperUrl.trim(), code: helperCode } : null;
 
   const routeLabel = helperLive && route !== "preview-only" ? tr(phoneHelper ? "ph.route" : "ap.rHelper") : route === "usb-pdf" ? "USB PDF Direct" : route === "usb-pcl" ? tr("ap.rUsbPcl") : selected?.host ? tr("ap.routeIpp") : tr("ap.rSave");
-  const recentPrinters = saved.slice(0, 6);
+  const recentPrinters = saved;
   const foundList = list.filter((item) => !item.id.startsWith("saved:"));
 
   async function onPdf() {
@@ -2021,7 +2042,7 @@ function AtlasMain() {
       {/* 앱으로 낼 거라 소개 문구는 없앰 — 오프라인일 때만 안내 */}
       {online === false ? (
         <div className="app-sub">
-          <p className="offline-badge inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold" role="status">
+          <p className="offline-badge inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold" role="status">
             {tr("ap.offline")}
           </p>
         </div>
@@ -2075,7 +2096,7 @@ function AtlasMain() {
       ) : null}
       {step === "print" && (printer.status || printer.loading) ? <PrinterStatusCard status={printer.status} loading={printer.loading} error={printer.error} onRefresh={() => void printer.refresh()} compact /> : null}
       {step === "connect" ? (
-        <PrinterPanel {...{ addTypedIp, album, aliasDraft, setAliasDraft, appOrigin, checkPrinter, connectUsb, editingUid, setEditingUid, findOnWifi, findViaHelper, forget, foundList, helperCode, setHelperCode, helperOk, setHelperOk, helperShare, helperUrl, setHelperUrl, history, ipInput, setIpInput, lanBusy, lanNote, setLanNote, linkOpen, setLinkOpen, linkTab, setLinkTab, memo, notice, onPrint, openChooser, pdfName, photoUrl, pickPreset, probes, recentPrinters, reconnect, rememberHost, route, saveAlias, scanMode, scanProg, scanning, selected, selectedId, selectedName, sending, setAskName, setOverrideQuery, setQrTarget, setSelectedId, setShowDiag, setShowIpGuide, showIpGuide, setStep, setSubnetInput, subnetInput, setSupportTab, setUseHelper, useHelper, startWith, statusDot, statusText, stopScan, usbMissed, usbOk, helperStatus, onLauncher }} statusCard={selected?.host || selected?.usbKey ? <PrinterStatusCard status={printer.status} loading={printer.loading} error={printer.error} onRefresh={() => void printer.refresh()} helperNeeded={!helperAlive && !selected?.usbKey} /> : null} />
+        <PrinterPanel {...{ addTypedIp, album, aliasDraft, setAliasDraft, appOrigin, checkPrinter, connectUsb, editingUid, setEditingUid, findOnWifi, findViaHelper, forget, registerPrinter, foundList, helperCode, setHelperCode, helperOk, setHelperOk, helperShare, helperUrl, setHelperUrl, history, ipInput, setIpInput, lanBusy, lanNote, setLanNote, linkOpen, setLinkOpen, linkTab, setLinkTab, memo, notice, onPrint, openChooser, pdfName, photoUrl, pickPreset, probes, recentPrinters, reconnect, rememberHost, route, saveAlias, scanMode, scanProg, scanning, selected, selectedId, selectedName, sending, setAskName, setOverrideQuery, setQrTarget, setSelectedId, setShowDiag, setShowIpGuide, showIpGuide, setStep, setSubnetInput, subnetInput, setSupportTab, setUseHelper, useHelper, startWith, statusDot, statusText, stopScan, usbMissed, usbOk, helperStatus, onLauncher }} statusCard={selected?.host || selected?.usbKey ? <PrinterStatusCard status={printer.status} loading={printer.loading} error={printer.error} onRefresh={() => void printer.refresh()} helperNeeded={!helperAlive && !selected?.usbKey} /> : null} />
       ) : (
         <section className="panel rounded-3xl p-4 sm:p-5">
           {step === "confirm" ? (

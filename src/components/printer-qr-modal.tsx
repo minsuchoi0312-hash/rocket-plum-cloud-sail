@@ -163,7 +163,7 @@ export function PrinterQrModal({ target, onClose }: { target: QrTarget; onClose:
         <p className="mt-3 text-xs font-medium text-muted">{tr("qr.size")}</p>
         <div className="mt-1.5 grid grid-cols-3 gap-1.5">
           {(["half", "two", "a4"] as const).map((value) => (
-            <button key={value} type="button" onClick={() => setSize(value)} className={`chip min-h-9 rounded-xl px-1.5 py-1 text-[11px] leading-tight ${size === value ? "is-on" : ""}`}>
+            <button key={value} type="button" onClick={() => setSize(value)} className={`chip min-h-9 rounded-xl px-1.5 py-1 text-xs leading-tight ${size === value ? "is-on" : ""}`}>
               {tr(CARD_SIZE_KEY[value])}
             </button>
           ))}

@@ -13,12 +13,18 @@
   --font-display: "Gowun Batang", "Pretendard Variable", serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
+  /* 가독성 — 작은 글자를 한 단계씩 키운다 (12→13px, 14→15px) */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.45;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.5;
+
   --color-bg: #17171c;
   --color-elevated: #202027;
   --color-subtle: #2c2c35;
   --color-fg: #ffffff;
   --color-muted: #c3c3c6;
-  --color-faint: #9e9ea4;
+  --color-faint: #ababb1;
   --color-line: #3c3c47;
   --color-accent: #3485fa;
   --color-accent-fg: #ffffff;
@@ -38,7 +44,7 @@
   --border: #3c3c47;
   --text-primary: #ffffff;
   --text-secondary: #c3c3c6;
-  --text-muted: #9e9ea4;
+  --text-muted: #ababb1;
   --input-bg: #2c2c35;
   --input-text: #ffffff;
   --input-placeholder: #7e7e87;
@@ -54,7 +60,7 @@ html[data-theme="dark"] {
   --color-subtle: #2c2c35;
   --color-fg: #ffffff;
   --color-muted: #c3c3c6;
-  --color-faint: #9e9ea4;
+  --color-faint: #ababb1;
   --color-line: #3c3c47;
   --color-accent: #3485fa;
   --color-accent-fg: #ffffff;
@@ -70,7 +76,7 @@ html[data-theme="dark"] {
   --border: #3c3c47;
   --text-primary: #ffffff;
   --text-secondary: #c3c3c6;
-  --text-muted: #9e9ea4;
+  --text-muted: #ababb1;
   --input-bg: #2c2c35;
   --input-text: #ffffff;
   --input-placeholder: #7e7e87;
@@ -1865,6 +1871,54 @@ html:not([data-theme="light"]) .toner-track span.is-dark-ink {
   color: var(--color-ok);
   background: color-mix(in srgb, var(--color-ok) 15%, transparent);
   border: 0;
+}
+
+/* ───────── 내 프린터 — 등록 · 목록 · 삭제 확인 ───────── */
+.add-box,
+.empty-add {
+  background: var(--fill);
+}
+
+.empty-add {
+  transition: background-color 120ms var(--ease);
+}
+
+.empty-add:hover,
+.empty-add:active {
+  background: var(--press);
+}
+
+.mp-row {
+  padding: 12px 0 6px;
+}
+
+.mp-row + .mp-row {
+  border-top: 1px solid var(--color-line);
+}
+
+.mp-ico {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+.del-ask {
+  background: color-mix(in srgb, var(--color-bad) 12%, transparent);
+}
+
+.del-btn {
+  background: var(--color-bad);
+  color: #ffffff;
+  transition: transform 120ms var(--ease);
+}
+
+.del-btn:active {
+  transform: scale(0.96);
 }
 
 /* 하단 토스트 — 토스 toast: grey-900 표면 + 흰 글자 */
