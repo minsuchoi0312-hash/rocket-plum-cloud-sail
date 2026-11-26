@@ -888,4 +888,6 @@ export const ja: Record<MsgKey, string> = {
   "ph.route": "Wi‑Fi 9100",
   "ph.sent": "Wi‑Fiで送信しました。",
   "ph.mono": "このプリンターへの直接印刷は白黒のみです。",
+  "ph.ready": "Wi‑Fiでプリンターに直接送ります。",
+  "ph.readyDirect": "このスマホから直接送ります。他の印刷アプリは開きません。",
 };

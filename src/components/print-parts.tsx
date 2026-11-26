@@ -40,7 +40,8 @@ export function ReadyCard({
 }) {
   const printer = match.printer;
   const inkjet = isInkjet(match);
-  const line = tr(inkjet ? "rc.inkjet" : viaHelper ? "rc.helper" : route === "usb-pdf" ? "rc.usbPdf" : route === "usb-pcl" ? "rc.usbPcl" : "rc.preview");
+  const phone = phoneApp();
+  const line = tr(inkjet ? "rc.inkjet" : viaHelper ? (phone ? "ph.ready" : "rc.helper") : route === "usb-pdf" ? "rc.usbPdf" : route === "usb-pcl" ? "rc.usbPcl" : "rc.preview");
   return (
     <div>
       <p className="text-xs text-muted">{tr("rc.confirmed")}</p>
@@ -48,7 +49,7 @@ export function ReadyCard({
         {printer.brand} {printer.model}
       </h2>
       <p className="mt-3 text-sm leading-relaxed text-fg">{line}</p>
-      {inkjet ? null : <p className="mt-2 text-sm text-muted">{tr(viaHelper ? "rc.helperDirect" : direct ? "rc.direct" : "rc.previewOnly")}</p>}
+      {inkjet ? null : <p className="mt-2 text-sm text-muted">{tr(viaHelper ? (phone ? "ph.readyDirect" : "rc.helperDirect") : direct ? "rc.direct" : "rc.previewOnly")}</p>}
       <p className="mt-3 text-xs leading-relaxed text-faint">{tr("rc.memory")}</p>
       {saved ? (
         <button type="button" onClick={onForget} className="mt-3 flex h-11 w-full items-center justify-center gap-1 rounded-2xl border border-line text-sm">
@@ -78,7 +79,10 @@ export function OfficeOptions({
   onGray,
   onDuplex,
   onCopies,
+  colorRaster = false,
 }: {
+  /** 엡손 잉크 팩: 래스터지만 컬러로 보낼 수 있고, 양면은 아직 단면만 */
+  colorRaster?: boolean;
   paper: OfficePaper;
   gray: boolean;
   duplex: DuplexMode;
@@ -93,7 +97,7 @@ export function OfficeOptions({
   onCopies: (value: number) => void;
 }) {
   const liveJob = controls;
-  const monoUsb = route === "usb-pcl";
+  const monoUsb = route === "usb-pcl" && !colorRaster;
   const sides = [
     ["simplex", tr("opt.simplex")],
     ["long", tr("opt.long")],
@@ -169,7 +173,7 @@ export function OfficeOptions({
         <span className="opt-label">{tr("opt.sides")}</span>
         <div className="seg" role="radiogroup" aria-label={tr("opt.sides")}>
           {sides.map(([id, text]) => (
-            <button key={id} type="button" role="radio" aria-checked={duplex === id && liveJob} disabled={idle} onClick={() => onDuplex(id)} className={`seg-btn ${duplex === id && liveJob ? "is-on" : ""}`}>
+            <button key={id} type="button" role="radio" aria-checked={duplex === id && liveJob} disabled={idle || (colorRaster && id !== "simplex")} onClick={() => onDuplex(id)} className={`seg-btn ${duplex === id && liveJob ? "is-on" : ""}`}>
               {text}
             </button>
           ))}

@@ -888,4 +888,6 @@ export const en: Record<MsgKey, string> = {
   "ph.route": "Wi‑Fi 9100",
   "ph.sent": "Sent over Wi‑Fi.",
   "ph.mono": "Direct printing to this printer is black & white only.",
+  "ph.ready": "Sends straight to the printer over Wi‑Fi.",
+  "ph.readyDirect": "This phone sends it directly. No other print app opens.",
 };

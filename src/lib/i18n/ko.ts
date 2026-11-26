@@ -886,4 +886,6 @@ export const ko = {
   "ph.route": "와이파이 9100",
   "ph.sent": "와이파이로 보냈어요.",
   "ph.mono": "이 프린터로 바로 보낼 때는 흑백만 돼요.",
+  "ph.ready": "와이파이로 프린터에 바로 보내요.",
+  "ph.readyDirect": "이 폰이 직접 보내요. 다른 인쇄 앱은 열지 않아요.",
 } as const;

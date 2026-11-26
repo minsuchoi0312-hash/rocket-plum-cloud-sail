@@ -888,4 +888,6 @@ export const zh: Record<MsgKey, string> = {
   "ph.route": "Wi‑Fi 9100",
   "ph.sent": "已通过 Wi‑Fi 发送。",
   "ph.mono": "直接打印到此打印机仅支持黑白。",
+  "ph.ready": "通过 Wi‑Fi 直接发送到打印机。",
+  "ph.readyDirect": "由本机直接发送，不会打开其他打印应用。",
 };

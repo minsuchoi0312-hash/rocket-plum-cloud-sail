@@ -22,6 +22,8 @@ export type PrintOptionsProps = {
   docKind: DocKind;
   sending: boolean;
   route: PrintRoute;
+  /** 엡손 잉크 팩(컬러 래스터 · 단면) */
+  colorRaster?: boolean;
   jobControls: boolean;
   presetCurrent: PresetSettings;
   activePresetId: string | null;
@@ -92,7 +94,7 @@ export type PrintOptionsProps = {
 
 export function PrintOptions(props: PrintOptionsProps) {
   const {
-    docKind, sending, route, jobControls, presetCurrent, activePresetId, applyPreset, onPresetSaved, setNotice,
+    docKind, sending, route, colorRaster, jobControls, presetCurrent, activePresetId, applyPreset, onPresetSaved, setNotice,
     paper, setPaper, gray, setGray, duplex, setDuplex, copies, setCopies,
     pdfCount, chosenPages, currentPage, pageChip, pickPages, pageList, setPageList, onTogglePage, reverse, setReverse, evenReverse,
     photoFilter, onPhotoFilter, photoLayout, onPhotoLayout, idLayout, cutLines, setCutLines,
@@ -103,7 +105,7 @@ export function PrintOptions(props: PrintOptionsProps) {
   return (
     <>
     {docKind !== "test" ? <PresetBar current={presetCurrent} activeId={activePresetId} disabled={sending} onApply={applyPreset} onSaved={onPresetSaved} onNotice={setNotice} /> : null}
-    <OfficeOptions paper={paper} gray={gray} duplex={duplex} copies={copies} route={route} locked={sending} controls={jobControls} copyMax={99} onPaper={setPaper} onGray={setGray} onDuplex={setDuplex} onCopies={setCopies} />
+    <OfficeOptions paper={paper} gray={gray} duplex={duplex} copies={copies} route={route} colorRaster={colorRaster} locked={sending} controls={jobControls} copyMax={99} onPaper={setPaper} onGray={setGray} onDuplex={setDuplex} onCopies={setCopies} />
     {docKind === "pdf" ? (
       <div className="mt-3 space-y-2">
         <p className="opt-label">{pdfCount ? tr("po.rangeOf", { total: pdfCount, n: chosenPages.length }) : tr("po.range")}</p>

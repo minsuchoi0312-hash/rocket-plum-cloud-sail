@@ -42,9 +42,21 @@ import { DoneBanner, JobBanner, type JobPhase } from "@/components/job-banner";
 import { blobUrl, chunkLoadError, downloadBytes, humanError, inAppBrowser, isSure, loadImage, marginLabel, stageForQuery, uidOf, viaLabel, type Found, type LinkTab, type PageChip, type ProbeState, type Step } from "@/lib/app-utils";
 import { isInkjet, PrintChooser, ReadyCard } from "@/components/print-parts";
 import { PackSheet } from "@/components/pack-sheet";
+import { escprEndPage, escprJobFooter, escprJobHeader, escprPageCommands } from "@/lib/escpr";
 import { laserCmd, packFor, packInstalled, PACKS, type PackChoice, type PackDef, type PackId } from "@/lib/print-packs";
 import { isPhoneHelper } from "@/lib/phone-helper";
 import type { WifiExtra } from "@/components/app-effects";
+
+/** 여러 명령을 한 덩어리로 */
+function concatBytes(parts: Uint8Array[]) {
+  const out = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0));
+  let offset = 0;
+  for (const part of parts) {
+    out.set(part, offset);
+    offset += part.length;
+  }
+  return out;
+}
 
 /** 언어 상자를 감싸 앱 전체가 같은 언어를 쓰게 한다 */
 export function AtlasApp() {
@@ -471,7 +483,9 @@ function AtlasMain() {
 
   /** 와이파이·PC 도우미 주소를 '최근 프린터'에 남긴다 (별칭은 유지) */
   function rememberHost(host: string, title: string, viaHelper: boolean) {
-    remember({ uid: `wifi-${host.replace(/\./g, "-")}`, title, query: host, host, via: tr(viaHelper ? "fx.helper" : "via.wifi"), link: viaHelper ? "helper" : "wifi", savedAt: Date.now() });
+    /* 폰 내장 도우미는 'PC 도우미'가 아니라 와이파이로 표시 */
+    const phoneLink = viaHelper && isPhoneHelper(helperUrl);
+    remember({ uid: `wifi-${host.replace(/\./g, "-")}`, title, query: host, host, via: tr(viaHelper && !phoneLink ? "fx.helper" : "via.wifi"), link: viaHelper ? "helper" : "wifi", savedAt: Date.now() });
   }
 
   const { stopScan, findOnWifi, findViaHelper, pickPreset } = lanSearch({ lanBusy, sending, useHelper, helperUrl, helperCode, subnetInput, scanAbortRef, setLanBusy, setScanMode, setScanProg, setLanNote, setSubnetInput, setHelperOk, setUseHelper, addWifi });
@@ -763,9 +777,11 @@ function AtlasMain() {
         canon: selected.canon,
       })
     : null;
-  const pickedPackId = selected?.host ? packPicked[selected.host] : undefined;
+  const pickedPackId = selected?.host ? packPicked[`${selected.host}|${selected.title}`] : undefined;
   const activePack: PackDef | null = packChoice ? (pickedPackId ? PACKS[pickedPackId] : packChoice.need.ready ? packChoice.need : packChoice.fallback) : null;
   const helperLive = Boolean(useHelper && selected?.host && helperUrl.trim() && !(phoneHelper && activePack?.route === "ipp"));
+  /* 엡손 잉크 팩: 래스터 경로를 그대로 쓰되 PCL 대신 ESC/P-R 로 만든다 */
+  const escprJob = Boolean(phoneHelper && helperLive && activePack?.route === "escpr");
   const marginMm = MARGIN_MM[margin];
   /* 여백을 넣으면 원본 PDF를 그대로 넘길 수 없으니(PDF Direct 불가) 래스터로 보낸다 */
   /* 복사기 실제 상태 (도우미 /status 또는 USB 장치 정보) */
@@ -778,7 +794,7 @@ function AtlasMain() {
   const rasterForced = pdfDirectBlocked || Boolean(pdfKey) || nup !== 1 || reverse || pageMode !== "all" || secureOn || orient === "landscape" || marginMm > 0 || stampActive;
   const route: PrintRoute = resolvePrintRoute({
     liveUsb: Boolean(selected?.live && selected.usbKey) || helperLive,
-    cmd: phoneHelper && helperLive && activePack?.route === "raw" ? laserCmd(selected?.cmd) : selected?.cmd || (helperLive ? "PCL5e,PDF" : ""),
+    cmd: escprJob ? "PCL5e" : phoneHelper && helperLive && activePack?.route === "raw" ? laserCmd(selected?.cmd) : selected?.cmd || (helperLive ? "PCL5e,PDF" : ""),
     catalogPcl5,
     catalogSure: Boolean(match && sure),
     pdfBytes: Boolean(pdfBytes),
@@ -871,7 +887,7 @@ function AtlasMain() {
   }
 
   function linkText() {
-    if (helperLive && selected?.host) return tr("ap.linkHelper", { host: selected.host });
+    if (helperLive && selected?.host && !phoneHelper) return tr("ap.linkHelper", { host: selected.host });
     if (selected?.host) return tr("ap.linkWifi", { host: selected.host });
     if (selected?.live && selected.usbKey) return `USB ${selected.title}`;
     return tr("ap.linkNone");
@@ -883,7 +899,7 @@ function AtlasMain() {
       link: linkText(),
       paper,
       orient: orient === "landscape" ? "landscape" : "portrait",
-      gray: forceGray || gray || route === "usb-pcl",
+      gray: forceGray || gray || (route === "usb-pcl" && !escprJob),
       at: Date.now(),
     };
   }
@@ -1057,7 +1073,7 @@ function AtlasMain() {
   /** 앱: 이 프린터에 맞는 팩이 아직 없으면 설치 창부터 띄운다 */
   function packGate(trial: boolean, copiesOverride?: number) {
     if (!packChoice || !selected?.host) return false;
-    const picked = packPicked[selected.host];
+    const picked = packPicked[`${selected.host}|${selected.title}`];
     if (picked && packInstalled(picked)) return false;
     if (packChoice.need.ready && packInstalled(packChoice.need.id)) return false;
     setPackAsk({ choice: packChoice, model: selected.title, trial, copies: copiesOverride });
@@ -1066,7 +1082,7 @@ function AtlasMain() {
 
   function onPackReady(pack: PackDef) {
     const ask = packAsk;
-    const host = selected?.host;
+    const host = selected?.host ? `${selected.host}|${selected.title}` : "";
     if (host) setPackPicked((prev) => ({ ...prev, [host]: pack.id }));
     if (!pack.builtin) diag(tr("pk.log", { pack: tr(pack.name), n: 0 }));
     setPackAsk(null);
@@ -1224,7 +1240,16 @@ function AtlasMain() {
     let started = false;
     const stop = () => stopRef.current;
     const fatalUsb = (error: unknown) => error instanceof Error && /15초|USB 연결을 닫|거절/.test(error.message);
+    const escprPages: Uint8Array[][] = [];
+    const escprOpts = { paper, color: !gray, name: "NUGUNA" };
+    /* 페이지 캔버스 → 쪽 명령 (레이저 팩 PCL / 엡손 팩 ESC/P-R) */
+    const encodeSheet = (canvas: HTMLCanvasElement, mode: "dither" | "threshold") => (escprJob ? escprPageCommands(canvas, escprOpts) : canvasPclCommands(canvas, mode));
     const sendPackets = async (commands: Uint8Array[], progress: (percent: number) => void) => {
+      if (escprJob) {
+        escprPages.push(commands);
+        progress(100);
+        return;
+      }
       const packets = bundleCommands(commands);
       for (const [index, packet] of packets.entries()) {
         if (stopRef.current) throw new Error(tr("ap.stopped"));
@@ -1248,7 +1273,7 @@ function AtlasMain() {
         const photoGroups = idSheet ? [[1]] : nupGroups(sources.map((_, index) => index + 1), nup, reverse);
         const pdfGroups = nupGroups(pages, nup, reverse);
         const jobPages = trial ? 1 : docKind === "pdf" ? Math.max(1, pdfGroups.length) : memoChunks?.length || photoGroups.length || 1;
-        await write(pclJobHeader({ copies: jobCopies, duplex, paper, pages: jobPages, secure, orient: orient === "landscape" ? "landscape" : "portrait" }), () => setProgress(2), stop, true);
+        if (!escprJob) await write(pclJobHeader({ copies: jobCopies, duplex, paper, pages: jobPages, secure, orient: orient === "landscape" ? "landscape" : "portrait" }), () => setProgress(2), stop, true);
         started = true;
         if (stopRef.current) throw new Error(tr("ap.stopped"));
         if (!trial && docKind === "pdf" && pdfBytes) {
@@ -1271,7 +1296,7 @@ function AtlasMain() {
               /* 여백: 묶음 한 장 전체를 안쪽으로 줄인다 (없음이면 composed 그대로) */
               const sheet = insetCanvas(composed, marginMm, paperMm(paper, orient === "landscape" ? "landscape" : "portrait").width);
               if (stampActive) stampSheet(sheet, index, pdfGroups.length, stamps, pclPxPerMm);
-              const commands = canvasPclCommands(sheet, "dither");
+              const commands = encodeSheet(sheet, "dither");
               sendStage(pdfGroups.length);
               for (const canvas of rendered) {
                 canvas.width = 0;
@@ -1287,7 +1312,7 @@ function AtlasMain() {
               }
               await sendPackets(commands, () => setProgress(Math.round(4 + ((index + 1) / pdfGroups.length) * 90)));
             }
-            if (needsBlankBack(pdfGroups.length, duplex)) {
+            if (!escprJob && needsBlankBack(pdfGroups.length, duplex)) {
               await sendPackets(pclPageCommands(new Uint8Array(size.width * size.height), size.width, size.height), () => setProgress(96));
             }
           } finally {
@@ -1315,7 +1340,7 @@ function AtlasMain() {
             const sheet = nup === 1 ? cells[0] : composeSheet(cells, cells.map((canvas) => ({ width: canvas.width, height: canvas.height })), size.width, size.height, nup, "contain");
             if (stampActive) stampSheet(sheet, index, groups.length, stamps, pclPxPerMm);
             /* 연한 워터마크는 문턱값으로 보내면 사라지므로 디더링 */
-            const commands = canvasPclCommands(sheet, stamps.watermark.trim() ? "dither" : "threshold");
+            const commands = encodeSheet(sheet, stamps.watermark.trim() ? "dither" : "threshold");
             sendStage(groups.length);
             for (const canvas of cells) {
               canvas.width = 0;
@@ -1323,7 +1348,7 @@ function AtlasMain() {
             }
             await sendPackets(commands, () => setProgress(Math.round(8 + ((index + 1) / groups.length) * 84)));
           }
-          if (needsBlankBack(groups.length, duplex)) {
+          if (!escprJob && needsBlankBack(groups.length, duplex)) {
             await sendPackets(pclPageCommands(new Uint8Array(size.width * size.height), size.width, size.height), () => setProgress(96));
           }
         } else if (docKind === "photo" && sources.length) {
@@ -1335,7 +1360,7 @@ function AtlasMain() {
               const image = await loadImage(src);
               const sheet = composeIdSheet(image, { width: image.naturalWidth || image.width, height: image.naturalHeight || image.height }, size.width, size.height, pclPxPerMm, photoLayout, cutLines);
               stampSheet(sheet, 0, 1, stamps, pclPxPerMm);
-              const commands = canvasPclCommands(sheet, "dither");
+              const commands = encodeSheet(sheet, "dither");
               sheet.width = 0;
               sheet.height = 0;
               sendStage(1);
@@ -1356,18 +1381,18 @@ function AtlasMain() {
               ctx?.drawImage(sheet, -size.width / 2, -size.height / 2);
               sheet.width = 0;
               if (stampActive) stampSheet(turned, index, photoGroups.length, stamps, pclPxPerMm);
-              const commands = canvasPclCommands(turned, "dither");
+              const commands = encodeSheet(turned, "dither");
               turned.width = 0;
               turned.height = 0;
               await sendPackets(commands, () => setProgress(Math.round(8 + ((index + 1) / photoGroups.length) * 84)));
             } else {
-              const commands = canvasPclCommands(sheet, "dither");
+              const commands = encodeSheet(sheet, "dither");
               sheet.width = 0;
               sheet.height = 0;
               await sendPackets(commands, () => setProgress(Math.round(8 + ((index + 1) / photoGroups.length) * 84)));
             }
           }
-          if (needsBlankBack(photoGroups.length, duplex)) {
+          if (!escprJob && needsBlankBack(photoGroups.length, duplex)) {
             await sendPackets(pclPageCommands(new Uint8Array(size.width * size.height), size.width, size.height), () => setProgress(96));
           }
         } else {
@@ -1375,19 +1400,29 @@ function AtlasMain() {
           canvas.width = size.width;
           canvas.height = size.height;
           /* 점검용 테스트 시트: 농도 막대가 살도록 디더링으로 보낸다 */
-          drawTestSheet(canvas, testInfo(true));
+          drawTestSheet(canvas, testInfo(!escprJob));
           if (stopRef.current) throw new Error(tr("ap.stopped"));
-          const commands = canvasPclCommands(canvas, "dither");
+          const commands = encodeSheet(canvas, "dither");
           canvas.width = 0;
           canvas.height = 0;
           sendStage(1);
           await sendPackets(commands, (percent) => setProgress(8 + Math.round(percent * 0.84)));
-          if (needsBlankBack(1, duplex)) {
+          if (!escprJob && needsBlankBack(1, duplex)) {
             await sendPackets(pclPageCommands(new Uint8Array(size.width * size.height), size.width, size.height), () => setProgress(96));
           }
         }
         if (stopRef.current) throw new Error(tr("ap.stopped"));
-        await write(pclJobFooter(), () => setProgress(100), () => false, true);
+        if (escprJob) {
+          /* 엡손: 머리말 → (부수만큼) 쪽들 → 꼬리말. 쪽 끝(endp)은 다음 쪽이 있는지 알고 붙인다 */
+          const sheets: Uint8Array[][] = [];
+          for (let copy = 0; copy < Math.max(1, jobCopies); copy++) sheets.push(...escprPages);
+          const parts: Uint8Array[] = [escprJobHeader(escprOpts)];
+          sheets.forEach((pageCommands, index) => {
+            parts.push(...pageCommands, escprEndPage(index < sheets.length - 1));
+          });
+          parts.push(escprJobFooter());
+          await write(concatBytes(parts), () => setProgress(100), () => false, true);
+        } else await write(pclJobFooter(), () => setProgress(100), () => false, true);
         /* 도우미: 머리말~꼬리말까지 모은 작업을 이제 한 번에 (멈춤·오류면 아무것도 보내지 않는다) */
         await flushHelper();
         setProgress(100);
@@ -2079,7 +2114,7 @@ function AtlasMain() {
                     onSheet={(index) => setPreviewSheet(index + 1)}
                   />
                 }
-                extras={<PrintOptions {...{ docKind, sending, route, jobControls, presetCurrent, activePresetId, applyPreset, onPresetSaved, setNotice, paper, setPaper, gray, setGray, duplex, setDuplex, copies, setCopies, pdfCount, chosenPages, currentPage, pageChip, pickPages, pageList, setPageList, onTogglePage, reverse, setReverse, evenReverse, photoFilter, onPhotoFilter, photoLayout, onPhotoLayout, idLayout, cutLines, setCutLines, memoSize, setMemoSize, memoHeader, setMemoHeader, memoTitle, setMemoTitle, onTextFile, advancedOpen, setAdvancedOpen, margin, setMargin, marginMm, pageNumber, setPageNumber, wmChoice, setWmChoice, wmCustom, setWmCustom, stampActive, nup, setNup, orient, setOrient, photoFit, setPhotoFit, photoTurn, setPhotoTurn, secureOn, setSecureOn, pin, setPin, pinRef, jobUser, setJobUser, }} />}
+                extras={<PrintOptions {...{ docKind, sending, route, colorRaster: escprJob, jobControls, presetCurrent, activePresetId, applyPreset, onPresetSaved, setNotice, paper, setPaper, gray, setGray, duplex, setDuplex, copies, setCopies, pdfCount, chosenPages, currentPage, pageChip, pickPages, pageList, setPageList, onTogglePage, reverse, setReverse, evenReverse, photoFilter, onPhotoFilter, photoLayout, onPhotoLayout, idLayout, cutLines, setCutLines, memoSize, setMemoSize, memoHeader, setMemoHeader, memoTitle, setMemoTitle, onTextFile, advancedOpen, setAdvancedOpen, margin, setMargin, marginMm, pageNumber, setPageNumber, wmChoice, setWmChoice, wmCustom, setWmCustom, stampActive, nup, setNup, orient, setOrient, photoFit, setPhotoFit, photoTurn, setPhotoTurn, secureOn, setSecureOn, pin, setPin, pinRef, jobUser, setJobUser, }} />}
                 onKind={setDocKind}
                 onMemo={setMemo}
                 onPhotos={choosePhotos}
