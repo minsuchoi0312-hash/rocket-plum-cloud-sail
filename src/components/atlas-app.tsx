@@ -13,6 +13,7 @@ import { clearPrintRoot, printSheet, type PrintJob } from "@/lib/print-sheet";
 import { downloadCanvasPdf, grayCanvas, renderSheetCanvas, sheetMemoChunks } from "@/lib/pdf-page";
 import { bundleCommands, canvasPclCommands, drawOfficePage, needsBlankBack, officeMemoChunks, osRasterSize, paperPoints, pclAbortFooter, pclJobFooter, pclJobHeader, pclPageCommands, previewSize, printPixelSize, printableSize, wrapPdfJob, type DuplexMode, type OfficePaper } from "@/lib/office-job";
 import { canPdfDirect, imagesToPdf, nupGroups, openPdf, pageSpan, parsePageRange, renderPdfPage, slicePdf, type OpenedPdf } from "@/lib/pdf-doc";
+import { pdfFontsEmbedded } from "@/lib/pdf-fonts";
 import { languageIsPcl5, resolvePrintRoute, type PrintRoute } from "@/lib/print-route";
 import { isValidIPv4, learnSubnetFromIp, type ScanProgress } from "@/lib/lan-find";
 import { sendIppPdf } from "@/lib/ipp-send";
@@ -106,6 +107,8 @@ function AtlasMain() {
   const [memo, setMemo] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null);
+  /* PDF 안에 글꼴이 다 들어 있는지 — 아니면 PDF Direct 대신 폰에서 그림으로 바꿔 보낸다(복사기에 한글 글꼴이 없어 깨짐) */
+  const [pdfFontsOk, setPdfFontsOk] = useState<{ bytes: Uint8Array; ok: boolean } | null>(null);
   const [pdfKey, setPdfKey] = useState("");
   const [pdfNeedsKey, setPdfNeedsKey] = useState(false);
   const [pdfName, setPdfName] = useState("");
@@ -888,8 +891,22 @@ function AtlasMain() {
     docKind,
     pageMode: pageMode === "list" ? "list" : pageMode,
     gray,
-    pdfDirect: Boolean(pdfBytes && canPdfDirect(pdfBytes) && !rasterForced),
+    /* 글꼴 검사가 끝나 '모두 들어 있음'으로 확인된 PDF만 원본 직통. 검사 전 · 실패는 그림(래스터)으로 */
+    pdfDirect: Boolean(pdfBytes && canPdfDirect(pdfBytes) && !rasterForced && pdfFontsOk?.bytes === pdfBytes && pdfFontsOk.ok),
   });
+
+  useEffect(() => {
+    if (!pdfBytes) return;
+    let alive = true;
+    void pdfFontsEmbedded(pdfBytes).then((check) => {
+      if (!alive) return;
+      setPdfFontsOk({ bytes: pdfBytes, ok: check.embedded });
+      if (!check.embedded) diag(`PDF 글꼴 미포함 → 래스터로 인쇄: ${check.missing.slice(0, 4).join(", ")}`);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [pdfBytes]);
 
   function oriented(size: { width: number; height: number }) {
     return orient === "landscape" ? { width: size.height, height: size.width } : size;
