@@ -4,22 +4,28 @@
  */
 import { useEffect, useRef, type RefObject } from "react";
 
+/** 열린 모달 순서 — 모달 위에 모달(도움말 위 약관)이 뜨면 Esc는 맨 위 것만 닫는다 */
+const stack: object[] = [];
+
 export function useModal(dialogRef: RefObject<HTMLElement | null>, onClose: () => void) {
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   useEffect(() => {
+    const me = {};
+    stack.push(me);
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const body = document.body;
     const prevOverflow = body.style.overflow;
     body.style.overflow = "hidden";
     dialogRef.current?.focus({ preventScroll: true });
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.defaultPrevented) return;
+      if (event.key !== "Escape" || event.defaultPrevented || stack[stack.length - 1] !== me) return;
       event.preventDefault();
       closeRef.current();
     };
     window.addEventListener("keydown", onKey);
     return () => {
+      stack.splice(stack.indexOf(me), 1);
       window.removeEventListener("keydown", onKey);
       body.style.overflow = prevOverflow;
       if (opener?.isConnected) opener.focus({ preventScroll: true });

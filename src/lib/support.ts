@@ -5,7 +5,7 @@ import { tr, type MsgKey } from "@/lib/i18n/core";
  * 문의 메일 받는 주소 — 이 한 줄만 채우면 '이메일로 보내기' 버튼이 켜진다. 예: "help@example.com"
  * 비어 있으면 버튼을 숨기고 "복사해서 메일/카톡으로 보내 주세요" 안내를 보여 준다.
  */
-export const SUPPORT_EMAIL = "";
+export const SUPPORT_EMAIL = "4th22sp@naver.com";
 
 export const HELPER_FILE = "/raw-print-helper.mjs";
 

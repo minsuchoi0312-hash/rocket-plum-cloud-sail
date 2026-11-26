@@ -38,6 +38,7 @@ import {
   QrCode as PhQrCode,
   Question,
   Repeat as PhRepeat,
+  ShieldCheck as PhShieldCheck,
   Stethoscope as PhStethoscope,
   Sun as PhSun,
   Table,
@@ -64,6 +65,7 @@ export const ArrowLeft = round(CaretLeft);
 export const ArrowRight = round(PhArrowRight);
 export const Bookmark = round(BookmarkSimple);
 export const Check = round(PhCheck);
+export const ShieldCheck = round(PhShieldCheck);
 export const ChevronDown = round(CaretDown);
 export const ChevronUp = round(CaretUp);
 export const ChevronRight = round(CaretRight);

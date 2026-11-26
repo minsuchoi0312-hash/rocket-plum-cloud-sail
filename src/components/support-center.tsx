@@ -14,6 +14,7 @@ import { copyText } from "@/lib/clipboard";
 import { historyKindLabel, historyRouteLabel, historyTime, type PrintRecord } from "@/lib/print-history";
 import { envLine, faqs, inquiryLabel, inquiryMailto, inquiryText, INQUIRY_TYPES, ipGuide, readEnv, SUPPORT_EMAIL, type EnvInfo, type InquiryType } from "@/lib/support";
 import { m, tr, useI18n } from "@/lib/i18n";
+import { LegalLinks, LegalSheet, type LegalTab } from "@/components/legal-sheet";
 
 export type SupportTab = "help" | "contact" | "diag" | "log";
 
@@ -69,6 +70,7 @@ export function SupportCenter({
   const [body, setBody] = useState("");
   const [withLog, setWithLog] = useState(true);
   const [logTick, setLogTick] = useState(0);
+  const [legal, setLegal] = useState<LegalTab | null>(null);
   const log = useMemo(() => diagText(), [logTick, tab]);
 
   useEffect(() => setEnv(readEnv()), [lang]);
@@ -143,6 +145,7 @@ export function SupportCenter({
               <button type="button" onClick={() => onTab("contact")} className="chip mt-1 h-11 w-full rounded-2xl text-sm font-medium">
                 {t("sc.toContact")}
               </button>
+              <LegalLinks onOpen={setLegal} />
             </div>
           ) : null}
 
@@ -292,6 +295,11 @@ export function SupportCenter({
           ) : null}
         </div>
       </div>
+      {legal ? (
+        <div onClick={(event) => event.stopPropagation()}>
+          <LegalSheet tab={legal} onTab={setLegal} onClose={() => setLegal(null)} />
+        </div>
+      ) : null}
     </div>
   );
 }

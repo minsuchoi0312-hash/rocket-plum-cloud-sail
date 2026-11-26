@@ -43,6 +43,7 @@ import { DoneBanner, JobBanner, type JobPhase } from "@/components/job-banner";
 import { blobUrl, chunkLoadError, downloadBytes, humanError, inAppBrowser, isSure, loadImage, marginLabel, stageForQuery, uidOf, viaLabel, type Found, type LinkTab, type PageChip, type ProbeState, type Step } from "@/lib/app-utils";
 import { isInkjet, PrintChooser, ReadyCard } from "@/components/print-parts";
 import { PackSheet } from "@/components/pack-sheet";
+import { ConsentGate } from "@/components/legal-sheet";
 import { escprEndPage, escprJobFooter, escprJobHeader, escprPageCommands } from "@/lib/escpr";
 import { splJobFooter, splJobHeader, splPageCommands, splProfile } from "@/lib/spl";
 import { pcl3JobFooter, pcl3JobHeader, pcl3PageCommands, pcl3Profile } from "@/lib/pcl3";
@@ -296,10 +297,12 @@ function AtlasMain() {
   const backRef = useRef<() => boolean>(() => false);
   const exitArmed = useRef(0);
   backRef.current = () => {
-    if (document.querySelector('[role="dialog"][aria-modal="true"], [role="menu"]')) {
+    if (document.querySelector('[role="dialog"][aria-modal="true"]:not([data-consent-gate]), [role="menu"]')) {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
       return true;
     }
+    /* 약관 동의 전에는 뒤로 = 앱 닫기 (동의하지 않으면 쓰지 않는다) */
+    if (document.querySelector("[data-consent-gate]")) return false;
     if (sending) {
       toast(m("ph.backBusy"));
       return true;
@@ -2066,6 +2069,7 @@ function AtlasMain() {
       ) : null}
       {zoom ? <PreviewZoomModal pages={zoom.pages} start={zoom.index} onClose={closeZoom} /> : null}
       {qrTarget ? <PrinterQrModal target={qrTarget} onClose={() => setQrTarget(null)} /> : null}
+      <ConsentGate />
       {packAsk ? <PackSheet choice={packAsk.choice} model={packAsk.model} onReady={onPackReady} onClose={() => setPackAsk(null)} /> : null}
       {showDiag ? (
         <SupportCenter
