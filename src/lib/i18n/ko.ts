@@ -871,7 +871,7 @@ export const ko = {
   "ap.skipName": "이름은 모르겠어요. 인쇄할 내용 고르기",
   "ap.ippBlocked": "와이파이로 바로 인쇄(IPP)가 막혔어요. 켜져 있는 PC 도우미로 바로 보낼 수 있어요.",
   "ap.retryHelper": "PC 도우미(9100)로 바꿔 다시 보내기",
-  "ap.whatToPrint": "무엇을 인쇄할까요?",
+  "ap.whatToPrint": "인쇄할 문서",
   "ap.adv": "고급",
   "ap.advNup": "모아 찍기 {n}",
   "ap.advReverse": "역순",

@@ -873,7 +873,7 @@ export const ja: Record<MsgKey, string> = {
   "ap.skipName": "名前はわかりません。印刷する内容を選ぶ",
   "ap.ippBlocked": "Wi-Fiでの直接印刷（IPP）がブロックされました。起動中のPCヘルパーで直接送信できます。",
   "ap.retryHelper": "PCヘルパー（9100）に切り替えて再送信",
-  "ap.whatToPrint": "何を印刷しますか？",
+  "ap.whatToPrint": "印刷する書類",
   "ap.adv": "詳細",
   "ap.advNup": "割り付け {n}",
   "ap.advReverse": "逆順",

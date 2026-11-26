@@ -164,7 +164,7 @@ export function ConsentGate() {
           <div className="mt-4 divide-y divide-line rounded-2xl bg-[var(--fill)]">
             <div className="flex items-center gap-3 px-3 py-3">
               <button type="button" role="checkbox" aria-checked={checked} onClick={() => setChecked((value) => !value)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-                <span className={`inline-flex size-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${checked ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-line"}`} aria-hidden="true">
+                <span className={`tds-check ${checked ? "is-on" : ""}`} aria-hidden="true">
                   {checked ? <Check className="size-3.5" /> : null}
                 </span>
                 <span className="min-w-0 text-[15px] font-medium text-fg">

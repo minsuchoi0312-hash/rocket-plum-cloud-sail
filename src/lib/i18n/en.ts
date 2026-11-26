@@ -873,7 +873,7 @@ export const en: Record<MsgKey, string> = {
   "ap.skipName": "I don't know the name. Choose what to print",
   "ap.ippBlocked": "Direct Wi-Fi printing (IPP) is blocked. You can send through the running PC Helper instead.",
   "ap.retryHelper": "Retry via PC Helper (9100)",
-  "ap.whatToPrint": "What do you want to print?",
+  "ap.whatToPrint": "Document to print",
   "ap.adv": "Advanced",
   "ap.advNup": "{n}-up",
   "ap.advReverse": "Reverse",

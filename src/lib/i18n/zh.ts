@@ -873,7 +873,7 @@ export const zh: Record<MsgKey, string> = {
   "ap.skipName": "不知道名称，直接选择打印内容",
   "ap.ippBlocked": "Wi-Fi 直接打印（IPP）被拦截，可以改用正在运行的 PC 助手发送。",
   "ap.retryHelper": "改用 PC 助手（9100）重新发送",
-  "ap.whatToPrint": "要打印什么？",
+  "ap.whatToPrint": "要打印的文档",
   "ap.adv": "高级",
   "ap.advNup": "{n} 合 1",
   "ap.advReverse": "倒序",
