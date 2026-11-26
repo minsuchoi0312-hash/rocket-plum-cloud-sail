@@ -2096,3 +2096,106 @@ html:not([data-theme="light"]) .toast-dock .toast {
     animation: none;
   }
 }
+
+/* ───────── PDF 쪽 고르기 — 쪽 썸네일을 터치해서 켜고 끄기 ───────── */
+/* 한 줄로 옆으로 넘기기 — 다음 쪽이 살짝 보여서 옆으로 더 있다는 걸 알 수 있게 */
+.pdf-pick {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 4px 10px;
+  margin: 0 -4px;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 4px;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pdf-pick-cell {
+  position: relative;
+  flex: 0 0 auto;
+  width: clamp(104px, 30vw, 140px);
+  scroll-snap-align: start;
+  display: block;
+  aspect-ratio: 180 / 254;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px var(--color-line);
+  transition: box-shadow 160ms var(--ease-out), transform 160ms var(--ease-out), opacity 160ms var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pdf-pick-cell img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  animation: veil-in 220ms var(--ease-out) both;
+}
+
+/* 아직 안 그린 쪽: 옅은 회색이 숨쉬듯 */
+.pdf-pick-wait {
+  position: absolute;
+  inset: 0;
+  background: #eef0f3;
+  animation: probe-pulse 1.2s ease-in-out infinite;
+}
+
+/* 하나라도 고르면 안 고른 쪽은 살짝 흐리게 */
+.pdf-pick:has(.is-on) .pdf-pick-cell:not(.is-on) {
+  opacity: 0.55;
+}
+
+.pdf-pick-cell.is-on {
+  box-shadow: 0 0 0 3px var(--accent);
+}
+
+.pdf-pick-cell:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.pdf-pick-num {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  min-width: 22px;
+  border-radius: 7px;
+  background: rgb(0 0 0 / 62%);
+  padding: 1px 6px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 20px;
+  color: #fff;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.pdf-pick-check {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 92%);
+  box-shadow: inset 0 0 0 1.5px rgb(0 0 0 / 25%);
+  color: #fff;
+  transition: background-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+}
+
+.pdf-pick-cell.is-on .pdf-pick-check {
+  background: var(--accent);
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pdf-pick-wait,
+  .pdf-pick-cell img {
+    animation: none;
+  }
+}

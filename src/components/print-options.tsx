@@ -15,6 +15,7 @@ import { tr } from "@/lib/i18n";
 import type { DocKind } from "@/components/paper-preview";
 import { OfficeOptions } from "@/components/print-parts";
 import { PresetBar } from "@/components/preset-bar";
+import { PdfPagePicker } from "@/components/pdf-page-picker";
 
 type Set<T> = Dispatch<SetStateAction<T>>;
 
@@ -41,6 +42,8 @@ export type PrintOptionsProps = {
   copies: number;
   setCopies: Set<number>;
   pdfCount: number;
+  pdfBytes: Uint8Array | null;
+  pdfKey: string;
   chosenPages: number[];
   currentPage: number;
   pageChip: PageChip;
@@ -98,7 +101,7 @@ export function PrintOptions(props: PrintOptionsProps) {
   const {
     docKind, sending, route, colorRaster, simplexOnly, jobControls, presetCurrent, activePresetId, applyPreset, onPresetSaved, setNotice,
     paper, setPaper, gray, setGray, duplex, setDuplex, copies, setCopies,
-    pdfCount, chosenPages, currentPage, pageChip, pickPages, pageList, setPageList, onTogglePage, reverse, setReverse, evenReverse,
+    pdfCount, pdfBytes, pdfKey, chosenPages, currentPage, pageChip, pickPages, pageList, setPageList, onTogglePage, reverse, setReverse, evenReverse,
     photoFilter, onPhotoFilter, photoLayout, onPhotoLayout, idLayout, cutLines, setCutLines,
     memoSize, setMemoSize, memoHeader, setMemoHeader, memoTitle, setMemoTitle, onTextFile,
     advancedOpen, setAdvancedOpen, margin, setMargin, marginMm, pageNumber, setPageNumber, wmChoice, setWmChoice, wmCustom, setWmCustom, stampActive,
@@ -128,22 +131,9 @@ export function PrintOptions(props: PrintOptionsProps) {
         </div>
         {pageChip === "custom" ? (
           <div className="space-y-2">
+            {/* 쪽 썸네일을 터치해서 고르기 — 아래 칸에 1, 3-5처럼 직접 써도 같은 값이 된다 */}
+            {pdfCount > 0 ? <PdfPagePicker pdfBytes={pdfBytes} pdfKey={pdfKey} total={pdfCount} chosen={chosenPages} disabled={sending} onToggle={onTogglePage} onSetList={setPageList} /> : null}
             <input value={pageList} onChange={(event) => setPageList(event.target.value)} placeholder="1, 3-5, 8" aria-label={tr("po.customAria")} className="field h-10 w-full rounded-xl px-3 text-sm outline-none" />
-            {pdfCount > 0 && pdfCount <= 30 ? (
-              <div className="page-grid" role="group" aria-label={tr("po.gridAria")}>
-                {Array.from({ length: pdfCount }, (_, index) => index + 1).map((n) => {
-                  const on = chosenPages.includes(n);
-                  return (
-                    <button key={n} type="button" disabled={sending} aria-pressed={on} onClick={() => onTogglePage(n)} className={`chip page-cell rounded-xl text-sm font-semibold tabular-nums ${on ? "is-on" : ""}`}>
-                      {n}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : pdfCount > 30 ? (
-              <p className="text-xs text-muted">{tr("po.over30")}</p>
-            ) : null}
-            <p className="text-xs text-muted">{chosenPages.length ? tr("po.chosen", { n: chosenPages.length }) : tr("po.choose")}</p>
           </div>
         ) : null}
         {pageChip === "odd" || pageChip === "even" ? (
