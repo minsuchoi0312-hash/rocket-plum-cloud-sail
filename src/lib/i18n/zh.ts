@@ -955,4 +955,5 @@ export const zh: Record<MsgKey, string> = {
   "lg.ossFail": "无法加载许可证文件",
   "lg.loading": "加载中…",
   "lg.enNote": "此为韩文原文的英文译本。",
+  "card.caps": "支持的功能",
 };

@@ -955,4 +955,5 @@ export const en: Record<MsgKey, string> = {
   "lg.ossFail": "Couldn't load the license file",
   "lg.loading": "Loading…",
   "lg.enNote": "",
+  "card.caps": "Supported features",
 };

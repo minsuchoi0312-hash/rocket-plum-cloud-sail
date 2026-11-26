@@ -2,7 +2,7 @@
  * 실시간 복사기 상태 카드: 상태 배지 · 마지막 확인 시각 · 새로고침 · 토너 잔량 막대 · 지원 기능 칩 · 웹 설정 열기.
  * USB면 GET_DEVICE_ID의 지원 언어와 인터페이스 상태를 같은 모양으로 보여 준다.
  */
-import { RefreshCw } from "@/components/icons";
+import { CircleCheck, Printer, RefreshCw, TriangleAlert } from "@/components/icons";
 import { displayLabel, ifaceLabel, reasonLabel, stateBadge, tonerLabel, type PrinterStatus } from "@/lib/printer-status";
 import { useI18n } from "@/lib/i18n";
 
@@ -44,29 +44,35 @@ export function PrinterStatusCard({ status, loading, error, onRefresh, compact =
         ["IPP 631", caps.ipp631 || null],
       ]
     : [];
+  /* 토스식: 한 줄 요약(상태 아이콘 + 상태 + 확인 시각 + 새로고침) → 알림 배지 → 토너 → '지원 기능'은 접어 둔다 */
+  const tone = loading && !status ? "idle" : badge.tone;
+  const StateIcon = tone === "ok" ? CircleCheck : tone === "idle" ? Printer : TriangleAlert;
+  const shownChips = chips.filter(([, v]) => v !== null && v !== undefined);
+  const webAdmin = caps?.webAdmin && status?.ip ? `http://${status.ip}` : "";
+  const subParts = [status?.source === "usb" ? t("card.usbTitle") : t("card.title")];
+  if (status?.checkedAt) subParts.push(t("card.checkedAt", { time: timeLabel(status.checkedAt) }));
   return (
     <div className={`status-card rounded-2xl ${compact ? "p-3" : "p-3.5"}`} aria-live="polite">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-xs font-medium text-muted">{status?.source === "usb" ? t("card.usbTitle") : t("card.title")}</p>
-          <p className="mt-1 flex flex-wrap items-center gap-1.5">
-            <span className={`state-badge is-${badge.tone}`}>{loading && !status ? t("card.checking") : badge.label}</span>
-            {status?.checkedAt ? <span className="text-xs text-faint">{t("card.checkedAt", { time: timeLabel(status.checkedAt) })}{status.latencyMs ? ` · ${status.latencyMs}ms` : ""}</span> : null}
-          </p>
-          {status?.display && status.display.toUpperCase() !== "READY" ? <p className="mt-1 break-words text-xs text-muted">{t("card.display", { v: displayLabel(status.display) })}</p> : null}
-          {status?.source === "usb" ? <p className="mt-1 text-xs text-muted">{t("card.iface", { v: ifaceLabel(status) })}</p> : null}
+      <div className="flex items-center gap-3">
+        <span className={`st-ico is-${tone}`} aria-hidden="true">
+          <StateIcon className="size-[22px]" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className={`st-title is-${tone}`}>{loading && !status ? t("card.checking") : badge.label}</p>
+          <p className="st-sub">{subParts.join(" · ")}</p>
         </div>
         {onRefresh ? (
-          <button type="button" onClick={onRefresh} disabled={loading} className="chip inline-flex h-8 shrink-0 items-center gap-1 rounded-full px-2.5 text-xs font-semibold" aria-label={t("card.refreshAria")}>
-            <RefreshCw className={`size-3.5 ${loading ? "spin" : ""}`} aria-hidden="true" />
-            {t("card.refresh")}
+          <button type="button" onClick={onRefresh} disabled={loading} className="st-refresh" aria-label={t("card.refreshAria")} title={t("card.refresh")}>
+            <RefreshCw className={`size-5 ${loading ? "spin" : ""}`} aria-hidden="true" />
           </button>
         ) : null}
       </div>
-      {error ? <p className="mt-2 text-xs text-warn">{error}</p> : null}
-      {!status && !loading && helperNeeded ? <p className="mt-2 text-xs text-muted">{t("card.helperHint")}</p> : null}
+      {status?.display && status.display.toUpperCase() !== "READY" ? <p className="st-note">{t("card.display", { v: displayLabel(status.display) })}</p> : null}
+      {status?.source === "usb" ? <p className="st-note">{t("card.iface", { v: ifaceLabel(status) })}</p> : null}
+      {error ? <p className="st-note text-warn">{error}</p> : null}
+      {!status && !loading && helperNeeded ? <p className="st-note">{t("card.helperHint")}</p> : null}
       {status?.reasons.length ? (
-        <div className="mt-2 flex flex-wrap gap-1">
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
           {status.reasons.map((r) => (
             <span key={r} className={`reason-chip ${["media-empty", "media-jam", "cover-open", "toner-empty", "printer-error", "hardware-error"].includes(r) ? "is-bad" : ""}`}>
               {reasonLabel(r)}
@@ -75,7 +81,7 @@ export function PrinterStatusCard({ status, loading, error, onRefresh, compact =
         </div>
       ) : null}
       {status?.toners.length && !compact ? (
-        <ul className="mt-2.5 space-y-1.5" aria-label={t("card.tonerAria")}>
+        <ul className="mt-3 space-y-1.5" aria-label={t("card.tonerAria")}>
           {status.toners.map((toner) => {
             const name = tonerLabel(toner.name);
             const fill = barColor(toner.color, toner.name);
@@ -93,21 +99,27 @@ export function PrinterStatusCard({ status, loading, error, onRefresh, compact =
           })}
         </ul>
       ) : null}
-      {chips.length ? (
-        <div className="mt-2.5 flex flex-wrap gap-1">
-          {chips
-            .filter(([, v]) => v !== null && v !== undefined)
-            .map(([label, v]) => (
-              <span key={label} className={`cap-chip ${v ? "is-yes" : "is-no"}`}>
-                {v ? "✓" : "✕"} {label}
-              </span>
-            ))}
-        </div>
-      ) : null}
-      {caps?.webAdmin && status?.ip ? (
-        <a href={`http://${status.ip}`} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs font-semibold text-accent">
-          {t("card.webAdmin")}
-        </a>
+      {shownChips.length || webAdmin ? (
+        <details className="st-more">
+          <summary>
+            {t("card.caps")}
+            {status?.latencyMs ? <span className="st-more-meta">{status.latencyMs}ms</span> : null}
+          </summary>
+          {shownChips.length ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {shownChips.map(([label, v]) => (
+                <span key={label} className={`cap-chip ${v ? "is-yes" : "is-no"}`}>
+                  {v ? "✓" : "✕"} {label}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          {webAdmin ? (
+            <a href={webAdmin} target="_blank" rel="noopener noreferrer" className="mt-2.5 inline-block text-sm font-semibold text-accent">
+              {t("card.webAdmin")}
+            </a>
+          ) : null}
+        </details>
       ) : null}
     </div>
   );

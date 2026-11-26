@@ -953,4 +953,5 @@ export const ko = {
   "lg.ossFail": "라이선스 파일을 불러오지 못했어요",
   "lg.loading": "불러오는 중…",
   "lg.enNote": "",
+  "card.caps": "지원 기능",
 } as const;

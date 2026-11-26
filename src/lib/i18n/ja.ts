@@ -955,4 +955,5 @@ export const ja: Record<MsgKey, string> = {
   "lg.ossFail": "ライセンスファイルを読み込めませんでした",
   "lg.loading": "読み込み中…",
   "lg.enNote": "韓国語の原文を英語に翻訳したものです。",
+  "card.caps": "対応機能",
 };
