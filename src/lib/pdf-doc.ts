@@ -89,10 +89,16 @@ export type OpenedPdf = {
 
 let pdfjsPromise: Promise<typeof import("pdfjs-dist")> | null = null;
 
+/*
+ * pdf.js 레거시 빌드(옛 브라우저용 폴리필 포함)를 쓴다.
+ * 기본 빌드는 Math.sumPrecise · Map.getOrInsert 같은 아주 새 기능을 확인 없이 써서,
+ * 그 기능이 없는 안드로이드 WebView/크롬(예: 145)에서는 PDF에 든 글꼴을 하나도 못 읽고 폰 글꼴로 대신 그린다
+ * → 힌디어 · 아랍어 · 미얀마어 · 그리스어 강세가 깨지고 명조체가 고딕으로 나왔다.
+ */
 async function loadPdfjs() {
   if (!pdfjsPromise) {
-    pdfjsPromise = import("pdfjs-dist").then(async (mod) => {
-      const worker = await import("pdfjs-dist/build/pdf.worker.min.mjs?url");
+    pdfjsPromise = (import("pdfjs-dist/legacy/build/pdf.mjs") as unknown as Promise<typeof import("pdfjs-dist")>).then(async (mod) => {
+      const worker = await import("pdfjs-dist/legacy/build/pdf.worker.min.mjs?url");
       mod.GlobalWorkerOptions.workerSrc = worker.default;
       return mod;
     });

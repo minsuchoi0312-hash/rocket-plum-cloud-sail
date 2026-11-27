@@ -2218,7 +2218,8 @@ function AtlasMain() {
                   <p className="route-badge">{routeLabel}</p>
                 </div>
               )}
-              {match ? <p className="route-badge mb-1 mt-2.5">{routeLabel}</p> : null}
+              {/* 경로 배지는 한 번만: 머리글(print-head)에 이미 있으면 다시 그리지 않는다 */}
+              {match && sure && selected ? <p className="route-badge mb-1 mt-2.5">{routeLabel}</p> : null}
               {(effNup !== 1 || (reverse && docKind !== "test") || secureOn || pageMode !== "all" || orient !== "auto" || (docKind === "pdf" && marginMm > 0) || stampActive) ? (
                 <p className="mb-3 text-xs text-muted">
                   {tr("ap.adv")}{" "}

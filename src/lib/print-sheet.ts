@@ -8,6 +8,8 @@ export type PrintJob =
   | { kind: "pdf"; pages: string[]; paper: string; gray: boolean };
 
 const heldUrls = new Set<string>();
+/** 미리보기(is-copying)를 열기 전 화면 스크롤 위치 — 닫으면 그 자리로 돌아간다 */
+let scrollBeforeCopy: number | null = null;
 
 function track(url: string) {
   if (url.startsWith("blob:")) heldUrls.add(url);
@@ -26,8 +28,11 @@ export function clearPrintRoot() {
   document.getElementById("copy-bar")?.remove();
   for (const url of heldUrls) URL.revokeObjectURL(url);
   heldUrls.clear();
+  const wasCopying = document.body.classList.contains("is-copying");
   document.body.classList.remove("is-printing", "is-copying", "print-gray");
   delete document.body.dataset.printPaper;
+  if (wasCopying && scrollBeforeCopy !== null) window.scrollTo({ top: scrollBeforeCopy, behavior: "instant" });
+  scrollBeforeCopy = null;
 }
 
 export function canvasObjectUrl(canvas: HTMLCanvasElement, quality = 0.92) {
@@ -65,7 +70,10 @@ async function bake(src: string, gray: boolean) {
 }
 
 function finishPrint(root: HTMLElement) {
+  /* 아래로 내려 본 상태에서 열어도 미리보기는 첫 쪽(맨 위)부터 보이게 */
+  if (!document.body.classList.contains("is-copying")) scrollBeforeCopy = window.scrollY;
   document.body.classList.add("is-copying");
+  window.scrollTo({ top: 0, behavior: "instant" });
   if (!document.getElementById("copy-bar")) {
     const bar = document.createElement("div");
     bar.id = "copy-bar";
