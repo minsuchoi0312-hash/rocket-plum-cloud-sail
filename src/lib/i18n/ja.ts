@@ -711,6 +711,7 @@ export const ja: Record<MsgKey, string> = {
   "pr.format": "1, 3-5, 8 のように入力してください。",
   "pr.none": "印刷するページがありません。",
   "ps.previewNote": "このブラウザで作成したプレビューです。他の印刷アプリは開きません。",
+  "ps.previewNoteApp": "印刷される見た目のプレビューです。まだ印刷していません。",
   "ps.close": "閉じる",
   "ps.kicker": "印刷の確認",
   "pdf.makeFail": "PDFを作成できませんでした。",

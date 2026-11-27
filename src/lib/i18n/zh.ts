@@ -711,6 +711,7 @@ export const zh: Record<MsgKey, string> = {
   "pr.format": "请按 1, 3-5, 8 的格式输入。",
   "pr.none": "没有要打印的页面。",
   "ps.previewNote": "这是在浏览器中生成的预览，不会打开其他打印应用。",
+  "ps.previewNoteApp": "这是打印效果预览，尚未打印。",
   "ps.close": "关闭",
   "ps.kicker": "打印确认",
   "pdf.makeFail": "无法生成 PDF。",

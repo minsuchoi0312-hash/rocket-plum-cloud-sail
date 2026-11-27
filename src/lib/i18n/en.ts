@@ -711,6 +711,7 @@ export const en: Record<MsgKey, string> = {
   "pr.format": "Enter it like 1, 3-5, 8.",
   "pr.none": "No pages to print.",
   "ps.previewNote": "This preview was made in your browser. No other print app is opened.",
+  "ps.previewNoteApp": "This is how it will print. Nothing has been printed yet.",
   "ps.close": "Close",
   "ps.kicker": "Print preview",
   "pdf.makeFail": "Couldn't create the PDF.",

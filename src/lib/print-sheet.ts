@@ -1,5 +1,6 @@
 import { tr } from "@/lib/i18n/core";
 import { grayCanvas, renderSheetCanvas, sheetMemoChunks } from "@/lib/pdf-page";
+import { phoneApp } from "@/lib/phone-helper";
 
 export type PrintJob =
   | { kind: "test"; title: string; note: string; paper: string; gray: boolean }
@@ -78,7 +79,8 @@ function finishPrint(root: HTMLElement) {
     const bar = document.createElement("div");
     bar.id = "copy-bar";
     const text = document.createElement("p");
-    text.textContent = tr("ps.previewNote");
+    /* 앱에는 "브라우저"가 없으니 앱용 문구 */
+    text.textContent = tr(phoneApp() ? "ps.previewNoteApp" : "ps.previewNote");
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = tr("ps.close");

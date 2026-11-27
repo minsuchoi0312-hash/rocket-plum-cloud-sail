@@ -709,6 +709,7 @@ export const ko = {
   "pr.format": "1, 3-5, 8처럼 입력해 주세요.",
   "pr.none": "인쇄할 쪽이 없어요.",
   "ps.previewNote": "이 브라우저에서 만든 미리보기예요. 다른 인쇄 앱은 열지 않아요.",
+  "ps.previewNoteApp": "인쇄될 모습을 미리 보여 드려요. 아직 인쇄하지 않았어요.",
   "ps.close": "닫기",
   "ps.kicker": "인쇄 확인",
   "pdf.makeFail": "PDF로 만들지 못했어요.",
