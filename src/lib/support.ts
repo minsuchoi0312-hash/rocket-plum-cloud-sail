@@ -130,7 +130,9 @@ const FAQ_DEF: { id: string; lines: number; copy?: string; download?: string }[]
 
 /** 자주 묻는 질문(지금 언어) */
 export function faqs(): Faq[] {
-  return FAQ_DEF.map((row) => ({
+  /* 안드로이드 앱은 도우미가 내장돼 있어 PC 도우미(CORS) · 아이폰 안내가 필요 없다 */
+  const rows = phoneApp() ? FAQ_DEF.filter((row) => row.id !== "cors" && row.id !== "ios") : FAQ_DEF;
+  return rows.map((row) => ({
     id: row.id,
     q: tr(`faq.${row.id}.q` as MsgKey),
     a: Array.from({ length: row.lines }, (_, i) => tr(`faq.${row.id}.a${i + 1}` as MsgKey)),

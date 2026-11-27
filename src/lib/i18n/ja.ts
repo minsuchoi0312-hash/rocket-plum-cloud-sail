@@ -900,6 +900,7 @@ export const ja: Record<MsgKey, string> = {
   "ap.btnConnect": "接続して印刷",
   "ap.helpCard": "接続できないとき・ヘルプ",
   "ap.helpTopics": "Wi-Fi検索・CORS・USB・iPhone・セキュリティ印刷・お問い合わせ",
+  "ap.helpTopicsApp": "Wi-Fi検索・USB・セキュリティ印刷・お問い合わせ",
   "ap.reconnectPrev": "以前接続したプリンターに再接続",
   "lang.aria": "表示言語: {v}（変更）",
   "lang.menu": "言語を選択",

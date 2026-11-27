@@ -898,6 +898,7 @@ export const ko = {
   "ap.btnConnect": "연결하고 인쇄하기",
   "ap.helpCard": "연결이 안 될 때 · 도움말",
   "ap.helpTopics": "와이파이 검색 · CORS · USB · 아이폰 · 보안 인쇄 · 문의하기",
+  "ap.helpTopicsApp": "와이파이 검색 · USB · 보안 인쇄 · 문의하기",
   "ap.reconnectPrev": "전에 연결한 복사기 다시 연결하기",
   "lang.aria": "화면 언어: {v} (바꾸기)",
   "lang.menu": "언어 선택",

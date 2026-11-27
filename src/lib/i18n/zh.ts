@@ -900,6 +900,7 @@ export const zh: Record<MsgKey, string> = {
   "ap.btnConnect": "连接后打印",
   "ap.helpCard": "无法连接？· 帮助",
   "ap.helpTopics": "Wi-Fi 搜索 · CORS · USB · iPhone · 安全打印 · 咨询",
+  "ap.helpTopicsApp": "Wi-Fi 搜索 · USB · 安全打印 · 咨询",
   "ap.reconnectPrev": "重新连接以前的打印机",
   "lang.aria": "界面语言：{v}（更改）",
   "lang.menu": "选择语言",

@@ -900,6 +900,7 @@ export const en: Record<MsgKey, string> = {
   "ap.btnConnect": "Connect to print",
   "ap.helpCard": "Can't connect? · Help",
   "ap.helpTopics": "Wi-Fi search · CORS · USB · iPhone · Secure Print · Contact",
+  "ap.helpTopicsApp": "Wi-Fi search · USB · Secure Print · Contact",
   "ap.reconnectPrev": "Reconnect a previous printer",
   "lang.aria": "Language: {v} (change)",
   "lang.menu": "Choose language",

@@ -52,7 +52,7 @@ import { splJobFooter, splJobHeader, splPageCommands, splProfile } from "@/lib/s
 import { pcl3JobFooter, pcl3JobHeader, pcl3PageCommands, pcl3Profile } from "@/lib/pcl3";
 import { canonJobFooter, canonJobHeader, canonPageCommands, canonProfile } from "@/lib/canon";
 import { laserCmd, packFor, packInstalled, PACKS, type PackChoice, type PackDef, type PackId } from "@/lib/print-packs";
-import { isPhoneHelper } from "@/lib/phone-helper";
+import { isPhoneHelper, phoneApp } from "@/lib/phone-helper";
 import type { WifiExtra } from "@/components/app-effects";
 
 /** 여러 명령을 한 덩어리로 */
@@ -2323,7 +2323,7 @@ function AtlasMain() {
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-[16px] font-semibold text-fg">{tr("ap.helpCard")}</span>
-          <span className="mt-0.5 block truncate text-[13px] text-muted">{tr("ap.helpTopics")}</span>
+          <span className="mt-0.5 block truncate text-sm text-muted">{tr(phoneApp() ? "ap.helpTopicsApp" : "ap.helpTopics")}</span>
         </span>
         <ChevronRightIcon className="doc-chev" aria-hidden="true" />
       </button>
