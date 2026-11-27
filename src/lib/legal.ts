@@ -20,6 +20,9 @@ export type LegalDoc = { title: string; intro: string; sections: LegalSection[] 
 const MAIL = SUPPORT_EMAIL || "앱 안 '문의하기'";
 const DATE_KO = "2026년 11월 26일";
 const DATE_EN = "November 26, 2026";
+/* 처리방침만 고친 날(약관은 그대로라 LEGAL_VERSION 은 두어 동의를 다시 받지 않는다): USB OTG · PDF 저장 · 보안 PIN 안내 추가 */
+const PRIVACY_DATE_KO = "2026년 11월 27일";
+const PRIVACY_DATE_EN = "November 27, 2026";
 
 const KO: Record<LegalKind, LegalDoc> = {
   terms: {
@@ -65,7 +68,7 @@ const KO: Record<LegalKind, LegalDoc> = {
   },
   privacy: {
     title: "개인정보처리방침",
-    intro: `누구나프린트(이하 '앱')는 개인정보를 모으지 않아요. 앱이 다루는 정보와 그 처리 방법을 「개인정보 보호법」 제30조에 따라 알려 드려요. 시행일 ${DATE_KO}.`,
+    intro: `누구나프린트(이하 '앱')는 개인정보를 모으지 않아요. 앱이 다루는 정보와 그 처리 방법을 「개인정보 보호법」 제30조에 따라 알려 드려요. 시행일 ${PRIVACY_DATE_KO}.`,
     sections: [
       {
         h: "1. 수집하는 개인정보",
@@ -82,12 +85,14 @@ const KO: Record<LegalKind, LegalDoc> = {
           "· 인쇄 기록: 파일 이름 · 쪽수 · 프린터 · 시각(최근 몇 건)",
           "· 설정: 인쇄 설정 · 언어 · 화면 테마 · 진단 기록",
           "앱의 '기록 지우기'나 앱 삭제로 바로 지워져요. 클라우드 백업이나 새 폰으로 옮기기(기기 간 이전)로도 복사되지 않아요. '백업 파일 받기'는 이용자가 직접 고른 곳에만 파일로 저장돼요.",
+          "'PDF로 저장'한 파일은 기기의 다운로드 › NugunaPrint 폴더에 남아요. 앱을 지워도 남으니, 필요 없으면 파일 앱에서 직접 지워 주세요.",
         ],
       },
       {
         h: "3. 인쇄할 파일",
         p: [
-          "이용자가 고르거나 다른 앱에서 '공유'한 사진 · PDF · 글은 기기 안에서 인쇄용 데이터로 바꾼 뒤, 이용자가 고른 같은 와이파이의 프린터로만 보내요.",
+          "이용자가 고르거나 다른 앱에서 '공유'한 사진 · PDF · 글은 기기 안에서 인쇄용 데이터로 바꾼 뒤, 이용자가 고른 같은 와이파이의 프린터(또는 USB 선으로 연결한 프린터)로만 보내요.",
+          "보안 인쇄 PIN은 인쇄 데이터에 담겨 그 프린터로만 가고, 기기에 저장하지 않아요.",
           "파일을 복사해 두지 않고, 인쇄가 끝나면 메모리에서 사라져요.",
         ],
       },
@@ -95,6 +100,7 @@ const KO: Record<LegalKind, LegalDoc> = {
         h: "4. 앱이 쓰는 권한",
         p: [
           "· 인터넷 · 네트워크 상태 · 와이파이 상태 · 멀티캐스트: 같은 와이파이 안의 프린터를 찾고 인쇄 데이터를 보내는 데만 써요. 인터넷의 외부 서버로는 보내지 않아요.",
+          "· USB(OTG): 이용자가 연결을 허락한 USB 프린터로 인쇄 데이터를 보내는 데만 써요. 프린터마다 안드로이드가 허락을 먼저 물어요.",
           "위치 · 카메라 · 마이크 · 연락처 · 전화 권한은 쓰지 않아요. 사진 · 파일은 이용자가 직접 고르거나 공유한 것만 열어요.",
         ],
       },
@@ -142,7 +148,7 @@ const KO: Record<LegalKind, LegalDoc> = {
           "· 경찰청 182 (ecrm.police.go.kr)",
         ],
       },
-      { h: "13. 변경", p: [`이 방침은 ${DATE_KO}부터 시행해요. 바뀌면 시행 7일 전부터 앱 안에 알려요.`] },
+      { h: "13. 변경", p: [`이 방침은 ${PRIVACY_DATE_KO}부터 시행해요. 바뀌면 시행 7일 전부터 앱 안에 알려요.`, `· ${PRIVACY_DATE_KO}: USB 선 인쇄 · 'PDF로 저장' · 보안 인쇄 PIN 안내를 더했어요(처리하는 정보는 그대로예요).`] },
     ],
   },
 };
@@ -179,7 +185,7 @@ const EN: Record<LegalKind, LegalDoc> = {
   },
   privacy: {
     title: "Privacy Policy",
-    intro: `Nuguna Print (the "App") does not collect personal information. This policy explains, under Article 30 of Korea's Personal Information Protection Act, what information the App handles. Effective ${DATE_EN}. The Korean version governs.`,
+    intro: `Nuguna Print (the "App") does not collect personal information. This policy explains, under Article 30 of Korea's Personal Information Protection Act, what information the App handles. Effective ${PRIVACY_DATE_EN}. The Korean version governs.`,
     sections: [
       { h: "1. Information collected", p: ["None. The App has no accounts, no login and no server, and contains no advertising or analytics SDKs.", "The Operator does not receive or store your name, phone number, location, contacts, photos or files."] },
       {
@@ -190,10 +196,11 @@ const EN: Record<LegalKind, LegalDoc> = {
           "· Print history: file name, pages, printer, time (recent items)",
           "· Settings: print settings, language, theme, diagnostic log",
           "It is erased by 'Clear history' or by uninstalling the App, and is excluded from cloud backups and device-to-device transfer. 'Download backup file' saves a file only where you choose.",
+          "Files saved with 'Save as PDF' stay in your device's Download › NugunaPrint folder, even after uninstalling. Delete them in your Files app if you no longer need them.",
         ],
       },
-      { h: "3. Files you print", p: ["Photos, PDFs and text you pick or share to the App are converted on your device and sent only to the printer you choose on the same Wi-Fi.", "Files are not copied and are released from memory after printing."] },
-      { h: "4. Permissions", p: ["· Internet, network state, Wi-Fi state, multicast: used only to find printers on your Wi-Fi and send print data. Nothing is sent to external internet servers.", "No location, camera, microphone, contacts or phone permissions. Only photos and files you pick or share are opened."] },
+      { h: "3. Files you print", p: ["Photos, PDFs and text you pick or share to the App are converted on your device and sent only to the printer you choose on the same Wi-Fi (or connected by USB cable).", "A secure-print PIN travels inside the print data to that printer only and is not stored on your device.", "Files are not copied and are released from memory after printing."] },
+      { h: "4. Permissions", p: ["· Internet, network state, Wi-Fi state, multicast: used only to find printers on your Wi-Fi and send print data. Nothing is sent to external internet servers.", "· USB (OTG): used only to send print data to a USB printer you allow. Android asks for your permission for each printer.", "No location, camera, microphone, contacts or phone permissions. Only photos and files you pick or share are opened."] },
       { h: "5. When you contact us", p: ["If you email us, the Operator receives your email address and message (including any device info or diagnostic log you choose to attach).", "It is used only to reply and is deleted without delay afterwards. PINs and passwords in the log are masked before sending."] },
       {
         h: "6. Third parties and transfers abroad",
@@ -208,7 +215,7 @@ const EN: Record<LegalKind, LegalDoc> = {
       { h: "10. Cookies and trackers", p: ["None. Settings stay in on-device storage (localStorage) and are not sent anywhere."] },
       { h: "11. Privacy officer", p: [`Nuguna Print operator (individual developer) · Email ${SUPPORT_EMAIL || "via 'Contact' in the App"}`] },
       { h: "12. Remedies (Korea)", p: ["Personal Information Dispute Mediation Committee 1833-6972 (www.kopico.go.kr)", "Personal Information Infringement Report Center 118 (privacy.kisa.or.kr)", "Supreme Prosecutors' Office 1301 · Korean National Police Agency 182"] },
-      { h: "13. Changes", p: [`This policy is effective from ${DATE_EN}. Changes are announced in the App at least 7 days in advance.`] },
+      { h: "13. Changes", p: [`This policy is effective from ${PRIVACY_DATE_EN}. Changes are announced in the App at least 7 days in advance.`, `· ${PRIVACY_DATE_EN}: added notes on USB cable printing, 'Save as PDF' and secure-print PINs (the information handled is unchanged).`] },
     ],
   },
 };

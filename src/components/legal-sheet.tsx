@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, ChevronRight, ShieldCheck, X } from "@/components/icons";
 import { useModal } from "@/components/use-modal";
 import { useI18n } from "@/lib/i18n";
+import { PRIVACY_POLICY_URL } from "@/lib/contact";
 import { legalAgreed, legalDoc, saveLegalAgree, type LegalKind } from "@/lib/legal";
 
 export type LegalTab = LegalKind | "oss";
@@ -73,6 +74,14 @@ function LegalBody({ kind }: { kind: LegalKind }) {
           ))}
         </section>
       ))}
+      {kind === "privacy" && PRIVACY_POLICY_URL ? (
+        <p className="text-xs text-faint">
+          {t("lg.webCopy")}{" "}
+          <a href={PRIVACY_POLICY_URL} target="_blank" rel="noopener noreferrer" className="break-all text-accent underline">
+            {PRIVACY_POLICY_URL}
+          </a>
+        </p>
+      ) : null}
     </article>
   );
 }

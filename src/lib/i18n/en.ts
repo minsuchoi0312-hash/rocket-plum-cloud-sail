@@ -960,4 +960,6 @@ export const en: Record<MsgKey, string> = {
   "ch.pdfPages": "{n} pages",
   "diag.t3app": "Phone helper connection",
   "diag.envApp": "built into the app (opens offline)",
+  "pp.scanOwn": "Only search Wi-Fi networks you are allowed to use, such as your own or your office's.",
+  "lg.webCopy": "Also available on the web:",
 };

@@ -6,8 +6,8 @@ import { phoneApp } from "@/lib/phone-helper";
  * 문의 메일 받는 주소: src/lib/contact.ts 한 곳에서 바꾼다 (약관 · 처리방침과 같은 값).
  * 비어 있으면 버튼을 숨기고 "복사해서 메일/카톡으로 보내 주세요" 안내를 보여 준다.
  */
-import { SUPPORT_EMAIL } from "@/lib/contact";
-export { SUPPORT_EMAIL };
+import { PRIVACY_POLICY_URL, SUPPORT_EMAIL } from "@/lib/contact";
+export { PRIVACY_POLICY_URL, SUPPORT_EMAIL };
 
 export const HELPER_FILE = "/raw-print-helper.mjs";
 

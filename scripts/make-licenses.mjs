@@ -37,6 +37,13 @@ const ANDROID_APACHE = [
   "Apache Cordova Android — Copyright The Apache Software Foundation",
 ];
 
+/** 패키지가 아니라 public/pdfjs 로 따로 싣는 데이터 — [이름 · 라이선스, pdfjs-dist 안 파일] */
+const PDFJS_DATA = [
+  ["PDF.js CMap (Adobe CMap, 한글 Adobe-Korea1 · KSC · UniKS 포함) — BSD-3-Clause", "cmaps/LICENSE"],
+  ["PDF.js 표준 글꼴 Foxit (PDFium) — BSD-3-Clause", "standard_fonts/LICENSE_FOXIT"],
+  ["PDF.js 표준 글꼴 Liberation Sans (Red Hat) — GPL-2.0 + 글꼴 예외", "standard_fonts/LICENSE_LIBERATION"],
+];
+
 function licenseFile(dir, given) {
   if (given) return join(dir, given);
   const hit = readdirSync(dir).find((name) => /^(licen[cs]e|copying)(\.(md|txt))?$/i.test(name));
@@ -66,6 +73,15 @@ for (const [pkg, label, given] of PACKAGES) {
   const text = readFileSync(file, "utf8").replace(/\r\n/g, "\n").trim();
   if (pkg === "pdfjs-dist") apache = text;
   out.push("=".repeat(72), `${label} ${meta.version} — ${meta.license}`, meta.homepage || "", "-".repeat(72), text, "");
+}
+
+for (const [label, rel] of PDFJS_DATA) {
+  const file = join(mods, "pdfjs-dist", rel);
+  if (!existsSync(file)) {
+    missing.push(`pdfjs-dist/${rel}`);
+    continue;
+  }
+  out.push("=".repeat(72), label, "-".repeat(72), readFileSync(file, "utf8").replace(/\r\n/g, "\n").trim(), "");
 }
 
 if (apache) {

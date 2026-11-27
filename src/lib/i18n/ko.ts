@@ -958,4 +958,6 @@ export const ko = {
   "ch.pdfPages": "전체 {n}쪽",
   "diag.t3app": "폰 도우미 연결",
   "diag.envApp": "앱에 내장된 화면(인터넷 없이도 열려요)",
+  "pp.scanOwn": "사용 권한이 있는 본인·사무실 와이파이에서만 검색해 주세요.",
+  "lg.webCopy": "웹에서도 볼 수 있어요:",
 } as const;

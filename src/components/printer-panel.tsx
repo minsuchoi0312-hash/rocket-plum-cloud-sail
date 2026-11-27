@@ -324,6 +324,8 @@ export function PrinterPanel(props: PrinterPanelProps) {
                   </div>
                 </details>
                 </div>
+                {/* 검색은 사용자가 누를 때만 한다(자동 · 백그라운드 전체 검색 없음) */}
+                <p className="px-1 text-xs text-faint">{t("pp.scanOwn")}</p>
                 {lanNote ? <p className="text-sm text-muted">{msgText(lanNote)}</p> : null}
               </div>
             ) : null}

@@ -960,4 +960,6 @@ export const zh: Record<MsgKey, string> = {
   "ch.pdfPages": "共 {n} 页",
   "diag.t3app": "手机内置助手连接",
   "diag.envApp": "应用内置界面(离线也能打开)",
+  "pp.scanOwn": "请仅在您有权使用的个人或办公室 Wi-Fi 中搜索。",
+  "lg.webCopy": "也可在网页上查看：",
 };

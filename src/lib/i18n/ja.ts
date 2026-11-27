@@ -960,4 +960,6 @@ export const ja: Record<MsgKey, string> = {
   "ch.pdfPages": "全{n}ページ",
   "diag.t3app": "スマホ内ヘルパー接続",
   "diag.envApp": "アプリ内蔵の画面(オフラインでも開けます)",
+  "pp.scanOwn": "利用が許可されたご自身やオフィスのWi-Fiでのみ検索してください。",
+  "lg.webCopy": "ウェブでも見られます:",
 };
