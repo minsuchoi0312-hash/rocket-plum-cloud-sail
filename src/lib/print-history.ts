@@ -29,6 +29,8 @@ function store(): Storage | null {
 const LIMIT = 10;
 
 function clean(text: string, max: number) {
+  // 기록에 남길 글에서 제어 문자를 걸러 내는 것이 목적이라 규칙을 끈다
+  // eslint-disable-next-line no-control-regex
   return text.replace(/[\u0000-\u001f]/g, " ").trim().slice(0, max);
 }
 

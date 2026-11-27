@@ -957,4 +957,6 @@ export const en: Record<MsgKey, string> = {
   "lg.enNote": "",
   "card.caps": "Supported features",
   "ch.pdfPages": "{n} pages",
+  "diag.t3app": "Phone helper connection",
+  "diag.envApp": "built into the app (opens offline)",
 };

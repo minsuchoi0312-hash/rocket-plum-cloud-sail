@@ -16,7 +16,10 @@ export function diagTitles() {
   return TITLE_KEYS.map((key) => tr(key));
 }
 
-const title = (id: number) => tr(TITLE_KEYS[id - 1]);
+/** 앱(APK) 안에서 도는지: 폰 내장 도우미 · 앱에 들어 있는 화면 */
+const inApp = () => typeof window !== "undefined" && Boolean((window as { __nugunaPhone?: boolean }).__nugunaPhone);
+/* 앱에서는 3단계가 PC가 아니라 폰 안의 도우미 */
+const title = (id: number) => tr(id === 3 && inApp() ? "diag.t3app" : TITLE_KEYS[id - 1]);
 const fix = (key: MsgKey, action: DiagFix) => ({ label: tr(key), action });
 
 /* 1) 브라우저·기기 */
@@ -28,6 +31,8 @@ export function judgeEnv(e: { browser: string; os: string; inApp: boolean; webUs
     tr(e.online ? "diag.online" : "diag.offline"),
   ].join(" · ");
   if (e.inApp) return { id: 1, title: title(1), level: "fail", detail: tr("diag.envInApp", { notes }), fix: fix("diag.fixChrome", "open-chrome") };
+  /* 앱: 화면 파일이 앱 안에 들어 있어 오프라인 캐시(서비스 워커)가 필요 없고, USB 대신 와이파이로 인쇄한다 → 경고하지 않는다 */
+  if (inApp()) return { id: 1, title: title(1), level: "pass", detail: `${e.browser} · ${e.os} · ${tr("diag.envApp")} · ${tr(e.online ? "diag.online" : "diag.offline")}` };
   if (!e.serviceWorker) return { id: 1, title: title(1), level: "warn", detail: tr("diag.envNoSw", { notes }), fix: fix("diag.fixReload", "reload") };
   if (!e.webUsb) return { id: 1, title: title(1), level: "warn", detail: tr("diag.envNoUsb", { notes }) };
   return { id: 1, title: title(1), level: "pass", detail: notes };

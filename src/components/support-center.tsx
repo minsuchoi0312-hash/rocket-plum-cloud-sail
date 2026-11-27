@@ -8,7 +8,7 @@ import { toast } from "@/lib/toast";
 import { buildBackup, backupFileName, restoreBackup } from "@/lib/backup";
 import { PRESETS_CHANGED } from "@/lib/presets";
 import { downloadText } from "@/lib/helper-launcher";
-import { Copy, Mail, Upload, X } from "@/components/icons";
+import { Check, Copy, Mail, Upload, X } from "@/components/icons";
 import { clearDiag, diagText, maskSecrets } from "@/lib/diag";
 import { copyText } from "@/lib/clipboard";
 import { historyKindLabel, historyRouteLabel, historyTime, type PrintRecord } from "@/lib/print-history";
@@ -90,7 +90,7 @@ export function SupportCenter({
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 p-3 sm:items-center" onClick={onClose}>
       <div ref={dialogRef} tabIndex={-1} className="card support-sheet flex w-full max-w-lg flex-col p-4 text-sm outline-none" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label={t("sc.aria")}>
         <div className="flex items-center justify-between">
-          <p className="text-base font-semibold text-fg">{t("sc.title")}</p>
+          <p className="sheet-title">{t("sc.title")}</p>
           <button type="button" onClick={onClose} className="icon-btn inline-flex size-9 items-center justify-center rounded-full" aria-label={t("sc.close")}>
             <X className="size-4" />
           </button>
@@ -104,12 +104,12 @@ export function SupportCenter({
         </div>
         <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-0.5">
           {tab === "help" ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
+              {/* 토스식: 번호 없이, 한 묶음 안에 얇은 선으로 나뉜 질문 목록 */}
+              <div className="faq-list">
               {faqs().map((faq, index) => (
-                <details key={faq.id} className="faq rounded-2xl px-3 py-2" open={index === 0}>
-                  <summary className="font-medium text-fg">
-                    {index + 1}) {faq.q}
-                  </summary>
+                <details key={faq.id} className="faq-item" open={index === 0}>
+                  <summary>{faq.q}</summary>
                   <ul className="mt-2 space-y-1.5 leading-relaxed text-muted">
                     {faq.a.map((line) => (
                       <li key={line}>{line}</li>
@@ -132,8 +132,8 @@ export function SupportCenter({
                   ) : null}
                 </details>
               ))}
-              <details className="faq rounded-2xl px-3 py-2">
-                <summary className="font-medium text-fg">{t("sc.ipQ")}</summary>
+              <details className="faq-item">
+                <summary>{t("sc.ipQ")}</summary>
                 <ul className="mt-2 space-y-1.5 leading-relaxed">
                   {ipGuide().map((row) => (
                     <li key={row.brand}>
@@ -142,7 +142,8 @@ export function SupportCenter({
                   ))}
                 </ul>
               </details>
-              <button type="button" onClick={() => onTab("contact")} className="chip mt-1 h-11 w-full rounded-2xl text-sm font-medium">
+              </div>
+              <button type="button" onClick={() => onTab("contact")} className="chip h-12 w-full rounded-2xl text-[15px] font-semibold">
                 {t("sc.toContact")}
               </button>
               <LegalLinks onOpen={setLegal} />
@@ -157,7 +158,7 @@ export function SupportCenter({
               }}
             >
               <div>
-                <p className="text-xs font-medium text-muted">{t("sc.inqType")}</p>
+                <p className="opt-label">{t("sc.inqType")}</p>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {INQUIRY_TYPES.map((value) => (
                     <button key={value} type="button" onClick={() => setKind(value)} className={`chip h-9 rounded-full px-3 text-sm ${kind === value ? "is-on" : ""}`}>
@@ -167,27 +168,30 @@ export function SupportCenter({
                 </div>
               </div>
               <label className="block">
-                <span className="text-xs font-medium text-muted">{t("sc.modelLabel")}</span>
-                <input value={model} onChange={(event) => setModel(event.target.value)} placeholder={t("sc.modelPh")} className="field mt-1 h-11 w-full rounded-xl px-3 text-sm outline-none" />
+                <span className="opt-label">{t("sc.modelLabel")}</span>
+                <input value={model} onChange={(event) => setModel(event.target.value)} placeholder={t("sc.modelPh")} className="field mt-1.5 h-12 w-full rounded-xl px-3 text-[15px] outline-none" />
               </label>
               <label className="block">
-                <span className="text-xs font-medium text-muted">{t("sc.bodyLabel")}</span>
-                <textarea value={body} onChange={(event) => setBody(event.target.value)} rows={4} placeholder={t("sc.bodyPh")} className="field mt-1 w-full rounded-xl px-3 py-2 text-sm outline-none" />
+                <span className="opt-label">{t("sc.bodyLabel")}</span>
+                <textarea value={body} onChange={(event) => setBody(event.target.value)} rows={4} placeholder={t("sc.bodyPh")} className="field mt-1.5 w-full rounded-xl px-3 py-2.5 text-[15px] outline-none" />
               </label>
-              <label className="flex items-start gap-2 text-sm text-fg">
-                <input type="checkbox" checked={withLog} onChange={(event) => setWithLog(event.target.checked)} className="mt-1" />
+              <label className="flex cursor-pointer items-start gap-3 text-[15px] text-fg">
+                <input type="checkbox" checked={withLog} onChange={(event) => setWithLog(event.target.checked)} className="sr-only" />
+                <span className={`tds-check mt-0.5 ${withLog ? "is-on" : ""}`} aria-hidden="true">
+                  {withLog ? <Check className="size-3.5" /> : null}
+                </span>
                 <span>
                   {t("sc.withLog")}
                   <span className="block text-xs text-muted">{t("sc.withLogHint")}</span>
                 </span>
               </label>
               <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => void copyText(inquiryText(inquiry)).then((ok) => toast(m(ok ? "sc.inqCopied" : "sc.copyFail")))} className="btn-solid inline-flex min-h-12 items-center justify-center gap-1.5 rounded-2xl px-2 py-1 text-center text-sm font-semibold">
+                <button type="button" onClick={() => void copyText(inquiryText(inquiry)).then((ok) => toast(m(ok ? "sc.inqCopied" : "sc.copyFail")))} className={`${mailto ? "chip weak" : "btn-solid"} inline-flex min-h-12 items-center justify-center gap-1.5 rounded-2xl px-2 py-1 text-center text-[15px] font-semibold`}>
                   <Copy className="size-4 shrink-0" aria-hidden="true" />
                   {t("sc.copyAll")}
                 </button>
                 {mailto ? (
-                  <a href={mailto} className="chip inline-flex h-12 items-center justify-center gap-1.5 rounded-2xl text-sm font-semibold">
+                  <a href={mailto} className="btn-solid inline-flex h-12 items-center justify-center gap-1.5 rounded-2xl text-[15px] font-semibold">
                     <Mail className="size-4" aria-hidden="true" />
                     {t("sc.mail")}
                   </a>

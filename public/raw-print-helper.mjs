@@ -886,9 +886,6 @@ export function qrMatrix(text, ecl = "M") {
   drawFormat(best);
   return modules;
 }
-{
-  qrMatrix
-};
 // </qr-core-js>
 
 /** 어두운 터미널 기준: 밝은 칸=█, 어두운 칸=공백 (invert=true면 반대) */

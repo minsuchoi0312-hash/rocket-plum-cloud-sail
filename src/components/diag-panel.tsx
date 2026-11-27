@@ -142,7 +142,7 @@ export function DiagPanel({ ctx }: { ctx: DiagContext }) {
               <div className="flex items-center gap-2">
                 <span className={`diag-badge is-${step?.level ?? (pending ? "run" : "idle")}`}>{step ? levelLabel(step.level) : pending ? t("diag.pending") : t("diag.idle")}</span>
                 <span className="min-w-0 flex-1 text-sm font-medium text-fg">
-                  {index + 1}) {title}
+                  {title}
                 </span>
               </div>
               {step?.metric ? <p className="diag-metric mt-0.5 text-xs tabular-nums text-muted">{t("diag.metric", { v: step.metric })}</p> : null}

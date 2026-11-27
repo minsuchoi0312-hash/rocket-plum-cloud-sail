@@ -1,3 +1,4 @@
+/* eslint-disable no-control-regex -- PCL 명령(ESC 등 제어 바이트)을 그대로 비교하는 테스트 */
 import assert from "node:assert/strict";
 import test from "node:test";
 import { bundleCommands, encodePclPageFromMono, monoFromLuma, needsBlankBack, packBits, paginateLines, pclAbortFooter, pclJobFooter, pclJobHeader, pclPageCommands, printableSize, wrapMeasuredLines } from "../src/lib/office-job.ts";

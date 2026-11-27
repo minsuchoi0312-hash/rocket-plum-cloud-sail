@@ -957,4 +957,6 @@ export const ja: Record<MsgKey, string> = {
   "lg.enNote": "韓国語の原文を英語に翻訳したものです。",
   "card.caps": "対応機能",
   "ch.pdfPages": "全{n}ページ",
+  "diag.t3app": "スマホ内ヘルパー接続",
+  "diag.envApp": "アプリ内蔵の画面(オフラインでも開けます)",
 };

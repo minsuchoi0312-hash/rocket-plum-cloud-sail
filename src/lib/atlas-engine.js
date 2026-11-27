@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment -- 자동 생성한 기종 표라 타입 검사를 끈다 */
 // @ts-nocheck
 /* Print Atlas pack resolver.
    Classifications follow publicly documented page languages
