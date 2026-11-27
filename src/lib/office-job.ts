@@ -11,18 +11,18 @@ export const OFFICE_PAPERS: OfficePaper[] = [...MAIN_PAPERS, ...MORE_PAPERS];
 
 /**
  * 용지 표 — 크기 계산 · 복사기 명령은 모두 여기서 나온다.
- * pcl: PCL5 ESC&l#A 용지 번호 · pjl: @PJL SET PAPER 이름(JIS 계열은 기종마다 이름이 달라 생략) · ipp: IPP media 이름
+ * pcl: PCL5 ESC&l#A 용지 번호 · pjl: @PJL SET PAPER 이름(JIS 계열은 기종마다 이름이 달라 생략) · ipp: IPP media 이름(PWG) · ippOld: IPP 1.x 옛 이름(코니카 등 1.1 기기)
  */
-const PAPER: Record<OfficePaper, { mm: readonly [number, number]; pcl: number; pjl: string | null; ipp: string; hint: string }> = {
-  A4: { mm: [210, 297], pcl: 26, pjl: "A4", ipp: "iso_a4_210x297mm", hint: "210×297mm" },
-  A3: { mm: [297, 420], pcl: 27, pjl: "A3", ipp: "iso_a3_297x420mm", hint: "297×420mm" },
-  B5: { mm: [182, 257], pcl: 45, pjl: null, ipp: "jis_b5_182x257mm", hint: "182×257mm" },
-  A5: { mm: [148, 210], pcl: 25, pjl: "A5", ipp: "iso_a5_148x210mm", hint: "148×210mm" },
-  B4: { mm: [257, 364], pcl: 46, pjl: null, ipp: "jis_b4_257x364mm", hint: "257×364mm" },
-  Letter: { mm: [215.9, 279.4], pcl: 2, pjl: "LETTER", ipp: "na_letter_8.5x11in", hint: "8.5×11in" },
-  Legal: { mm: [215.9, 355.6], pcl: 3, pjl: "LEGAL", ipp: "na_legal_8.5x14in", hint: "8.5×14in" },
-  A6: { mm: [105, 148], pcl: 24, pjl: "A6", ipp: "iso_a6_105x148mm", hint: "105×148mm" },
-  Postcard: { mm: [100, 148], pcl: 71, pjl: null, ipp: "jpn_hagaki_100x148mm", hint: "100×148mm" },
+const PAPER: Record<OfficePaper, { mm: readonly [number, number]; pcl: number; pjl: string | null; ipp: string; ippOld: string; hint: string }> = {
+  A4: { mm: [210, 297], pcl: 26, pjl: "A4", ipp: "iso_a4_210x297mm", ippOld: "iso-a4", hint: "210×297mm" },
+  A3: { mm: [297, 420], pcl: 27, pjl: "A3", ipp: "iso_a3_297x420mm", ippOld: "iso-a3", hint: "297×420mm" },
+  B5: { mm: [182, 257], pcl: 45, pjl: null, ipp: "jis_b5_182x257mm", ippOld: "jis-b5", hint: "182×257mm" },
+  A5: { mm: [148, 210], pcl: 25, pjl: "A5", ipp: "iso_a5_148x210mm", ippOld: "iso-a5", hint: "148×210mm" },
+  B4: { mm: [257, 364], pcl: 46, pjl: null, ipp: "jis_b4_257x364mm", ippOld: "jis-b4", hint: "257×364mm" },
+  Letter: { mm: [215.9, 279.4], pcl: 2, pjl: "LETTER", ipp: "na_letter_8.5x11in", ippOld: "na-letter", hint: "8.5×11in" },
+  Legal: { mm: [215.9, 355.6], pcl: 3, pjl: "LEGAL", ipp: "na_legal_8.5x14in", ippOld: "na-legal", hint: "8.5×14in" },
+  A6: { mm: [105, 148], pcl: 24, pjl: "A6", ipp: "iso_a6_105x148mm", ippOld: "iso-a6", hint: "105×148mm" },
+  Postcard: { mm: [100, 148], pcl: 71, pjl: null, ipp: "jpn_hagaki_100x148mm", ippOld: "jpn-hagaki", hint: "100×148mm" },
 };
 
 const encoder = new TextEncoder();
@@ -50,8 +50,8 @@ export function paperHint(paper: string) {
   return spec(paper).hint;
 }
 
-export function ippMedia(paper: string) {
-  return spec(paper).ipp;
+export function ippMedia(paper: string, old = false) {
+  return old ? spec(paper).ippOld : spec(paper).ipp;
 }
 
 export function paperPoints(paper: string) {
@@ -89,7 +89,8 @@ function concat(parts: Uint8Array[]) {
 
 function pjl(options: { copies: number; duplex: DuplexMode; paper: OfficePaper; language: "PDF" | "PCL"; pages: number; secure?: { pin: string; user: string } }) {
   const count = Math.min(99, Math.max(1, options.copies));
-  const lines = ["\x1b%-12345X@PJL JOB", options.pages > 1 ? `@PJL SET QTY=${count}` : `@PJL SET COPIES=${count}`];
+  /* 1부는 COPIES=1 (코니카 28BW-4 실기에서 양면이 확인된 머리와 같게). 여러 쪽 여러 부만 QTY(한 부씩 묶어 찍기) */
+  const lines = ['\x1b%-12345X@PJL JOB NAME="NUGUNA PRINT"', options.pages > 1 && count > 1 ? `@PJL SET QTY=${count}` : `@PJL SET COPIES=${count}`];
   const pjlPaper = spec(options.paper).pjl;
   if (pjlPaper) lines.push(`@PJL SET PAPER=${pjlPaper}`);
   if (options.duplex === "simplex") lines.push("@PJL SET DUPLEX=OFF");

@@ -11,6 +11,7 @@ import { copyText } from "@/lib/clipboard";
 import { downloadCanvasPdf } from "@/lib/pdf-page";
 import { paperPoints } from "@/lib/office-job";
 import { printSheet } from "@/lib/print-sheet";
+import { fontsReady, sheetGlyphs } from "@/lib/font-ready";
 import { currentLang, m, tr } from "@/lib/i18n";
 import type { MsgKey } from "@/lib/i18n/types";
 
@@ -121,6 +122,7 @@ export function PrinterQrModal({ target, onClose }: { target: QrTarget; onClose:
   const svg = useMemo(() => (link ? qrSvg(link, { margin: 3 }) : ""), [link]);
 
   async function printCard() {
+    await fontsReady(sheetGlyphs(target.name, target.ip));
     const canvas = drawQrCard(target, link, size);
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
     canvas.width = 0;
@@ -131,6 +133,7 @@ export function PrinterQrModal({ target, onClose }: { target: QrTarget; onClose:
   }
 
   async function saveCard() {
+    await fontsReady(sheetGlyphs(target.name, target.ip));
     const canvas = drawQrCard(target, link, size);
     await downloadCanvasPdf(canvas, tr("qr.file", { name: target.name || target.ip }), paperPoints("A4"));
     canvas.width = 0;

@@ -12,6 +12,7 @@ import { drawTestSheet, paperMm, type TestSheetInfo } from "@/lib/test-sheet";
 import { composeIdSheet, type PhotoLayout } from "@/lib/image-enhance";
 import { drawMemoStyled, memoChunksStyled, memoIsDefault, type MemoStyle } from "@/lib/memo-sheet";
 import { tr, useI18n } from "@/lib/i18n";
+import { fontsReady, sheetGlyphs } from "@/lib/font-ready";
 
 export type DocKind = "pdf" | "photo" | "memo" | "test";
 
@@ -102,8 +103,9 @@ export function PaperPreview({
     const size = orient === "landscape" ? { width: base.height, height: base.width } : base;
     const pxPerMm = size.width / paperMm(paper, orientKey).width;
     const sources = idMode ? [photoUrl] : photoGroupKey ? photoGroupKey.split(",").map((number) => album[Number(number) - 1]).filter(Boolean) : [photoUrl];
-    void Promise.all(sources.map((src) => loadImage(src)))
-      .then((images) => {
+    void Promise.all([...sources.map((src) => loadImage(src)), fontsReady(sheetGlyphs(stamps.watermark)).then(() => null)])
+      .then((loaded) => {
+        const images = loaded.filter((image): image is HTMLImageElement => image !== null);
         const canvas = pageRef.current;
         if (stop || !canvas) return;
         canvas.width = size.width;
@@ -137,9 +139,16 @@ export function PaperPreview({
     if (!canvas) return;
     const base = previewSize(paper);
     const size = orient === "landscape" ? { width: base.height, height: base.width } : base;
-    canvas.width = size.width;
-    canvas.height = size.height;
-    drawTestSheet(canvas, { ...testSheet, at: Date.now() });
+    let stop = false;
+    void fontsReady(sheetGlyphs(testSheet.printer, testSheet.link, testSheet.paper)).then(() => {
+      if (stop || !testRef.current) return;
+      canvas.width = size.width;
+      canvas.height = size.height;
+      drawTestSheet(canvas, { ...testSheet, at: Date.now() });
+    });
+    return () => {
+      stop = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docKind, testKey, paper, orient, lang]);
 
@@ -155,6 +164,8 @@ export function PaperPreview({
     void (async () => {
       const canvas = memoRef.current;
       if (!canvas) return;
+      await fontsReady(sheetGlyphs(memo, JSON.stringify(memoStyle), stamps.watermark));
+      if (stop) return;
       let total = 1;
       let page: HTMLCanvasElement;
       if (memoIsDefault(memoStyle)) {

@@ -14,6 +14,7 @@ import { downloadCanvasPdf, grayCanvas, renderSheetCanvas, sheetMemoChunks } fro
 import { bundleCommands, canvasPclCommands, drawOfficePage, needsBlankBack, officeMemoChunks, osRasterSize, paperPoints, pclAbortFooter, pclJobFooter, pclJobHeader, pclPageCommands, previewSize, printPixelSize, printableSize, wrapPdfJob, type DuplexMode, type OfficePaper } from "@/lib/office-job";
 import { canPdfDirect, imagesToPdf, nupGroups, openPdf, pageSpan, parsePageRange, renderPdfPage, slicePdf, type OpenedPdf } from "@/lib/pdf-doc";
 import { directSafe, pdfFontsEmbedded } from "@/lib/pdf-fonts";
+import { fontsReady, sheetGlyphs } from "@/lib/font-ready";
 import { languageIsPcl5, resolvePrintRoute, type PrintRoute } from "@/lib/print-route";
 import { isValidIPv4, learnSubnetFromIp, type ScanProgress } from "@/lib/lan-find";
 import { sendIppPdf } from "@/lib/ipp-send";
@@ -1079,6 +1080,7 @@ function AtlasMain() {
     const useGray = forceColor ? false : gray;
     const title = match ? `${match.printer.brand} ${match.printer.model}` : selected?.title || tr("ap.print");
     const note = docKind === "memo" ? memo.trim() : tr("ap.browserCopy");
+    await fontsReady(sheetGlyphs(note, title, watermarkText, JSON.stringify(memoStyle)));
     if (docKind === "pdf" && pdfBytes) {
       const opened = await openPdf(pdfBytes, pdfKey || undefined);
       try {
@@ -1238,6 +1240,8 @@ function AtlasMain() {
       return;
     }
     const note = docKind === "memo" ? memo.trim() : tr("ap.browserCopy");
+    /* 그리기 · 줄 나눔 전에 글꼴 조각을 받아 둔다 (안 받은 글자만 다른 글꼴로 섞여 찍히던 것) */
+    await fontsReady(sheetGlyphs(note, title, selected?.title || "", watermarkText, JSON.stringify(memoStyle)));
     const viaHelper = helperLive;
     const jobPageCount = trial ? 1 : pageCount;
     const prep = (done: number, total: number) => setPhase({ stage: "prep", done, total, percent: total ? (done / total) * 100 : 0 });
@@ -1251,8 +1255,10 @@ function AtlasMain() {
         let bytes = pdfBytes;
         if (docKind === "pdf") {
           if (!bytes) throw new Error(tr("ap.pickPdf"));
-          /* 원본 PDF를 그대로 못 보내는 경우(가로·여백·쪽 번호·워터마크·모아찍기·역순)는 실제 시트 순서대로 래스터 */
-          if (orient === "landscape" || marginMm > 0 || stampActive || nup > 1 || reverse) {
+          /* 글꼴이 빠졌거나 한글 · 한자 복합 글꼴이면 복사기가 자기 글꼴로 그려 깨진다 → 폰에서 그림으로 바꿔 보낸다 */
+          const fontsSafe = pdfFontsOk?.bytes === bytes ? pdfFontsOk.ok : directSafe(await pdfFontsEmbedded(bytes).catch(() => null));
+          /* 원본 PDF를 그대로 못 보내는 경우(글꼴·가로·여백·쪽 번호·워터마크·모아찍기·역순)는 실제 시트 순서대로 래스터 */
+          if (!fontsSafe || orient === "landscape" || marginMm > 0 || stampActive || nup > 1 || reverse) {
             const opened = await openPdf(bytes, pdfKey || undefined);
             try {
               const sheets: { jpeg: Uint8Array; width: number; height: number }[] = [];

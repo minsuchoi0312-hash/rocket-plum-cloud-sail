@@ -48,6 +48,15 @@ export function trIn(lang: Lang, key: MsgKey, vars?: Vars) {
   return format(DICTS[lang][key] ?? ko[key] ?? key, vars);
 }
 
+/** 지금 언어 사전에서 prefixes로 시작하는 키의 문구를 모두 이어 붙여요(인쇄 이미지 글꼴 미리 받기용). */
+export function dictText(prefixes: readonly string[]) {
+  const dict = DICTS[current];
+  return Object.keys(dict)
+    .filter((key) => prefixes.some((prefix) => key.startsWith(prefix)))
+    .map((key) => dict[key as MsgKey])
+    .join("");
+}
+
 /** 앱이 직접 만든 문구인지 알아보려고 최근 번역 결과를 조금 기억해 둬요(오류 문구 판별용). */
 const recent = new Set<string>();
 
