@@ -131,6 +131,28 @@ export function osRasterSize(paper: string, pageCount: number) {
   };
 }
 
+type Segmenter = { segment: (text: string) => Iterable<{ segment: string }> };
+function segmenter(granularity: "word" | "grapheme"): Segmenter | null {
+  const Ctor = (Intl as unknown as { Segmenter?: new (locale: string, options: { granularity: string }) => Segmenter }).Segmenter;
+  return Ctor ? new Ctor("und", { granularity }) : null;
+}
+
+/** 단어(띄어쓰기 · 태국어 · 중국어 사전 단위) 조각. Segmenter가 없으면 공백 기준 */
+export function wordPieces(paragraph: string) {
+  const seg = segmenter("word");
+  return seg ? Array.from(seg.segment(paragraph), (s) => s.segment) : paragraph.split(/(\s+)/).filter(Boolean);
+}
+
+/** 글자(자모 · 성조 · 결합 부호를 떼지 않는 단위) 조각 */
+export function graphemes(text: string) {
+  const seg = segmenter("grapheme");
+  return seg ? Array.from(seg.segment(text), (s) => s.segment) : Array.from(text);
+}
+
+/**
+ * 폭에 맞춰 줄을 나눈다. 단어째 다음 줄로 넘기고(영어 "Pa / ck"처럼 쪼개지 않게),
+ * 한 단어가 한 줄보다 길 때만 글자 단위로 자른다. 줄 첫머리 공백은 버린다.
+ */
 export function wrapMeasuredLines(text: string, measure: (value: string) => number, maxWidth: number) {
   const lines: string[] = [];
   for (const paragraph of text.split("\n")) {
@@ -139,14 +161,28 @@ export function wrapMeasuredLines(text: string, measure: (value: string) => numb
       lines.push("");
       continue;
     }
-    for (const ch of paragraph) {
-      const next = line + ch;
-      if (line && measure(next) > maxWidth) {
-        lines.push(line);
-        line = ch.trim() ? ch : "";
-      } else line = next;
+    for (const piece of wordPieces(paragraph)) {
+      const next = line + piece;
+      if (!line || measure(next) <= maxWidth) {
+        line = next;
+        if (measure(line) <= maxWidth) continue;
+      } else {
+        lines.push(line.trimEnd());
+        line = piece.trim() ? piece : "";
+        if (!line || measure(line) <= maxWidth) continue;
+      }
+      /* 한 줄보다 긴 단어: 글자 단위로 자른다 */
+      const long = line;
+      line = "";
+      for (const ch of graphemes(long)) {
+        const cut = line + ch;
+        if (line && measure(cut) > maxWidth) {
+          lines.push(line);
+          line = ch.trim() ? ch : "";
+        } else line = cut;
+      }
     }
-    lines.push(line);
+    lines.push(line.trimEnd());
   }
   return lines.length ? lines : [""];
 }
@@ -163,7 +199,7 @@ export function officeMemoChunks(text: string, width: number, height: number) {
   const ctx = canvas.getContext("2d");
   const font = Math.max(18, Math.round(width / 28));
   if (!ctx) return [text];
-  ctx.font = `${font}px "Pretendard Variable", sans-serif`;
+  ctx.font = `${font}px "Pretendard Variable", Pretendard, Roboto, "Segoe UI", "Noto Sans", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", "Hiragino Sans", "Yu Gothic", sans-serif`;
   const lines = wrapMeasuredLines(text, (value) => ctx.measureText(value).width, Math.max(40, width - font * 2));
   const perPage = Math.max(1, Math.floor((height - font * 2) / (font * 1.4)));
   return paginateLines(lines, perPage);
@@ -365,24 +401,13 @@ export function drawOfficePage(
   }
   const text = options.kind === "memo" ? options.note : options.kind === "test" ? `${options.title}\n${options.note}` : options.note;
   const font = Math.max(18, Math.round(canvas.width / 28));
-  ctx.font = `${font}px "Pretendard Variable", sans-serif`;
-  let line = "";
+  ctx.font = `${font}px "Pretendard Variable", Pretendard, Roboto, "Segoe UI", "Noto Sans", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", "Hiragino Sans", "Yu Gothic", sans-serif`;
   let y = font * 2;
   const maxWidth = canvas.width - font * 2;
-  for (const paragraph of text.split("\n")) {
-    for (const ch of paragraph) {
-      const next = line + ch;
-      if (line && ctx.measureText(next).width > maxWidth) {
-        ctx.fillText(line, font, y);
-        y += font * 1.4;
-        line = ch.trim() ? ch : "";
-      } else line = next;
-    }
-    if (line) {
-      ctx.fillText(line, font, y);
-      y += font * 1.4;
-      line = "";
-    }
+  /* 쪽 나눔(officeMemoChunks)과 같은 줄바꿈 · 같은 줄 수(빈 줄 포함)로 그린다 */
+  for (const row of wrapMeasuredLines(text, (value) => ctx.measureText(value).width, maxWidth)) {
+    if (row) ctx.fillText(row, font, y);
+    y += font * 1.4;
   }
   ctx.filter = "none";
   return canvas;

@@ -138,23 +138,14 @@ export async function renderSheetCanvas(options: {
     return canvas;
   }
   const text = options.kind === "memo" ? options.note : `${options.title}\n${options.note}`;
-  ctx.font = '48px "Pretendard Variable", sans-serif';
-  let line = "";
+  ctx.font = '48px "Pretendard Variable", Pretendard, Roboto, "Segoe UI", "Noto Sans", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", "Hiragino Sans", "Yu Gothic", sans-serif';
   let y = 120;
   const maxWidth = width - 160;
+  /* 쪽 나눔(sheetMemoChunks)과 같은 줄바꿈 · 같은 줄 수(빈 줄 포함)로 그린다 */
   for (const paragraph of text.split("\n")) {
-    for (const ch of paragraph) {
-      const next = line + ch;
-      if (line && ctx.measureText(next).width > maxWidth) {
-        ctx.fillText(line, 80, y);
-        y += 68;
-        line = ch.trim() ? ch : "";
-      } else line = next;
-    }
-    if (line) {
-      ctx.fillText(line, 80, y);
+    for (const row of wrapMeasuredLines(paragraph, (value) => ctx.measureText(value).width, maxWidth)) {
+      if (row) ctx.fillText(row, 80, y);
       y += 68;
-      line = "";
     }
     if (options.kind !== "memo") y += 16;
   }
@@ -167,7 +158,7 @@ export function sheetMemoChunks(text: string, paper: string, frame?: { width: nu
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
   if (!ctx) return [text];
-  ctx.font = '48px "Pretendard Variable", sans-serif';
+  ctx.font = '48px "Pretendard Variable", Pretendard, Roboto, "Segoe UI", "Noto Sans", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", "Hiragino Sans", "Yu Gothic", sans-serif';
   const lines = wrapMeasuredLines(text, (value) => ctx.measureText(value).width, Math.max(80, width - 160));
   return paginateLines(lines, Math.max(1, Math.floor((height - 120) / 68)));
 }

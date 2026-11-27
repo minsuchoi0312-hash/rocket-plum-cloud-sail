@@ -35,7 +35,7 @@ function metrics(width: number, height: number, style: MemoStyle, pxPerMm: numbe
 }
 
 function fontCss(px: number, weight = 400) {
-  return `${weight} ${Math.round(px)}px "Pretendard Variable", sans-serif`;
+  return `${weight} ${Math.round(px)}px "Pretendard Variable", Pretendard, Roboto, "Segoe UI", "Noto Sans", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", "Hiragino Sans", "Yu Gothic", sans-serif`;
 }
 
 export function memoChunksStyled(text: string, width: number, height: number, style: MemoStyle, pxPerMm: number) {

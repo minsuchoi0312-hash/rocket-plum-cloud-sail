@@ -9,9 +9,9 @@ import { paperLabel, paperMm as tableMm } from "./office-job.ts";
 /** 언어별 글꼴: 한국어·일본어·중국어 글자가 시스템 글꼴로 대체되도록 뒤에 일반 글꼴을 붙여요. */
 function fontStack() {
   const lang = currentLang();
-  if (lang === "ja") return '"Hiragino Sans", "Noto Sans JP", "Yu Gothic", "Pretendard Variable", sans-serif';
-  if (lang === "zh") return '"PingFang SC", "Noto Sans SC", "Microsoft YaHei", "Pretendard Variable", sans-serif';
-  return '"Pretendard Variable", sans-serif';
+  if (lang === "ja") return '"Hiragino Sans", "Noto Sans JP", "Yu Gothic", "Pretendard Variable", Pretendard, Roboto, "Segoe UI", "Noto Sans", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", "Hiragino Sans", "Yu Gothic", sans-serif';
+  if (lang === "zh") return '"PingFang SC", "Noto Sans SC", "Microsoft YaHei", "Pretendard Variable", Pretendard, Roboto, "Segoe UI", "Noto Sans", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", "Hiragino Sans", "Yu Gothic", sans-serif';
+  return '"Pretendard Variable", Pretendard, Roboto, "Segoe UI", "Noto Sans", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", "Hiragino Sans", "Yu Gothic", sans-serif';
 }
 
 export type TestSheetInfo = {

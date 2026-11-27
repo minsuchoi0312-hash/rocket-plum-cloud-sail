@@ -120,11 +120,11 @@ export function stampSheet(canvas: HTMLCanvasElement, index: number, total: numb
     ctx.rotate(-Math.atan2(H, W));
     const diag = Math.hypot(W, H);
     let size = Math.min(diag / Math.max(2, text.length * 1.15), 60 * pxPerMm);
-    ctx.font = `700 ${Math.round(size)}px "Pretendard Variable", sans-serif`;
+    ctx.font = `700 ${Math.round(size)}px "Pretendard Variable", Pretendard, Roboto, "Segoe UI", "Noto Sans", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", "Hiragino Sans", "Yu Gothic", sans-serif`;
     const width = ctx.measureText(text).width;
     if (width > diag * 0.7) {
       size *= (diag * 0.7) / width;
-      ctx.font = `700 ${Math.round(size)}px "Pretendard Variable", sans-serif`;
+      ctx.font = `700 ${Math.round(size)}px "Pretendard Variable", Pretendard, Roboto, "Segoe UI", "Noto Sans", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", "Hiragino Sans", "Yu Gothic", sans-serif`;
     }
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -135,7 +135,7 @@ export function stampSheet(canvas: HTMLCanvasElement, index: number, total: numb
   if (opts.pageNumber) {
     ctx.save();
     /* 4.2mm(약 12pt) 굵게 · 진한 검정: 미리보기·실제 출력 모두 또렷하게 */
-    ctx.font = `600 ${Math.max(11, Math.round(4.2 * pxPerMm))}px "Pretendard Variable", sans-serif`;
+    ctx.font = `600 ${Math.max(11, Math.round(4.2 * pxPerMm))}px "Pretendard Variable", Pretendard, Roboto, "Segoe UI", "Noto Sans", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", "Hiragino Sans", "Yu Gothic", sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
     const label = `${index + 1} / ${total}`;
