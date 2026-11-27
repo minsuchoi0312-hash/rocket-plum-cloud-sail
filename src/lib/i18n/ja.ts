@@ -227,6 +227,7 @@ export const ja: Record<MsgKey, string> = {
   "env.usbYes": "WebUSB対応",
   "env.usbNo": "WebUSB非対応",
   "env.inApp": "アプリ内ブラウザ",
+  "env.app": "アプリ · Wi-Fi印刷",
   "iq.title": "[ヌグナプリント お問い合わせ]",
   "iq.type": "種類: {v}",
   "iq.model": "プリンター機種: {v}",

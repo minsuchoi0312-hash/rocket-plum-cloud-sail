@@ -225,6 +225,7 @@ export const ko = {
   "env.usbYes": "WebUSB 지원",
   "env.usbNo": "WebUSB 지원 안 함",
   "env.inApp": "앱 안의 브라우저",
+  "env.app": "앱 · 와이파이 인쇄",
   "iq.title": "[누구나프린트 문의]",
   "iq.type": "유형: {v}",
   "iq.model": "복사기 모델: {v}",

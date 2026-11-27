@@ -227,6 +227,7 @@ export const zh: Record<MsgKey, string> = {
   "env.usbYes": "支持 WebUSB",
   "env.usbNo": "不支持 WebUSB",
   "env.inApp": "应用内浏览器",
+  "env.app": "应用 · Wi-Fi 打印",
   "iq.title": "[Nuguna Print 咨询]",
   "iq.type": "类型: {v}",
   "iq.model": "打印机型号: {v}",

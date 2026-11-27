@@ -12,7 +12,7 @@ import { Check, Copy, Mail, Upload, X } from "@/components/icons";
 import { clearDiag, diagText, maskSecrets } from "@/lib/diag";
 import { copyText } from "@/lib/clipboard";
 import { historyKindLabel, historyRouteLabel, historyTime, type PrintRecord } from "@/lib/print-history";
-import { envLine, faqs, inquiryLabel, inquiryMailto, inquiryText, INQUIRY_TYPES, ipGuide, readEnv, SUPPORT_EMAIL, type EnvInfo, type InquiryType } from "@/lib/support";
+import { envLine, faqs, inquiryLabel, inquiryMailto, inquiryText, INQUIRY_TYPES, ipGuide, readEnv, SUPPORT_EMAIL, usbLabel, type EnvInfo, type InquiryType } from "@/lib/support";
 import { m, tr, useI18n } from "@/lib/i18n";
 import { LegalLinks, LegalSheet, type LegalTab } from "@/components/legal-sheet";
 
@@ -207,7 +207,7 @@ export function SupportCenter({
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   <span className="env-badge">{env.browser || t("sc.envBrowser")}</span>
                   <span className="env-badge">{env.os || t("sc.envOs")}</span>
-                  <span className={`env-badge ${env.webUsb ? "is-ok" : "is-no"}`}>{t(env.webUsb ? "env.usbYes" : "env.usbNo")}</span>
+                  <span className={`env-badge ${env.app || env.webUsb ? "is-ok" : "is-no"}`}>{usbLabel(env)}</span>
                   {env.inApp ? <span className="env-badge is-no">{t("env.inApp")}</span> : null}
                   <span className="env-badge">{route}</span>
                 </div>

@@ -227,6 +227,7 @@ export const en: Record<MsgKey, string> = {
   "env.usbYes": "WebUSB supported",
   "env.usbNo": "No WebUSB",
   "env.inApp": "In-app browser",
+  "env.app": "App · Wi-Fi printing",
   "iq.title": "[Nuguna Print inquiry]",
   "iq.type": "Type: {v}",
   "iq.model": "Printer model: {v}",

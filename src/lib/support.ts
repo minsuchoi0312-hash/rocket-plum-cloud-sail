@@ -1,5 +1,6 @@
 import { maskSecrets } from "@/lib/diag";
 import { tr, type MsgKey } from "@/lib/i18n/core";
+import { phoneApp } from "@/lib/phone-helper";
 
 /**
  * 문의 메일 받는 주소: src/lib/contact.ts 한 곳에서 바꾼다 (약관 · 처리방침과 같은 값).
@@ -19,7 +20,13 @@ export function inquiryLabel(type: InquiryType) {
   return tr(`inq.${type}` as MsgKey);
 }
 
-export type EnvInfo = { browser: string; os: string; webUsb: boolean; inApp: boolean };
+/** app: 누구나프린트 안드로이드 앱(APK) 안 — USB 대신 폰 내장 도우미로 와이파이 인쇄하므로 WebUSB는 따지지 않는다 */
+export type EnvInfo = { browser: string; os: string; webUsb: boolean; inApp: boolean; app?: boolean };
+
+/** 기기 정보 칩 · 문의 글에 쓰는 인쇄 방식 한 마디 */
+export function usbLabel(env: EnvInfo) {
+  return tr(env.app ? "env.app" : env.webUsb ? "env.usbYes" : "env.usbNo");
+}
 
 export function readEnv(): EnvInfo {
   if (typeof navigator === "undefined") return { browser: tr("env.unknown"), os: tr("env.unknown"), webUsb: false, inApp: false };
@@ -54,11 +61,12 @@ export function readEnv(): EnvInfo {
     os,
     webUsb: "usb" in navigator,
     inApp: /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\//i.test(ua),
+    app: phoneApp(),
   };
 }
 
 export function envLine(env: EnvInfo) {
-  return `${env.browser} · ${env.os} · ${tr(env.webUsb ? "env.usbYes" : "env.usbNo")}${env.inApp ? ` · ${tr("env.inApp")}` : ""}`;
+  return `${env.browser} · ${env.os} · ${usbLabel(env)}${env.inApp ? ` · ${tr("env.inApp")}` : ""}`;
 }
 
 export type Inquiry = {
