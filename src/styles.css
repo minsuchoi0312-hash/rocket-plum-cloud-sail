@@ -2490,6 +2490,19 @@ html:not([data-theme="light"]) .tds-check {
   opacity: 0.5;
 }
 
+/* 줄 앞 아이콘(QR 찍기) — 파란 둥근 칸 */
+.opt-item-ico {
+  display: inline-flex;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
 .opt-item-title {
   display: block;
   font-size: 16px;

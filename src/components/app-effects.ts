@@ -2,19 +2,23 @@
  * 앱 공용 효과 훅 (atlas-app.tsx에서 분리): 링크 자동 연결 · 저장된 PC 도우미 확인 · 파일 끌어놓기/붙여넣기 · 오프라인 감지.
  * 모두 useEffect 안에서만 window·localStorage에 닿는다(SSR 안전).
  */
-import { useEffect, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
+import { useCallback, useEffect, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import { diag } from "@/lib/diag";
 import { helperDiscover, helperInfo, helperPing, helperProgress } from "@/lib/helper-send";
 import { isValidIPv4, isValidSubnet, scanLan, type ScanProgress } from "@/lib/lan-find";
 import type { LinkTab } from "@/lib/app-utils";
 import { m, tr, useI18n, type Msg } from "@/lib/i18n";
-import { cleanIPv4, cleanText, localHelperOrigin } from "@/lib/sanitize";
+import { parseConnectLink, type ConnectInfo } from "@/lib/connect-link";
 import type { HelperStatus } from "@/components/printer-panel";
-import { isPhoneHelper } from "@/lib/phone-helper";
+import { isPhoneHelper, phoneApp } from "@/lib/phone-helper";
 
 type Set<T> = Dispatch<SetStateAction<T>>;
 
-/** ?helper=…&code=… / ?ip=…&name=… 로 열리면 자동 연결하고, 주소창에서 코드를 지운다 */
+/**
+ * 프린터 연결 링크 적용: ?helper=…&code=… / ?ip=…&name=… 로 열리면 자동 연결하고, 주소창에서 코드를 지운다.
+ * 돌려주는 applyLink(글)는 QR 찍기 · 앱 링크(nugunaprint://connect)도 같은 길로 연결한다 — 연결 링크가 아니면 false.
+ * 앱에서는 window.__nugunaApplyLink 로도 열어 둔다(android-main 이 앱 링크를 넘긴다).
+ */
 export function useLinkParams(h: {
   setHelperUrl: Set<string>;
   setHelperCode: Set<string>;
@@ -28,18 +32,17 @@ export function useLinkParams(h: {
   addWifi: (host: string, answered: boolean, opts?: { title?: string; subtitle?: Msg; query?: string; select?: boolean }) => unknown;
   rememberHost: (host: string, title: string, viaHelper: boolean) => void;
 }) {
-  const { setHelperUrl, setHelperCode, setUseHelper, setLinkTab, setLinkOpen, setHelperOk, setLanNote, setSubnetInput, setNotice, addWifi, rememberHost } = h;
+  const latest = useRef(h);
+  latest.current = h;
   // 언어 감지가 끝난 뒤 한 번만 처리해야 안내 문구가 고른 언어로 나와요.
   const { ready } = useI18n();
-  useEffect(() => {
-    if (!ready) return;
-    const params = new URLSearchParams(window.location.search);
-    /* 쿼리 값은 모두 중앙 정화: 도우미는 http(s) origin만, IP는 엄격한 IPv4, 이름은 제어 문자 제거 */
-    const helper = localHelperOrigin(params.get("helper"));
-    const code = (params.get("code") || "").replace(/\D/g, "").slice(0, 6);
-    const ip = cleanIPv4(params.get("ip"));
-    const name = cleanText(params.get("name"), 40);
-    if (!helper && !ip) return;
+
+  const apply = useCallback((info: ConnectInfo, allowHelper: boolean) => {
+    const { setHelperUrl, setHelperCode, setUseHelper, setLinkTab, setLinkOpen, setHelperOk, setLanNote, setSubnetInput, setNotice, addWifi, rememberHost } = latest.current;
+    /* 앱에서는 받은 링크로 도우미를 바꾸지 않는다 — 폰 안 도우미 대신 남의 PC로 인쇄가 새지 않게 */
+    const helper = allowHelper ? info.helper : "";
+    const code = helper ? info.code : "";
+    const { ip, name } = info;
     let helperLinked = false;
     if (/^https?:\/\/[^\s/]+(:\d+)?\/?$/i.test(helper)) {
       setHelperUrl(helper.replace(/\/$/, ""));
@@ -54,8 +57,8 @@ export function useLinkParams(h: {
           setLanNote(m("fx.linkHelper"));
           return code ? helperInfo(helper, code) : null;
         })
-        .then((info) => {
-          if (info?.subnets[0]) setSubnetInput(info.subnets[0]);
+        .then((res) => {
+          if (res?.subnets[0]) setSubnetInput(res.subnets[0]);
         })
         .catch(() => setLanNote(m("fx.linkHelperDown")));
     }
@@ -66,12 +69,39 @@ export function useLinkParams(h: {
     }
     /* 키로 담아 두면 언어를 바꿔도 바로 다시 번역돼요 */
     const target = isValidIPv4(ip) ? name || ip : "";
-    if (helperLinked || target) setNotice(target ? m(helperLinked ? "fx.linkedBoth" : "fx.linked", { name: target }) : m("fx.linkedHelperOnly"));
+    if (!helperLinked && !target) return false;
+    setNotice(target ? m(helperLinked ? "fx.linkedBoth" : "fx.linked", { name: target }) : m("fx.linkedHelperOnly"));
     diag(tr("fx.logLink", { helper: helper ? tr("fx.logHelper") : "", ip: ip ? `ip=${ip}` : "" }));
-    /* 연결 코드가 주소창·방문 기록에 남지 않게 */
-    window.history.replaceState(null, "", `${window.location.pathname}${window.location.hash}`);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready]);
+    return true;
+  }, []);
+
+  const applyLink = useCallback(
+    (text: string) => {
+      const info = parseConnectLink(text);
+      return info ? apply(info, !phoneApp()) : false;
+    },
+    [apply],
+  );
+
+  useEffect(() => {
+    if (!ready) return;
+    /* 웹 주소창 ?ip= · #ip= (이 페이지 자체로 열렸으니 도우미도 받는다) */
+    const info = parseConnectLink(window.location.href);
+    if (info) {
+      apply(info, true);
+      /* 연결 코드가 주소창·방문 기록에 남지 않게 */
+      const keepHash = /(^|[#&])(ip|helper|code)=/.test(window.location.hash) ? "" : window.location.hash;
+      window.history.replaceState(null, "", `${window.location.pathname}${keepHash}`);
+    }
+    const w = window as { __nugunaApplyLink?: (text: string) => boolean };
+    w.__nugunaApplyLink = applyLink;
+    window.dispatchEvent(new Event("nuguna-link-ready"));
+    return () => {
+      delete w.__nugunaApplyLink;
+    };
+  }, [ready, apply, applyLink]);
+
+  return applyLink;
 }
 
 /** 이전에 연결한 PC 도우미가 있으면 /info를 1.5초 안에 한 번 찔러 상태를 바로 보여 주고, 연결되면 기억한다 */

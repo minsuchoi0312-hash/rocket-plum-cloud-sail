@@ -20,7 +20,7 @@ export type LegalDoc = { title: string; intro: string; sections: LegalSection[] 
 const MAIL = SUPPORT_EMAIL || "앱 안 '문의하기'";
 const DATE_KO = "2026년 11월 26일";
 const DATE_EN = "November 26, 2026";
-/* 처리방침만 고친 날(약관은 그대로라 LEGAL_VERSION 은 두어 동의를 다시 받지 않는다): USB OTG · PDF 저장 · 보안 PIN 안내 추가 */
+/* 처리방침만 고친 날(약관은 그대로라 LEGAL_VERSION 은 두어 동의를 다시 받지 않는다): USB OTG · PDF 저장 · 보안 PIN · QR 찍기 · 연결 링크 안내 추가 */
 const PRIVACY_DATE_KO = "2026년 11월 27일";
 const PRIVACY_DATE_EN = "November 27, 2026";
 
@@ -102,6 +102,8 @@ const KO: Record<LegalKind, LegalDoc> = {
           "· 인터넷 · 네트워크 상태 · 와이파이 상태 · 멀티캐스트: 같은 와이파이 안의 프린터를 찾고 인쇄 데이터를 보내는 데만 써요. 인터넷의 외부 서버로는 보내지 않아요.",
           "· USB(OTG): 이용자가 연결을 허락한 USB 프린터로 인쇄 데이터를 보내는 데만 써요. 프린터마다 안드로이드가 허락을 먼저 물어요.",
           "위치 · 카메라 · 마이크 · 연락처 · 전화 권한은 쓰지 않아요. 사진 · 파일은 이용자가 직접 고르거나 공유한 것만 열어요.",
+          "· QR 찍기: 구글 Play 서비스의 코드 스캐너가 기기 안에서 QR을 읽고, 앱은 QR에 담긴 글자만 받아요. 카메라 화면은 앱에 오지 않아요.",
+          "· 프린터 연결 링크 · QR: 공개 연결 페이지(GitHub Pages)를 거쳐 앱을 열어요. 프린터 주소 · 이름은 주소의 # 뒤에 담겨 그 서버로 보내지 않아요.",
         ],
       },
       {
@@ -148,7 +150,7 @@ const KO: Record<LegalKind, LegalDoc> = {
           "· 경찰청 182 (ecrm.police.go.kr)",
         ],
       },
-      { h: "13. 변경", p: [`이 방침은 ${PRIVACY_DATE_KO}부터 시행해요. 바뀌면 시행 7일 전부터 앱 안에 알려요.`, `· ${PRIVACY_DATE_KO}: USB 선 인쇄 · 'PDF로 저장' · 보안 인쇄 PIN 안내를 더했어요(처리하는 정보는 그대로예요).`] },
+      { h: "13. 변경", p: [`이 방침은 ${PRIVACY_DATE_KO}부터 시행해요. 바뀌면 시행 7일 전부터 앱 안에 알려요.`, `· ${PRIVACY_DATE_KO}: USB 선 인쇄 · 'PDF로 저장' · 보안 인쇄 PIN · QR 찍기 · 연결 링크 안내를 더했어요(처리하는 정보는 그대로예요).`] },
     ],
   },
 };
@@ -200,7 +202,7 @@ const EN: Record<LegalKind, LegalDoc> = {
         ],
       },
       { h: "3. Files you print", p: ["Photos, PDFs and text you pick or share to the App are converted on your device and sent only to the printer you choose on the same Wi-Fi (or connected by USB cable).", "A secure-print PIN travels inside the print data to that printer only and is not stored on your device.", "Files are not copied and are released from memory after printing."] },
-      { h: "4. Permissions", p: ["· Internet, network state, Wi-Fi state, multicast: used only to find printers on your Wi-Fi and send print data. Nothing is sent to external internet servers.", "· USB (OTG): used only to send print data to a USB printer you allow. Android asks for your permission for each printer.", "No location, camera, microphone, contacts or phone permissions. Only photos and files you pick or share are opened."] },
+      { h: "4. Permissions", p: ["· Internet, network state, Wi-Fi state, multicast: used only to find printers on your Wi-Fi and send print data. Nothing is sent to external internet servers.", "· USB (OTG): used only to send print data to a USB printer you allow. Android asks for your permission for each printer.", "No location, camera, microphone, contacts or phone permissions. Only photos and files you pick or share are opened.", "· QR scan: Google Play services’ code scanner reads the QR on your device; the App receives only the text in the QR, never the camera image.", "· Printer links and QR codes open the App through a public connect page (GitHub Pages). The printer address and name sit after # in the link and are not sent to that server."] },
       { h: "5. When you contact us", p: ["If you email us, the Operator receives your email address and message (including any device info or diagnostic log you choose to attach).", "It is used only to reply and is deleted without delay afterwards. PINs and passwords in the log are masked before sending."] },
       {
         h: "6. Third parties and transfers abroad",
@@ -215,7 +217,7 @@ const EN: Record<LegalKind, LegalDoc> = {
       { h: "10. Cookies and trackers", p: ["None. Settings stay in on-device storage (localStorage) and are not sent anywhere."] },
       { h: "11. Privacy officer", p: [`Nuguna Print operator (individual developer) · Email ${SUPPORT_EMAIL || "via 'Contact' in the App"}`] },
       { h: "12. Remedies (Korea)", p: ["Personal Information Dispute Mediation Committee 1833-6972 (www.kopico.go.kr)", "Personal Information Infringement Report Center 118 (privacy.kisa.or.kr)", "Supreme Prosecutors' Office 1301 · Korean National Police Agency 182"] },
-      { h: "13. Changes", p: [`This policy is effective from ${PRIVACY_DATE_EN}. Changes are announced in the App at least 7 days in advance.`, `· ${PRIVACY_DATE_EN}: added notes on USB cable printing, 'Save as PDF' and secure-print PINs (the information handled is unchanged).`] },
+      { h: "13. Changes", p: [`This policy is effective from ${PRIVACY_DATE_EN}. Changes are announced in the App at least 7 days in advance.`, `· ${PRIVACY_DATE_EN}: added notes on USB cable printing, 'Save as PDF', secure-print PINs, QR scanning and connect links (the information handled is unchanged).`] },
     ],
   },
 };

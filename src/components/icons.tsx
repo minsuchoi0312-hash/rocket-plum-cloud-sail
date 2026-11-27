@@ -38,6 +38,8 @@ import {
   QrCode as PhQrCode,
   Question,
   Repeat as PhRepeat,
+  Scan as PhScan,
+  ShareNetwork,
   ShieldCheck as PhShieldCheck,
   Stethoscope as PhStethoscope,
   Sun as PhSun,
@@ -92,6 +94,8 @@ export const RefreshCw = round(ArrowsClockwise);
 export const Repeat = round(PhRepeat);
 export const RotateCw = round(ArrowClockwise);
 export const Search = round(MagnifyingGlass);
+export const ScanQr = round(PhScan);
+export const Share = round(ShareNetwork);
 export const Sheet = round(Table);
 export const Stethoscope = round(PhStethoscope);
 export const StickyNote = round(NotePencil);

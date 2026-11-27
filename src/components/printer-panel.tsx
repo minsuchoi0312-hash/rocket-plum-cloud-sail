@@ -3,7 +3,7 @@
  * atlas-app.tsx에서 분리. 상태는 부모가 갖고 여기서는 그리기만 한다.
  */
 import { useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
-import { ChevronDown, ChevronRight, ChevronUp, Copy, FileText, History, Image as ImageIcon, Monitor, Printer, QrCode, Search, Sheet, Stethoscope, StickyNote, Upload, Usb, Wifi, X } from "@/components/icons";
+import { ChevronDown, ChevronRight, ChevronUp, Copy, FileText, History, Image as ImageIcon, Monitor, Printer, QrCode, ScanQr, Search, Sheet, Stethoscope, StickyNote, Upload, Usb, Wifi, X } from "@/components/icons";
 import { helperPing } from "@/lib/helper-send";
 import { SUBNET_PRESETS, type ScanProgress } from "@/lib/lan-find";
 import { type SavedPrinter } from "@/lib/printer-store";
@@ -102,6 +102,8 @@ export type PrinterPanelProps = {
   setAskName: Set<string>;
   setOverrideQuery: Set<string | null>;
   setQrTarget: Set<QrTarget | null>;
+  /** QR 찍어 연결 (찍을 수 없는 환경이면 null → 줄을 숨긴다) */
+  onScanQr: (() => void) | null;
   setSelectedId: Set<string | null>;
   setShowDiag: Set<boolean>;
   setShowIpGuide: Set<boolean>;
@@ -125,7 +127,7 @@ export type PrinterPanelProps = {
 };
 
 export function PrinterPanel(props: PrinterPanelProps) {
-  const { statusCard, addTypedIp, album, aliasDraft, setAliasDraft, appOrigin, checkPrinter, connectUsb, editingUid, setEditingUid, findOnWifi, findViaHelper, forget, registerPrinter, disconnect, foundList, helperCode, setHelperCode, helperOk, setHelperOk, helperShare, helperUrl, setHelperUrl, history, ipInput, setIpInput, lanBusy, lanNote, setLanNote, linkOpen, setLinkOpen, linkTab, setLinkTab, memo, notice, onPrint, openChooser, pdfName, photoUrl, pickPreset, probes, recentPrinters, reconnect, rememberHost, route, saveAlias, scanMode, scanProg, scanning, selected, selectedId, selectedName, sending, setAskName, setOverrideQuery, setQrTarget, setSelectedId, setShowDiag, setShowIpGuide, showIpGuide, setStep, setSubnetInput, subnetInput, setSupportTab, setUseHelper, useHelper, startWith, statusDot, statusText, stopScan, usbMissed, usbOk, helperStatus, onLauncher } = props;
+  const { statusCard, addTypedIp, album, aliasDraft, setAliasDraft, appOrigin, checkPrinter, connectUsb, editingUid, setEditingUid, findOnWifi, findViaHelper, forget, registerPrinter, disconnect, foundList, helperCode, setHelperCode, helperOk, setHelperOk, helperShare, helperUrl, setHelperUrl, history, ipInput, setIpInput, lanBusy, lanNote, setLanNote, linkOpen, setLinkOpen, linkTab, setLinkTab, memo, notice, onPrint, openChooser, pdfName, photoUrl, pickPreset, probes, recentPrinters, reconnect, rememberHost, route, saveAlias, scanMode, scanProg, scanning, selected, selectedId, selectedName, sending, setAskName, setOverrideQuery, setQrTarget, onScanQr, setSelectedId, setShowDiag, setShowIpGuide, showIpGuide, setStep, setSubnetInput, subnetInput, setSupportTab, setUseHelper, useHelper, startWith, statusDot, statusText, stopScan, usbMissed, usbOk, helperStatus, onLauncher } = props;
   const { t } = useI18n();
   /* 앱(APK): 폰이 직접 찾고 보내니 PC 도우미 탭 · 상태는 감춘다 */
   const phone = useHelper && isPhoneHelper(helperUrl);
@@ -247,6 +249,18 @@ export function PrinterPanel(props: PrinterPanelProps) {
                   </div>
                 ) : null}
                 <div className="opt-list">
+                {onScanQr ? (
+                  <button type="button" disabled={sending} onClick={onScanQr} className="opt-item">
+                    <span className="opt-item-ico" aria-hidden="true">
+                      <ScanQr className="size-5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="opt-item-title">{t("qrs.title")}</span>
+                      <span className="opt-item-sub">{t("qrs.sub")}</span>
+                    </span>
+                    <ChevronRight className="doc-chev" aria-hidden="true" />
+                  </button>
+                ) : null}
                 <button type="button" disabled={lanBusy || sending} onClick={() => {
                   setSearched(true);
                   void findOnWifi("full");

@@ -5,9 +5,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useModal } from "@/components/use-modal";
 import { toast } from "@/lib/toast";
-import { Copy, Printer, X } from "@/components/icons";
+import { Copy, Printer, Share, X } from "@/components/icons";
 import { qrSvg, drawQr } from "@/lib/qr-svg";
 import { copyText } from "@/lib/clipboard";
+import { buildConnectLink } from "@/lib/connect-link";
+import { CONNECT_PAGE_URL } from "@/lib/contact";
+import { phoneApp } from "@/lib/phone-helper";
+import { canShare, shareLink } from "@/lib/qr-scan";
 import { downloadCanvasPdf } from "@/lib/pdf-page";
 import { paperPoints } from "@/lib/office-job";
 import { printSheet } from "@/lib/print-sheet";
@@ -16,18 +20,6 @@ import { currentLang, m, tr } from "@/lib/i18n";
 import type { MsgKey } from "@/lib/i18n/types";
 
 export type QrTarget = { name: string; ip: string; helper?: { url: string; code: string } | null };
-
-/** 이 앱 주소에 ?ip=&name= (선택: 도우미 주소·코드)를 붙인 원터치 연결 링크 */
-function printerShareLink(origin: string, target: QrTarget, withHelper: boolean) {
-  const params = new URLSearchParams();
-  params.set("ip", target.ip);
-  if (target.name) params.set("name", target.name);
-  if (withHelper && target.helper) {
-    params.set("helper", target.helper.url);
-    params.set("code", target.helper.code);
-  }
-  return `${origin.replace(/\/$/, "")}/?${params.toString()}`;
-}
 
 type CardSize = "half" | "two" | "a4";
 const CARD_SIZE_KEY: Record<CardSize, MsgKey> = { half: "qr.half", two: "qr.two", a4: "qr.a4" };
@@ -113,12 +105,26 @@ function drawQrCard(target: QrTarget, link: string, size: CardSize) {
 
 export function PrinterQrModal({ target, onClose }: { target: QrTarget; onClose: () => void }) {
   const [origin, setOrigin] = useState("");
+  /* 앱: 링크는 공개 연결 페이지로(앱 안 주소 http://localhost 는 다른 폰에서 안 열린다), 폰 안 도우미는 넣지 않는다 */
+  const [inApp, setInApp] = useState(false);
+  const [shareOk, setShareOk] = useState(false);
   const [withHelper, setWithHelper] = useState(false);
   const [size, setSize] = useState<CardSize>("two");
   const dialogRef = useRef<HTMLDivElement>(null);
   useModal(dialogRef, onClose);
-  useEffect(() => setOrigin(window.location.origin), []);
-  const link = origin ? printerShareLink(origin, target, withHelper) : "";
+  useEffect(() => {
+    setOrigin(window.location.origin);
+    setInApp(phoneApp());
+    setShareOk(canShare());
+  }, []);
+  const link = !origin ? "" : inApp ? buildConnectLink(target, { page: CONNECT_PAGE_URL }) : buildConnectLink(target, { origin, withHelper });
+  const helperOption = Boolean(target.helper) && !inApp;
+
+  async function share() {
+    const title = tr("qr.shareTitle", { name: target.name || target.ip });
+    if (!(await shareLink(`${title}
+${link}`, title))) toast(m("qr.shareFail"));
+  }
   const svg = useMemo(() => (link ? qrSvg(link, { margin: 3 }) : ""), [link]);
 
   async function printCard() {
@@ -154,7 +160,7 @@ export function PrinterQrModal({ target, onClose }: { target: QrTarget; onClose:
         </p>
         <div className="qr-box mx-auto mt-3 w-52 rounded-2xl p-2" aria-label={tr("qr.codeAria")} dangerouslySetInnerHTML={{ __html: svg }} />
         <p className="mt-2 text-center text-xs text-muted">{tr("qr.scanHint")}</p>
-        {target.helper ? (
+        {helperOption ? (
           <label className="mt-3 flex items-start gap-2 text-xs text-fg">
             <input type="checkbox" checked={withHelper} onChange={(event) => setWithHelper(event.target.checked)} className="mt-0.5" />
             <span>
@@ -171,16 +177,22 @@ export function PrinterQrModal({ target, onClose }: { target: QrTarget; onClose:
             </button>
           ))}
         </div>
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => void copyText(link).then((ok) => toast(m(ok ? "qr.linkCopied" : "qr.copyFail")))} className="chip inline-flex min-h-11 px-1 py-1 text-center items-center justify-center gap-1.5 rounded-2xl font-medium">
+        <div className={`mt-3 grid gap-2 ${shareOk ? "grid-cols-2" : "grid-cols-1"}`}>
+          <button type="button" onClick={() => void copyText(link).then((ok) => toast(m(ok ? "qr.linkCopied" : "qr.copyFail")))} className="chip weak inline-flex min-h-11 items-center justify-center gap-1.5 rounded-2xl px-1 py-1 text-center font-semibold">
             <Copy className="size-4" aria-hidden="true" />
             {tr("qr.copyLink")}
           </button>
-          <button type="button" onClick={() => void printCard()} className="btn-solid inline-flex min-h-11 items-center justify-center gap-1.5 rounded-2xl px-1 py-1 text-center font-semibold">
-            <Printer className="size-4 shrink-0" aria-hidden="true" />
-            {tr("qr.print")}
-          </button>
+          {shareOk ? (
+            <button type="button" onClick={() => void share()} className="chip weak inline-flex min-h-11 items-center justify-center gap-1.5 rounded-2xl px-1 py-1 text-center font-semibold">
+              <Share className="size-4" aria-hidden="true" />
+              {tr("qr.shareLink")}
+            </button>
+          ) : null}
         </div>
+        <button type="button" onClick={() => void printCard()} className="btn-solid mt-2 inline-flex min-h-12 w-full items-center justify-center gap-1.5 rounded-2xl px-1 py-1 text-center font-semibold">
+          <Printer className="size-4 shrink-0" aria-hidden="true" />
+          {tr("qr.print")}
+        </button>
         <button type="button" onClick={() => void saveCard()} className="mt-2 h-9 w-full text-xs font-semibold text-accent">
           {tr("qr.savePdf")}
         </button>

@@ -5,6 +5,7 @@ import { LangSwitcher } from "@/components/lang-switcher";
 import { AppErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "@/components/toaster";
 import { toast } from "@/lib/toast";
+import { canScanQr, scanQr } from "@/lib/qr-scan";
 import { syncThemeColor } from "@/lib/theme-color";
 import { cleanPin, cleanText, pjlToken } from "@/lib/sanitize";
 import { matchQuery, type MatchResult } from "@/lib/atlas";
@@ -179,6 +180,9 @@ function AtlasMain() {
   const [zoom, setZoom] = useState<{ pages: string[]; index: number } | null>(null);
   const [presetMark, setPresetMark] = useState<{ id: string; sig: string | null } | null>(null);
   const [appOrigin, setAppOrigin] = useState("");
+  /* QR 찍기: 앱(구글 코드 스캐너) · BarcodeDetector 있는 브라우저만. 서버 렌더와 어긋나지 않게 마운트 뒤에 정한다 */
+  const [qrScanOk, setQrScanOk] = useState(false);
+  useEffect(() => setQrScanOk(canScanQr()), []);
   const [doneText, setDoneText] = useState<string | null>(null);
   const procCache = useRef(new Map<string, string>());
   const zoomSeq = useRef(0);
@@ -255,7 +259,23 @@ function AtlasMain() {
     };
   }, []);
 
-  useLinkParams({ setHelperUrl, setHelperCode, setUseHelper, setLinkTab, setLinkOpen, setHelperOk, setLanNote, setSubnetInput, setNotice, addWifi, rememberHost });
+  const applyLink = useLinkParams({ setHelperUrl, setHelperCode, setUseHelper, setLinkTab, setLinkOpen, setHelperOk, setLanNote, setSubnetInput, setNotice, addWifi, rememberHost });
+
+  /** QR 찍어 연결: 프린터 연결 QR이면 바로 연결, 아니면 알려 준다 */
+  async function scanQrConnect() {
+    let text: string | null;
+    try {
+      text = await scanQr();
+    } catch {
+      text = null;
+    }
+    if (text === "") return;
+    if (text === null) {
+      toast(m("qrs.fail"));
+      return;
+    }
+    if (!applyLink(text)) toast(m("qrs.notOurs"));
+  }
   useSavedHelper({ helperOk, helperUrl, helperCode, setHelperUrl, setHelperCode, setHelperStatus, setHelperOk, setUseHelper });
 
   /* 사진 회전·문서 보정 결과를 미리 만들어 둔다 (안 쓰는 결과는 정리) */
@@ -2144,7 +2164,7 @@ function AtlasMain() {
       ) : null}
       {step === "print" && (printer.status || printer.loading) ? <PrinterStatusCard status={printer.status} loading={printer.loading} error={printer.error} onRefresh={() => void printer.refresh()} compact /> : null}
       {step === "connect" ? (
-        <PrinterPanel {...{ addTypedIp, album, aliasDraft, setAliasDraft, appOrigin, checkPrinter, connectUsb, editingUid, setEditingUid, findOnWifi, findViaHelper, forget, registerPrinter, disconnect, foundList, helperCode, setHelperCode, helperOk, setHelperOk, helperShare, helperUrl, setHelperUrl, history, ipInput, setIpInput, lanBusy, lanNote, setLanNote, linkOpen, setLinkOpen, linkTab, setLinkTab, memo, notice, onPrint, openChooser, pdfName, photoUrl, pickPreset, probes, recentPrinters, reconnect, rememberHost, route, saveAlias, scanMode, scanProg, scanning, selected, selectedId, selectedName, sending, setAskName, setOverrideQuery, setQrTarget, setSelectedId, setShowDiag, setShowIpGuide, showIpGuide, setStep, setSubnetInput, subnetInput, setSupportTab, setUseHelper, useHelper, startWith, statusDot, statusText, stopScan, usbMissed, usbOk, helperStatus, onLauncher }} statusCard={selected?.host || selected?.usbKey ? <PrinterStatusCard status={printer.status} loading={printer.loading} error={printer.error} onRefresh={() => void printer.refresh()} helperNeeded={!helperAlive && !selected?.usbKey} /> : null} />
+        <PrinterPanel {...{ addTypedIp, album, aliasDraft, setAliasDraft, appOrigin, checkPrinter, connectUsb, editingUid, setEditingUid, findOnWifi, findViaHelper, forget, registerPrinter, disconnect, foundList, helperCode, setHelperCode, helperOk, setHelperOk, helperShare, helperUrl, setHelperUrl, history, ipInput, setIpInput, lanBusy, lanNote, setLanNote, linkOpen, setLinkOpen, linkTab, setLinkTab, memo, notice, onPrint, openChooser, pdfName, photoUrl, pickPreset, probes, recentPrinters, reconnect, rememberHost, route, saveAlias, scanMode, scanProg, scanning, selected, selectedId, selectedName, sending, setAskName, setOverrideQuery, setQrTarget, setSelectedId, setShowDiag, onScanQr: qrScanOk ? () => void scanQrConnect() : null, setShowIpGuide, showIpGuide, setStep, setSubnetInput, subnetInput, setSupportTab, setUseHelper, useHelper, startWith, statusDot, statusText, stopScan, usbMissed, usbOk, helperStatus, onLauncher }} statusCard={selected?.host || selected?.usbKey ? <PrinterStatusCard status={printer.status} loading={printer.loading} error={printer.error} onRefresh={() => void printer.refresh()} helperNeeded={!helperAlive && !selected?.usbKey} /> : null} />
       ) : (
         <section className="panel step-in rounded-3xl p-4 sm:p-5">
           {step === "confirm" ? (
