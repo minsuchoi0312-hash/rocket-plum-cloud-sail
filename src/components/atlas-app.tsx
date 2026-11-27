@@ -22,7 +22,7 @@ import { sendIppPdf } from "@/lib/ipp-send";
 import { diag } from "@/lib/diag";
 import { helperProbe, helperSend } from "@/lib/helper-send";
 import { composeSheet, insetCanvas, MARGIN_MM, nupCell, stampSheet, stampsOn, watermarkLabel, type MarginMode, type StampOptions, type WatermarkPreset } from "@/lib/compose-sheet";
-import { usePrinterStore, type SavedPrinter } from "@/lib/printer-store";
+import { printerLabel, usePrinterStore, type SavedPrinter } from "@/lib/printer-store";
 import { drawTestSheet, paperMm, type TestSheetInfo } from "@/lib/test-sheet";
 import { addHistory, clearHistory, loadHistory, type PrintRecord } from "@/lib/print-history";
 import { composeIdSheet, processPhotoUrl, type PhotoFilter, type PhotoLayout } from "@/lib/image-enhance";
@@ -568,7 +568,7 @@ function AtlasMain() {
     remember({ uid: `wifi-${host.replace(/\./g, "-")}`, title, query: host, host, via: tr(viaHelper && !phoneLink ? "fx.helper" : "via.wifi"), link: viaHelper ? "helper" : "wifi", savedAt: Date.now() });
   }
 
-  const { stopScan, findOnWifi, findViaHelper, pickPreset } = lanSearch({ lanBusy, sending, useHelper, helperUrl, helperCode, subnetInput, scanAbortRef, setLanBusy, setScanMode, setScanProg, setLanNote, setSubnetInput, setHelperOk, setUseHelper, addWifi });
+  const { stopScan, findOnWifi, findViaHelper, pickPreset } = lanSearch({ lanBusy, sending, useHelper, helperUrl, helperCode, subnetInput, scanAbortRef, setLanBusy, setScanMode, setScanProg, setLanNote, setSubnetInput, setHelperOk, setUseHelper, addWifi, savedHosts: saved.filter((row) => row.host && row.link !== "usb").map((row) => ({ host: row.host!, title: printerLabel(row) })) });
 
   function addTypedIp() {
     if (sending) {

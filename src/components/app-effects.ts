@@ -4,7 +4,7 @@
  */
 import { useCallback, useEffect, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import { diag } from "@/lib/diag";
-import { helperDiscover, helperInfo, helperPing, helperProgress } from "@/lib/helper-send";
+import { helperDiscover, helperInfo, helperPing, helperProbe, helperProgress } from "@/lib/helper-send";
 import { isValidIPv4, isValidSubnet, scanLan, type ScanProgress } from "@/lib/lan-find";
 import type { LinkTab } from "@/lib/app-utils";
 import { m, tr, useI18n, type Msg } from "@/lib/i18n";
@@ -246,8 +246,10 @@ export function lanSearch(d: {
   setHelperOk: Set<boolean>;
   setUseHelper: Set<boolean>;
   addWifi: AddWifi;
+  /** 내 프린터(전에 연결했던 와이파이 프린터) — 지금 와이파이 대역 밖이어도 검색 때 직접 확인한다 */
+  savedHosts: { host: string; title: string }[];
 }) {
-  const { lanBusy, sending, useHelper, helperUrl, helperCode, subnetInput, scanAbortRef, setLanBusy, setScanMode, setScanProg, setLanNote, setSubnetInput, setHelperOk, setUseHelper, addWifi } = d;
+  const { lanBusy, sending, useHelper, helperUrl, helperCode, subnetInput, scanAbortRef, setLanBusy, setScanMode, setScanProg, setLanNote, setSubnetInput, setHelperOk, setUseHelper, addWifi, savedHosts } = d;
   function stopScan() {
     scanAbortRef.current?.abort();
   }
@@ -345,6 +347,28 @@ export function lanSearch(d: {
       setHelperOk(true);
       setUseHelper(true);
       diag(tr("fx.logHelperScan", { nets: result.subnets.join(","), n: result.printers.length, ms: result.ms, list: result.printers.map((row) => `${row.host}=${row.model || "?"}`).join(" ") }));
+      /* 내 프린터 중 이번 검색에 안 나온 것: 폰과 복사기 대역이 다를 수 있어(다른 공유기 · 5GHz · 게스트 와이파이) 주소로 직접 확인한다 */
+      const seen = new Set(result.printers.map((row) => row.host));
+      const missing = [...new Map(savedHosts.filter((row) => isValidIPv4(row.host) && !seen.has(row.host)).map((row) => [row.host, row])).values()].slice(0, 12);
+      const savedHits = (
+        await Promise.all(
+          missing.map(async (row) => {
+            try {
+              return (await helperProbe(helperUrl, helperCode, row.host, ac.signal)).open ? row : null;
+            } catch {
+              return null;
+            }
+          }),
+        )
+      ).filter((row): row is { host: string; title: string } => row !== null);
+      if (missing.length) diag(tr("fx.logSavedCheck", { n: missing.length, hits: savedHits.map((row) => row.host).join(",") || "-" }));
+      savedHits.forEach((row, index) => {
+        addWifi(row.host, true, { title: row.title, subtitle: m("fx.savedHit", { host: row.host }), query: row.title, select: !result.printers.length && index === 0, viaHelper: true, raw9100: true });
+      });
+      if (!result.printers.length && savedHits.length) {
+        setLanNote(m("fx.savedFound", { n: savedHits.length }));
+        return;
+      }
       if (!result.printers.length) {
         setLanNote(phone ? m("ph.none", { where: result.subnets.map((net) => `${net}.x`).join(", ") || tr("ph.thisWifi") }) : m("fx.helperNone", { where: result.subnets.join(", ") || tr("fx.thisPcNet") }));
         return;
@@ -364,7 +388,7 @@ export function lanSearch(d: {
         });
       });
       const ready = result.printers.filter((row) => row.raw9100).length;
-      setLanNote(phone ? m("ph.found", { n: result.printers.length, sec: (result.ms / 1000).toFixed(1) }) : m("fx.helperFound", { n: result.printers.length, ready, sec: (result.ms / 1000).toFixed(1) }));
+      setLanNote(phone ? m("ph.found", { n: result.printers.length + savedHits.length, sec: (result.ms / 1000).toFixed(1) }) : m("fx.helperFound", { n: result.printers.length, ready, sec: (result.ms / 1000).toFixed(1) }));
       if (phone && result.subnets[0]) setSubnetInput(result.subnets[0]);
     } catch (error) {
       setLanNote(error instanceof Error ? error.message : tr("fx.helperFail"));
