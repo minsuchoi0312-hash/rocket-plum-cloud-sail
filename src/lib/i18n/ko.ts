@@ -852,7 +852,7 @@ export const ko = {
   "ap.stUsb": "USB 연결",
   "ap.stHelper": "PC 도우미 연결",
   "ap.stWifi": "와이파이 연결",
-  "ap.stPreview": "화면 미리보기만",
+  "ap.stPreview": "미리보기 전용",
   "ap.dropTitle": "여기에 놓으면 바로 열어요",
   "ap.dropSub": "PDF는 PDF 탭에서, 사진은 사진 탭에서 열려요",
   "ap.inApp": "앱 안의 브라우저에서는 USB와 일부 인쇄 기능이 막혀 있어요.",

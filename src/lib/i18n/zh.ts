@@ -854,7 +854,7 @@ export const zh: Record<MsgKey, string> = {
   "ap.stUsb": "USB 已连接",
   "ap.stHelper": "PC 助手已连接",
   "ap.stWifi": "Wi-Fi 已连接",
-  "ap.stPreview": "仅屏幕预览",
+  "ap.stPreview": "仅预览",
   "ap.dropTitle": "拖到这里即可打开",
   "ap.dropSub": "PDF 在 PDF 标签页打开，照片在照片标签页打开",
   "ap.inApp": "应用内浏览器会屏蔽 USB 和部分打印功能。",

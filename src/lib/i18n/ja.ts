@@ -854,7 +854,7 @@ export const ja: Record<MsgKey, string> = {
   "ap.stUsb": "USB接続",
   "ap.stHelper": "PCヘルパー接続",
   "ap.stWifi": "Wi-Fi接続",
-  "ap.stPreview": "画面プレビューのみ",
+  "ap.stPreview": "プレビュー専用",
   "ap.dropTitle": "ここにドロップするとすぐ開きます",
   "ap.dropSub": "PDFはPDFタブ、写真は写真タブで開きます",
   "ap.inApp": "アプリ内ブラウザではUSBと一部の印刷機能が使えません。",

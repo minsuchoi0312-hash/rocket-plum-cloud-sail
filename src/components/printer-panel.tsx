@@ -3,7 +3,7 @@
  * atlas-app.tsx에서 분리. 상태는 부모가 갖고 여기서는 그리기만 한다.
  */
 import { useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
-import { ChevronDown, ChevronRight, ChevronUp, Copy, FileText, History, Image as ImageIcon, Monitor, Printer, QrCode, Search, Sheet, StickyNote, Upload, Usb, Wifi, X } from "@/components/icons";
+import { ChevronDown, ChevronRight, ChevronUp, Copy, FileText, History, Image as ImageIcon, Monitor, Printer, QrCode, Search, Sheet, Stethoscope, StickyNote, Upload, Usb, Wifi, X } from "@/components/icons";
 import { helperPing } from "@/lib/helper-send";
 import { SUBNET_PRESETS, type ScanProgress } from "@/lib/lan-find";
 import { type SavedPrinter } from "@/lib/printer-store";
@@ -152,7 +152,8 @@ export function PrinterPanel(props: PrinterPanelProps) {
               aria-label={t("pp.selfCheck")}
               title={t("pp.selfCheck")}
             >
-              <Search className="size-[22px]" aria-hidden="true" />
+              {/* 자가진단 = 청진기 (아래 '프린터 찾기' 돋보기와 헷갈리지 않게) */}
+              <Stethoscope className="size-[22px]" aria-hidden="true" />
             </button>
             <button
               type="button"
