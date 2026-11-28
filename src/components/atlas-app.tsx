@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight as ChevronRightIcon, CircleHelp, House as HouseIcon, Monitor as MonitorIcon, Moon, Printer as PrinterIcon, RefreshCw, Sun, Upload, Usb as UsbIcon, Wifi as WifiIcon } from "@/components/icons";
+import { ChevronRight as ChevronRightIcon, CircleHelp, House as HouseIcon, Monitor as MonitorIcon, Printer as PrinterIcon, RefreshCw, Upload, Usb as UsbIcon, Wifi as WifiIcon } from "@/components/icons";
 import { I18nProvider, m, msgText, tr, useI18n, type Msg } from "@/lib/i18n";
 import { LangSwitcher } from "@/components/lang-switcher";
+import { ThemePicker } from "@/components/theme-picker";
 import { AppErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "@/components/toaster";
 import { toast } from "@/lib/toast";
 import { canScanQr, scanQr } from "@/lib/qr-scan";
 import { syncThemeColor } from "@/lib/theme-color";
+import { applyAppearance, readMode, saveMode, type ThemeMode } from "@/lib/palette";
 import { cleanPin, cleanText, pjlToken } from "@/lib/sanitize";
 import { matchQuery, type MatchResult } from "@/lib/atlas";
 import { grantedUsb, identifyUsb, pickUsb, sendUsbBytes, watchUsbConnect, watchUsbDisconnect } from "@/lib/discover";
@@ -101,6 +103,7 @@ function AtlasMain() {
   const [gray, setGray] = useState(false);
   const [duplex, setDuplex] = useState<DuplexMode>("simplex");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [themeMode, setThemeModeState] = useState<ThemeMode>("system");
   const [inApp, setInApp] = useState(false);
   const [isIos, setIsIos] = useState(false);
   const [usbMissed, setUsbMissed] = useState(false);
@@ -205,8 +208,9 @@ function AtlasMain() {
   const previewReq = useRef(0);
 
   useEffect(() => {
-    const savedTheme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
-    setTheme(savedTheme);
+    const savedMode = readMode();
+    setThemeModeState(savedMode);
+    setTheme(applyAppearance(savedMode));
     setUsbOk(typeof navigator !== "undefined" && "usb" in navigator);
     const rememberedSubnet = localStorage.getItem("nuguna-subnet") || "";
     if (rememberedSubnet) setSubnetInput(rememberedSubnet);
@@ -309,12 +313,21 @@ function AtlasMain() {
     [],
   );
 
-  function toggleTheme() {
-    const next = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    document.documentElement.dataset.theme = next;
-    localStorage.setItem("atlas-theme", next);
+  /* 밝기 모드(시스템 · 밝게 · 어둡게) — 저장하고 바로 적용. theme 은 실제로 보이는 밝기 */
+  function setThemeMode(next: ThemeMode) {
+    saveMode(next);
+    setThemeModeState(next);
+    setTheme(applyAppearance(next));
   }
+
+  /* 시스템 모드면 폰 · PC 의 다크 모드 전환을 바로 따라간다 */
+  useEffect(() => {
+    if (themeMode !== "system" || !window.matchMedia) return;
+    const query = window.matchMedia("(prefers-color-scheme: light)");
+    const follow = () => setTheme(applyAppearance("system"));
+    query.addEventListener("change", follow);
+    return () => query.removeEventListener("change", follow);
+  }, [themeMode]);
 
   /* 폰 브라우저 주소창 색을 앱 테마와 맞춘다(라이트 웜 페이퍼 / 다크 슬레이트) */
   useEffect(() => syncThemeColor(theme), [theme]);
@@ -2095,15 +2108,15 @@ function AtlasMain() {
           >
             <CircleHelp className="size-6" />
           </button>
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="icon-btn inline-flex size-10 items-center justify-center rounded-full"
-            aria-label={tr(theme === "dark" ? "ap.light" : "ap.dark")}
-            title={tr(theme === "dark" ? "ap.light" : "ap.dark")}
-          >
-            {theme === "dark" ? <Sun className="size-6" /> : <Moon className="size-6" />}
-          </button>
+          <ThemePicker
+            mode={themeMode}
+            scheme={theme}
+            onMode={setThemeMode}
+            onPalette={() => {
+              applyAppearance(themeMode);
+              syncThemeColor(theme);
+            }}
+          />
         </div>
       </header>
       {/* 앱으로 낼 거라 소개 문구는 없앰 — 오프라인일 때만 안내 */}

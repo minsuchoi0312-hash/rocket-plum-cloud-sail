@@ -2,10 +2,12 @@
 @import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 
 /* ════════════════════════════════════════════════════════════════════
-   디자인 기준
-   · 토스 TDS — 색(그레이 · 토스 블루), 서체(Pretendard), 버튼 크기 · 라운드, 누름 효과
-   · 애플 — SF 계열 폰트 폴백, 큰 제목일수록 좁히는 자간, 반투명 유리 · 원형 아이콘 버튼
-   · 당근 SEED — 테두리 대신 표면 명도로 층 나누기, 성공 · 주의 · 오류 색
+   디자인 기준 — 자세한 규칙은 저장소 루트 NUGUNA-DESIGN.md
+   · 기본 색은 원래 파랑(아래 토큰). 색 테마(종이 · 잉크 · 숲 · 노을 · 포도)와 모양(덜 둥글게) · 인쇄하기 2×2 타일은
+     파일 끝 블록 — 규칙은 저장소 루트 NUGUNA-DESIGN.md
+   · 토스 TDS — 기본 파랑 · 버튼 크기 · 누름 효과 · 해요체 문구
+   · 애플 — 큰 제목 자간, 반투명 상단바
+   · 당근 SEED — 성공 · 주의 · 오류 색
    ════════════════════════════════════════════════════════════════════ */
 
 @theme {
@@ -18,6 +20,12 @@
   --text-xs--line-height: 1.5;
   --text-sm: 0.9375rem;
   --text-sm--line-height: 1.5;
+
+  /* 모서리 — 모든 색 테마 공통: 덜 둥글게 (Tailwind rounded-xl · 2xl · 3xl 도 따라온다) */
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+  --radius-2xl: 12px;
+  --radius-3xl: 14px;
 
   --color-bg: #17171c;
   --color-elevated: #202027;
@@ -52,7 +60,7 @@
   --accent: #3485fa;
 }
 
-/* 어두운 테마 — 토스 TDS 다크 (background → layered → float 순으로 밝아진다) */
+/* 어두운 테마 — 밤 잉크: 따뜻한 검정 바탕, 종이색 글자 · 주 버튼 */
 :root,
 html[data-theme="dark"] {
   --color-bg: #17171c;
@@ -99,7 +107,7 @@ html[data-theme="dark"] {
   color-scheme: dark;
 }
 
-/* 밝은 테마 — 토스 회색 바탕(grey-100) 위 흰 카드, 글자는 grey-900 */
+/* 밝은 테마 — 종이: 미색 바탕 위 크림 카드, 글자 · 주 버튼은 잉크 검정 */
 html[data-theme="light"] {
   --color-bg: #f2f4f6;
   --color-elevated: #ffffff;
@@ -379,7 +387,7 @@ html[data-theme="light"] .app-header .icon-btn:hover,
   color: var(--tone);
 }
 
-/* 종류마다 다른 색 — 토스 레드 · 당근 그린 · 당근 주황 · 토스 블루 */
+/* 종류마다 다른 색 — 토스 레드 · 당근 그린 · 당근 주황 · 토스 블루 (종이 · 잉크 팔레트는 CMYK) */
 .doc-ico.is-pdf { --tone: #f04452; }
 .doc-ico.is-photo { --tone: #10ab7d; }
 .doc-ico.is-memo { --tone: #ff7a1a; }
@@ -390,7 +398,7 @@ html:not([data-theme="light"]) .doc-ico {
   background: color-mix(in srgb, var(--tone) 20%, transparent);
 }
 
-html:not([data-theme="light"]) .doc-ico.is-help { --tone: #9e9ea4; }
+
 
 /* 오른쪽 화살표 — 작고 연하게 (토스 grey-400) */
 .doc-chev {
@@ -589,7 +597,7 @@ html:not([data-theme="light"]) .doc-chev {
 }
 
 html[data-theme="light"] .tile-icon {
-  background: #ffffff;
+  background: var(--surface);
 }
 
 .text-xs {
@@ -1958,7 +1966,7 @@ html:not([data-theme="light"]) .toner-track span.is-dark-ink {
 
 /* 하단 토스트 — 토스 toast: grey-900 표면 + 흰 글자 */
 .toast-dock .toast {
-  background: #191f28;
+  background: #1c1b19;
   color: #ffffff;
   border-radius: 14px;
   box-shadow: 0 8px 24px rgb(0 27 55 / 0.22);
@@ -2290,11 +2298,11 @@ html:not([data-theme="light"]) .toast-dock .toast {
    더 또렷하게 (2026-11-26 2차)
    ════════════════════════════════════════════════════════════════════ */
 
-/* 밝은 테마 카드 — 회색 바탕 위에서 살짝 떠 보이게(토스 카드처럼 아주 옅은 그림자) */
+/* 밝은 테마 카드 — 종이 한 장처럼 헤어라인 + 아래 아주 옅은 선 */
 html[data-theme="light"] .panel,
 html[data-theme="light"] .card,
 html[data-theme="light"] .help-row {
-  box-shadow: 0 1px 2px rgb(0 20 50 / 0.04), 0 4px 16px rgb(0 20 50 / 0.04);
+  box-shadow: 0 0 0 1px var(--color-line), 0 1px 0 rgb(40 30 10 / 0.04);
 }
 
 /* 인쇄 화면의 복사기 상태 — 바탕 위에 바로 놓이면 회색 채움이 바탕과 같아 사라졌다 → 카드로 */
@@ -2305,7 +2313,7 @@ html[data-theme="light"] .help-row {
 }
 
 html[data-theme="light"] .shell > .status-card {
-  box-shadow: 0 1px 2px rgb(0 20 50 / 0.04), 0 4px 16px rgb(0 20 50 / 0.04);
+  box-shadow: 0 0 0 1px var(--color-line), 0 1px 0 rgb(40 30 10 / 0.04);
 }
 
 .status-card .state-badge {
@@ -2391,8 +2399,8 @@ html:not([data-theme="light"]) {
 /* 꺼진 인쇄 버튼 — 토스 disabled: 옅은 파랑 + 흰 글자(무거운 회색 막대 대신) */
 button.btn-send:disabled {
   background: color-mix(in srgb, var(--accent) 38%, var(--surface));
-  color: #ffffff;
-  -webkit-text-fill-color: #ffffff;
+  color: var(--color-accent-fg);
+  -webkit-text-fill-color: var(--color-accent-fg);
 }
 
 /* 보조 버튼(화면 미리보기 · PDF 저장)이 켜지면 토스 'weak' 버튼: 옅은 파랑 바탕 + 파란 글자 */
@@ -2442,7 +2450,7 @@ button.btn-send:disabled {
   border-radius: 6px;
   border: 1.5px solid var(--tds-grey-300, #d1d6db);
   background: var(--surface);
-  color: #ffffff;
+  color: var(--color-accent-fg);
   transition: background-color 200ms var(--ease), border-color 200ms var(--ease);
 }
 
@@ -2658,7 +2666,7 @@ html:not([data-theme="light"]) .tds-check {
 }
 
 html[data-theme="light"] .status-card {
-  box-shadow: 0 1px 2px rgb(0 20 50 / 0.04), 0 4px 16px rgb(0 20 50 / 0.04);
+  box-shadow: 0 0 0 1px var(--color-line), 0 1px 0 rgb(40 30 10 / 0.04);
 }
 
 :is(.card, .panel) .status-card {
@@ -2804,4 +2812,360 @@ html[data-theme="light"] .status-card {
 .opt-note,
 .preset-card .preset-hint {
   line-height: 1.6;
+}
+/* ════════════════════════════════════════════════════════════════════
+   모양 (2026-11-28) — 모든 색 테마 공통: 덜 둥글게, 카드는 헤어라인
+   카드 14 · 미리보기 12 · 버튼 · 타일 10 · 칩 · 입력 8 (알약 모양은 상태 점 · 배지만)
+   이 블록과 아래 '색 테마' 블록이 최종 기준. 새 덮어쓰기 블록을 더 쌓지 않는다.
+   ════════════════════════════════════════════════════════════════════ */
+.card,
+.panel,
+.status-card,
+.shell > .status-card,
+.drop-card,
+.help-row {
+  border-radius: 14px;
+}
+
+.card,
+.panel,
+.shell > .status-card,
+.help-row {
+  box-shadow: 0 0 0 1px var(--color-line);
+}
+
+.preview-stage {
+  border-radius: 12px;
+}
+
+.tile,
+.tile-icon,
+.btn-solid,
+.btn-cta,
+.seg {
+  border-radius: 10px;
+}
+
+.ip-join .field {
+  border-radius: 8px 0 0 8px;
+}
+
+.ip-join button {
+  border-radius: 0 8px 8px 0;
+}
+
+.bottom-cta {
+  border-radius: 0 0 14px 14px;
+}
+
+.chip,
+.chip-row .chip,
+.seg-btn,
+.field {
+  border-radius: 8px;
+}
+
+.toast-dock .toast {
+  border-radius: 10px;
+}
+
+/* 숫자 — 부수 · 쪽 번호는 고정폭 */
+.stepper-value,
+.page-cell,
+.pdf-pick-num {
+  font-family: var(--font-mono);
+  letter-spacing: 0;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   색 테마 (2026-11-28) — html[data-palette] 로 고른다. 없으면 기본 파랑(위 토큰 그대로).
+   밝게 · 어둡게(data-theme)와 따로 움직인다. 목록은 src/lib/palette.ts 와 맞출 것.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── 종이 · 잉크: 미색 종이 + 잉크 검정, CMYK 포인트 ── */
+html[data-palette="paper"]:not([data-theme="light"]) {
+  --color-bg: #12110f; --bg: #12110f;
+  --color-elevated: #1c1a17; --surface: #1c1a17;
+  --color-subtle: #2a2723; --surface-elevated: #2a2723; --input-bg: #2a2723; --float: #2a2723;
+  --color-fg: #f3efe6; --text-primary: #f3efe6; --input-text: #f3efe6; --chip-text: #f3efe6; --color-ink: #f3efe6; --color-paper: #f3efe6;
+  --color-muted: #d2ccc0; --text-secondary: #d2ccc0;
+  --color-faint: #b8b1a5; --text-muted: #b8b1a5;
+  --color-line: #3a362f; --border: #3a362f; --input-border: #3a362f; --chip-border: #3a362f;
+  --color-accent: #f3efe6; --accent: #f3efe6; --accent-hover: #ffffff; --color-accent-fg: #12110f;
+  --focus-ring: #ff5c9d; --raised: #47423a;
+  --ink-c: #3fb6e6; --ink-m: #ff5c9d; --ink-y: #f5c518; --ink-y-text: #f5c518; --ink-k: #f3efe6;
+}
+
+html[data-palette="paper"][data-theme="light"] {
+  --color-bg: #f4f1ea; --bg: #f4f1ea; --fill: #f4f1ea; --soft: #f4f1ea; --input-bg: #f4f1ea;
+  --color-elevated: #fffdf8; --surface: #fffdf8; --raised: #fffdf8; --float: #fffdf8;
+  --color-subtle: #e9e4d9; --surface-elevated: #faf7f0;
+  --color-fg: #1c1b19; --text-primary: #1c1b19; --input-text: #1c1b19; --chip-text: #1c1b19; --color-ink: #1c1b19; --color-paper: #1c1b19; --color-navy: #1c1b19;
+  --color-muted: #514e47; --text-secondary: #514e47;
+  --color-faint: #66625a; --text-muted: #66625a;
+  --color-line: #e2dccf; --border: #e2dccf; --input-border: #e2dccf; --chip-border: #e2dccf;
+  --color-accent: #1c1b19; --accent: #1c1b19; --accent-hover: #000000; --color-accent-fg: #fffdf8;
+  --focus-ring: #c8175d;
+  --ink-c: #0a84b8; --ink-m: #c8175d; --ink-y: #f2b705; --ink-y-text: #9a6b00; --ink-k: #1c1b19;
+}
+
+/* 제목 아래 C · M · Y 세 칸 띠 */
+html[data-palette="paper"] .app-header::after {
+  content: "";
+  position: absolute;
+  left: 20px;
+  bottom: 2px;
+  width: 42px;
+  height: 3px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, var(--ink-c) 0 33.3%, var(--ink-m) 33.3% 66.6%, var(--ink-y) 66.6% 100%);
+  pointer-events: none;
+}
+
+html[data-palette="paper"] .app-header {
+  background: var(--color-bg);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-palette="paper"] .home-link-icon {
+  color: var(--ink-m);
+}
+
+/* 인쇄 버튼 — 잉크 바탕 아래 마젠타 한 줄 */
+html[data-palette="paper"] .bottom-cta .btn-cta:not(:disabled),
+html[data-palette="paper"] .btn-send:not(:disabled) {
+  box-shadow: inset 0 -3px 0 var(--ink-m);
+}
+
+html[data-palette="paper"] .tds-check.is-on {
+  background: var(--ink-k);
+  border-color: var(--ink-k);
+}
+
+html[data-palette="paper"] .dot-wifi { background: var(--ink-c); }
+html[data-palette="paper"] .doc-ico.is-pdf { --tone: var(--ink-m); }
+html[data-palette="paper"] .doc-ico.is-photo { --tone: var(--ink-c); }
+html[data-palette="paper"] .doc-ico.is-memo { --tone: var(--ink-y-text); }
+html[data-palette="paper"] .doc-ico.is-test { --tone: var(--color-fg); }
+html[data-palette="paper"] .doc-ico.is-help { --tone: var(--color-faint); }
+
+/* ── 숲: 짙은 초록 ── */
+html[data-palette="forest"]:not([data-theme="light"]) {
+  --color-bg: #111714; --bg: #111714;
+  --color-elevated: #19211d; --surface: #19211d;
+  --color-subtle: #243029; --surface-elevated: #243029; --input-bg: #243029; --float: #243029;
+  --color-line: #33423a; --border: #33423a; --input-border: #33423a; --chip-border: #33423a;
+  --color-accent: #3ccf91; --accent: #3ccf91; --accent-hover: #2fb97f; --color-accent-fg: #0b1a12;
+  --focus-ring: #3ccf91; --raised: #3f5148;
+}
+
+html[data-palette="forest"][data-theme="light"] {
+  --color-bg: #eef4f0; --bg: #eef4f0; --fill: #eef4f0; --soft: #eef4f0; --input-bg: #eef4f0;
+  --color-line: #dbe6df; --border: #dbe6df; --input-border: #dbe6df; --chip-border: #dbe6df;
+  --color-subtle: #dbe6df;
+  --color-accent: #0e7c54; --accent: #0e7c54; --accent-hover: #0a6544; --color-accent-fg: #ffffff;
+  --focus-ring: #0e7c54;
+}
+
+/* ── 노을: 따뜻한 코랄 ── */
+html[data-palette="sunset"]:not([data-theme="light"]) {
+  --color-bg: #191312; --bg: #191312;
+  --color-elevated: #231b19; --surface: #231b19;
+  --color-subtle: #302522; --surface-elevated: #302522; --input-bg: #302522; --float: #302522;
+  --color-line: #43332e; --border: #43332e; --input-border: #43332e; --chip-border: #43332e;
+  --color-accent: #ff8a5c; --accent: #ff8a5c; --accent-hover: #ff7642; --color-accent-fg: #2a1208;
+  --focus-ring: #ff8a5c; --raised: #554039;
+}
+
+html[data-palette="sunset"][data-theme="light"] {
+  --color-bg: #f8f1ec; --bg: #f8f1ec; --fill: #f8f1ec; --soft: #f8f1ec; --input-bg: #f8f1ec;
+  --color-line: #ecdfd6; --border: #ecdfd6; --input-border: #ecdfd6; --chip-border: #ecdfd6;
+  --color-subtle: #ecdfd6;
+  --color-accent: #d24a1c; --accent: #d24a1c; --accent-hover: #b53d13; --color-accent-fg: #ffffff;
+  --focus-ring: #d24a1c;
+}
+
+/* ── 포도: 보라 ── */
+html[data-palette="grape"]:not([data-theme="light"]) {
+  --color-bg: #14121b; --bg: #14121b;
+  --color-elevated: #1d1a26; --surface: #1d1a26;
+  --color-subtle: #292535; --surface-elevated: #292535; --input-bg: #292535; --float: #292535;
+  --color-line: #383247; --border: #383247; --input-border: #383247; --chip-border: #383247;
+  --color-accent: #a08cff; --accent: #a08cff; --accent-hover: #8d76ff; --color-accent-fg: #160f33;
+  --focus-ring: #a08cff; --raised: #4a4360;
+}
+
+html[data-palette="grape"][data-theme="light"] {
+  --color-bg: #f3f1f9; --bg: #f3f1f9; --fill: #f3f1f9; --soft: #f3f1f9; --input-bg: #f3f1f9;
+  --color-line: #e2def0; --border: #e2def0; --input-border: #e2def0; --chip-border: #e2def0;
+  --color-subtle: #e2def0;
+  --color-accent: #6741d9; --accent: #6741d9; --accent-hover: #5633c2; --color-accent-fg: #ffffff;
+  --focus-ring: #6741d9;
+}
+
+/* 화면 꾸미기 팝오버 — 밝기(시스템 · 밝게 · 어둡게) + 밝을 때 · 어두울 때 색 */
+.palette-pop {
+  background: var(--float);
+  color: var(--color-fg);
+  box-shadow: var(--shadow-float);
+}
+
+.palette-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 2px 2px 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-muted);
+}
+
+.palette-name {
+  font-weight: 600;
+  color: var(--color-fg);
+}
+
+.palette-mode {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--fill);
+}
+
+.palette-mode button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.palette-mode button[aria-checked="true"] {
+  background: var(--surface);
+  color: var(--color-fg);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.1);
+}
+
+html:not([data-theme="light"]) .palette-mode button[aria-checked="true"] {
+  background: var(--raised);
+}
+
+.palette-row + .palette-row {
+  margin-top: 12px;
+}
+
+/* 지금 보이는 밝기의 줄은 제목을 진하게 */
+.palette-row.is-now .palette-head > span:first-child {
+  color: var(--color-fg);
+}
+
+.palette-swatches {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+/* 색 칩 — 바탕색 사각형 + 가운데 강조색 점. 고르면 강조색 테두리와 체크 */
+.palette-chip {
+  position: relative;
+  display: grid;
+  aspect-ratio: 1 / 1;
+  min-height: 44px;
+  place-items: center;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px rgb(127 127 127 / 0.35);
+  transition: transform 160ms var(--ease-out);
+}
+
+.palette-chip:active {
+  transform: scale(0.94);
+}
+
+.palette-chip[aria-checked="true"] {
+  box-shadow: inset 0 0 0 2.5px currentColor;
+}
+
+.palette-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+}
+
+.palette-chip[aria-checked="true"] .palette-dot {
+  display: none;
+}
+
+.palette-check {
+  color: currentColor;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   인쇄하기 2×2 타일 (2026-11-28) — PDF · 사진 / 메모 · 테스트
+   세로 목록이 토스처럼 보인다는 의견 → 문서 종류만 사각 타일로. 다른 카드는 그대로.
+   ════════════════════════════════════════════════════════════════════ */
+.doc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.doc-tile {
+  display: flex;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  min-height: 132px;
+  flex-direction: column;
+  justify-content: space-between;
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--fill);
+  color: var(--color-fg);
+  text-align: left;
+  transition: transform 160ms var(--ease-out), background-color 160ms var(--ease-out);
+}
+
+.doc-tile:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  .doc-tile:hover {
+    background: var(--press);
+  }
+}
+
+.doc-tile .doc-ico {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+}
+
+.doc-tile .doc-ico > svg {
+  width: 26px;
+  height: 26px;
+}
+
+.doc-tile-name {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.doc-tile-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--color-muted);
 }

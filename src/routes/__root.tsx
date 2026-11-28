@@ -1,6 +1,7 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
+import { APPEARANCE_BOOT } from "@/lib/palette";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -29,7 +30,8 @@ export const Route = createRootRoute({
     scripts: [
       {
         children:
-          "try{var t=localStorage.getItem('atlas-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;var c=t==='light'?'#F2F4F6':'#17171C';document.querySelectorAll('meta[name=theme-color]').forEach(function(m){m.setAttribute('content',c)});}catch(e){}",
+          APPEARANCE_BOOT +
+          "try{var c=document.documentElement.dataset.theme==='light'?'#F2F4F6':'#17171C';document.querySelectorAll('meta[name=theme-color]').forEach(function(m){m.setAttribute('content',c)});}catch(e){}",
       },
     ],
   }),

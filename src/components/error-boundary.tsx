@@ -7,7 +7,7 @@ import { diag, maskSecrets } from "@/lib/diag";
 import { useI18n } from "@/lib/i18n";
 
 /** 이 앱이 브라우저에 남기는 저장소 키(초기화 대상). 도우미 연결 코드·언어 선택도 함께 지운다. */
-export const APP_STORAGE_KEYS = ["print-atlas-v2", "nuguna-print-presets", "nuguna-print-history", "nuguna-subnet", "nuguna-subnet-learned", "nuguna-helper", "nuguna-lang", "atlas-theme"];
+export const APP_STORAGE_KEYS = ["print-atlas-v2", "nuguna-print-presets", "nuguna-print-history", "nuguna-subnet", "nuguna-subnet-learned", "nuguna-helper", "nuguna-lang", "atlas-theme", "atlas-palette", "atlas-palette-light", "atlas-palette-dark"];
 
 export function resetAppStorage(store: Pick<Storage, "removeItem"> = window.localStorage) {
   for (const key of APP_STORAGE_KEYS) {

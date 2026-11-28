@@ -529,8 +529,8 @@ export function PrinterPanel(props: PrinterPanelProps) {
             {t("pp.continue", { v: pdfName || (album.length ? t("pp.photos", { n: album.length }) : photoUrl ? t("pp.photo") : t("pp.memo")) })}
           </button>
         ) : null}
-        {/* 문서 종류 — 애플 설정 앱처럼 색 아이콘 + 한 줄 행 + 오른쪽 화살표 */}
-        <ul className="-mx-2 mt-2">
+        {/* 문서 종류 — 2×2 사각 타일(색 아이콘 + 이름 + 한 줄 설명) */}
+        <ul className="doc-grid mt-3">
           {(
             [
               ["pdf", FileText, "pp.hintPdf"],
@@ -540,15 +540,14 @@ export function PrinterPanel(props: PrinterPanelProps) {
             ] as const
           ).map(([kind, Icon, hint]) => (
             <li key={kind}>
-              <button type="button" onClick={() => startWith(kind)} className="doc-row">
+              <button type="button" onClick={() => startWith(kind)} className="doc-tile">
                 <span className={`doc-ico is-${kind}`} aria-hidden="true">
                   <Icon weight="fill" className="size-[22px]" />
                 </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[16px] font-semibold text-fg">{docLabel(kind)}</span>
-                  <span className="mt-0.5 block truncate text-[13px] text-muted">{t(hint)}</span>
+                <span className="min-w-0">
+                  <span className="doc-tile-name">{docLabel(kind)}</span>
+                  <span className="doc-tile-hint">{t(hint)}</span>
                 </span>
-                <ChevronRight className="doc-chev" aria-hidden="true" />
               </button>
             </li>
           ))}
