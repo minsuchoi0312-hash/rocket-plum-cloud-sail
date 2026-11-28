@@ -3188,3 +3188,149 @@ html:not([data-palette]):not([data-theme="light"]) {
 .btn-solid:not(:disabled):hover {
   background: var(--accent-btn-hover, var(--accent-hover));
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   가로 화면 · 태블릿 (2026-11-28)
+   · 좁은 화면(세로 폰)은 그대로 — 감싸는 .home-col · .print-col 은 display: contents
+   · 840px 이상: 홈은 두 줄(왼쪽 프린터 연결 · 상태 / 오른쪽 내 프린터 · 인쇄하기),
+     인쇄 화면도 두 줄(왼쪽 문서 · 미리보기 / 오른쪽 옵션 · 인쇄 버튼)
+   · 높이가 낮은 가로 폰: 상단바 · 큰 버튼 · 미리보기를 납작하게
+   ════════════════════════════════════════════════════════════════════ */
+.home-col,
+.print-col {
+  display: contents;
+}
+
+/* 가로 폰의 노치 · 펀치홀이 옆에 올 때 글자가 가려지지 않게 */
+.shell {
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+}
+
+@media (min-width: 840px) {
+  .shell {
+    max-width: 1120px;
+    padding-left: max(24px, env(safe-area-inset-left));
+    padding-right: max(24px, env(safe-area-inset-right));
+  }
+
+  .home-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+  }
+
+  .home-col {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .print-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    gap: 28px;
+    align-items: start;
+  }
+
+  .print-col {
+    display: block;
+    min-width: 0;
+  }
+
+  /* 오른쪽 줄 첫 요소는 위 여백 없이 왼쪽 줄과 맞춘다 */
+  .print-col-side > :first-child {
+    margin-top: 0;
+  }
+
+  /* 인쇄 버튼 줄은 오른쪽 줄 안에서만 (좁은 화면의 카드 끝까지 넓히는 음수 여백 없앰) */
+  .print-col-side .bottom-cta {
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
+    border-radius: 0;
+  }
+
+  /* 미리보기 종이 — 넓어진 만큼 크게, 화면 높이를 넘지 않게 */
+  .print-col-doc .sheet-a4 {
+    width: min(100%, 300px, calc((100dvh - 260px) * 0.707));
+    min-width: 160px;
+    max-height: none;
+  }
+
+  .print-col-doc .sheet-a4.is-land {
+    width: min(100%, 440px);
+  }
+}
+
+/* 키 큰 태블릿 가로: 왼쪽 문서 · 미리보기가 스크롤해도 따라온다 */
+@media (min-width: 840px) and (min-height: 700px) {
+  .print-col-doc {
+    position: sticky;
+    top: 76px;
+  }
+}
+
+/* 높이가 낮은 가로 폰 */
+@media (orientation: landscape) and (max-height: 520px) {
+  .app-header {
+    min-height: 48px;
+    padding-top: 4px;
+    padding-bottom: 2px;
+  }
+
+  .app-header h1 {
+    font-size: 22px;
+  }
+
+  .btn-cta {
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  .bottom-cta {
+    padding-top: 12px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .sheet-a4,
+  .print-col-doc .sheet-a4 {
+    width: min(100%, 220px, calc(62dvh * 0.707));
+    max-height: none;
+  }
+
+  .doc-tile {
+    aspect-ratio: 4 / 3;
+    min-height: 104px;
+  }
+}
+
+/* 넓은 화면의 인쇄하기 타일 — 정사각형이면 너무 커서 높이를 고정 */
+@media (min-width: 840px) {
+  .doc-tile {
+    aspect-ratio: auto;
+    min-height: 136px;
+  }
+}
+
+/* 세로 태블릿(640~839px) — 한 줄이지만 조금 넓게 */
+@media (min-width: 640px) and (max-width: 839px) {
+  .shell {
+    max-width: 640px;
+  }
+}
+
+/* 높이가 낮은 가로 폰 — 인쇄 화면 위 프린터 줄도 납작하게 */
+@media (orientation: landscape) and (max-height: 520px) {
+  .help-row {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .doc-tile {
+    min-height: 104px;
+  }
+}

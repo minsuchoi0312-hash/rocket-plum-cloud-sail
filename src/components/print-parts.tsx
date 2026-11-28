@@ -288,7 +288,9 @@ export function PrintChooser({
 }) {
   const tabs = (["pdf", "photo", "memo", "test"] as const).map((id) => [id, docLabel(id)] as const);
   return (
-    <div className="mt-3">
+    <div className="print-grid mt-3">
+      {/* 넓은 화면: 왼쪽 = 문서 고르기 · 미리보기(따라옴), 오른쪽 = 옵션 · 인쇄 버튼 */}
+      <div className="print-col print-col-doc">
       <div className="doc-tabs grid grid-cols-4 gap-1 rounded-2xl p-1" role="tablist" aria-label={tr("ch.tabsAria")}>
         {tabs.map(([id, text]) => (
           <button
@@ -435,6 +437,8 @@ export function PrintChooser({
       ) : null}
       {docKind === "test" ? <p className="mt-3 text-sm text-muted">{tr("ch.testHint")}</p> : null}
       {preview}
+      </div>
+      <div className="print-col print-col-side">
       {extras}
       {doneBanner}
       {preflight}
@@ -475,6 +479,7 @@ export function PrintChooser({
           </div>
         </>
       )}
+      </div>
     </div>
   );
 }

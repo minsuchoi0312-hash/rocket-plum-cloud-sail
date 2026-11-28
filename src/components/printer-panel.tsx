@@ -138,7 +138,9 @@ export function PrinterPanel(props: PrinterPanelProps) {
   /* 최근 프린터 중 지금 연결된 것 */
   const isCurrent = (item: SavedPrinter) => Boolean(selected && ((item.host && selected.host === item.host) || (!item.host && selected.usbKey && selected.title === item.title)));
   return (
-    <section className="step-in flex flex-col gap-3">
+    <section className="home-cols step-in flex flex-col gap-3">
+      {/* 넓은 화면: 왼쪽 = 프린터 연결 · 상태, 오른쪽 = 내 프린터 · 인쇄하기 · 최근 인쇄 */}
+      <div className="home-col">
       <div className="card p-5">
         {/* 머리글 — 제목 + 아이콘만 있는 버튼 (자가진단 · 접기/펼치기) */}
         <div className="card-head">
@@ -500,7 +502,9 @@ export function PrinterPanel(props: PrinterPanelProps) {
       </div>
 
       {statusCard}
+      </div>
 
+      <div className="home-col">
       <MyPrinters
         items={recentPrinters}
         isCurrent={isCurrent}
@@ -574,6 +578,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
           </button>
         </details>
       ) : null}
+      </div>
     </section>
   );
 }
