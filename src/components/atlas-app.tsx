@@ -533,6 +533,17 @@ function AtlasMain() {
     setNotice("");
   }
 
+  /* 화면(단계)이 바뀌면 맨 위부터 — 홈을 맨 아래까지 내린 뒤 인쇄하기 타일을 누르면
+     다음 화면이 아래쪽(미리보기 · PDF 저장 · 도움말)에서 시작하던 문제 */
+  const firstStep = useRef(true);
+  useEffect(() => {
+    if (firstStep.current) {
+      firstStep.current = false;
+      return;
+    }
+    window.scrollTo({ top: 0 });
+  }, [step]);
+
   function backToConnect() {
     if (sending) return;
     clearPrintRoot();
