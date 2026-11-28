@@ -85,7 +85,7 @@ const KO: Record<LegalKind, LegalDoc> = {
           "· 인쇄 기록: 파일 이름 · 쪽수 · 프린터 · 시각(최근 몇 건)",
           "· 설정: 인쇄 설정 · 언어 · 화면 테마 · 진단 기록",
           "앱의 '기록 지우기'나 앱 삭제로 바로 지워져요. 클라우드 백업이나 새 폰으로 옮기기(기기 간 이전)로도 복사되지 않아요. '백업 파일 받기'는 이용자가 직접 고른 곳에만 파일로 저장돼요.",
-          "'PDF로 저장'한 파일은 기기의 다운로드 › NugunaPrint 폴더에 남아요. 앱을 지워도 남으니, 필요 없으면 파일 앱에서 직접 지워 주세요.",
+          "'PDF로 저장'한 파일은 기기의 다운로드 › NugunaPrint 폴더에 남아요(안드로이드 9 이하는 공유 창에서 이용자가 고른 곳). 앱을 지워도 남으니, 필요 없으면 파일 앱에서 직접 지워 주세요.",
         ],
       },
       {
@@ -198,7 +198,7 @@ const EN: Record<LegalKind, LegalDoc> = {
           "· Print history: file name, pages, printer, time (recent items)",
           "· Settings: print settings, language, theme, diagnostic log",
           "It is erased by 'Clear history' or by uninstalling the App, and is excluded from cloud backups and device-to-device transfer. 'Download backup file' saves a file only where you choose.",
-          "Files saved with 'Save as PDF' stay in your device's Download › NugunaPrint folder, even after uninstalling. Delete them in your Files app if you no longer need them.",
+          "Files saved with 'Save as PDF' stay in your device's Download › NugunaPrint folder (on Android 9 and older, wherever you choose in the share sheet), even after uninstalling. Delete them in your Files app if you no longer need them.",
         ],
       },
       { h: "3. Files you print", p: ["Photos, PDFs and text you pick or share to the App are converted on your device and sent only to the printer you choose on the same Wi-Fi (or connected by USB cable).", "A secure-print PIN travels inside the print data to that printer only and is not stored on your device.", "Files are not copied and are released from memory after printing."] },

@@ -7,12 +7,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchPrinterStatus, usbStatus, type PrinterStatus } from "@/lib/printer-status";
 import { tr } from "@/lib/i18n";
 
-export function usePrinterStatus(opts: { host: string; helperUrl: string; helperCode: string; helperAlive: boolean; usb: { cmd: string; live: boolean; title: string } | null }) {
+/** pjl: 9100 으로 PJL 상태 질문을 보내도 되는지 — PJL 을 모르는 잉크젯(엡손 · HP PCL3 · 캐논)은 그 글을 쪽으로 찍을 수 있어 묻지 않는다 */
+export function usePrinterStatus(opts: { host: string; helperUrl: string; helperCode: string; helperAlive: boolean; usb: { cmd: string; live: boolean; title: string } | null; pjl?: boolean }) {
   const [status, setStatus] = useState<PrinterStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const req = useRef(0);
   const { host, helperUrl, helperCode, helperAlive, usb } = opts;
+  const pjl = opts.pjl !== false;
   const usbKey = usb ? `${usb.cmd}|${usb.live}|${usb.title}` : "";
 
   const refresh = useCallback(async () => {
@@ -31,7 +33,7 @@ export function usePrinterStatus(opts: { host: string; helperUrl: string; helper
     const ac = new AbortController();
     const timer = window.setTimeout(() => ac.abort(), 6000);
     try {
-      const next = await fetchPrinterStatus(helperUrl, helperCode, host, ac.signal);
+      const next = await fetchPrinterStatus(helperUrl, helperCode, host, ac.signal, pjl);
       if (id === req.current) {
         setStatus(next);
         setError("");
@@ -45,7 +47,7 @@ export function usePrinterStatus(opts: { host: string; helperUrl: string; helper
     }
     return null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [host, helperUrl, helperCode, helperAlive, usbKey]);
+  }, [host, helperUrl, helperCode, helperAlive, usbKey, pjl]);
 
   useEffect(() => {
     setStatus(null);

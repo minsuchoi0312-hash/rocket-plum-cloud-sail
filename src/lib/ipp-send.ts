@@ -44,9 +44,9 @@ export const IPP_TRIES: ReadonlyArray<{ major: number; minor: number; path: stri
   { major: 1, minor: 1, path: "/" },
 ];
 
-type IppOptions = { copies: number; duplex: "simplex" | "long" | "short"; paper: OfficePaper; gray: boolean };
+type IppOptions = { copies: number; duplex: "simplex" | "long" | "short"; paper: OfficePaper; gray: boolean; /** 보안 인쇄 PIN (프린터가 job-password 를 받을 때만) */ password?: string };
 
-export function printJobPacket(host: string, pdf: Uint8Array, options: IppOptions, attempt: { major: number; minor: number; path: string } = IPP_TRIES[0]) {
+export function printJobPacket(host: string, pdf: Uint8Array, options: IppOptions, attempt: { major: number; minor: number; path: string } = IPP_TRIES[0], format = "application/pdf") {
   const header = new Uint8Array(8);
   const view = new DataView(header.buffer);
   header[0] = attempt.major;
@@ -63,7 +63,9 @@ export function printJobPacket(host: string, pdf: Uint8Array, options: IppOption
     textAttr(0x45, "printer-uri", `ipp://${host}:631${attempt.path}`),
     textAttr(0x42, "requesting-user-name", "nuguna"),
     textAttr(0x42, "job-name", "누구나프린트"),
-    textAttr(0x49, "document-format", "application/pdf"),
+    textAttr(0x49, "document-format", format),
+    /* 보안 인쇄: 작업을 프린터에 붙잡아 두고 패널에서 PIN 을 넣어야 나온다 */
+    ...(options.password ? [textAttr(0x30, "job-password", options.password), textAttr(0x44, "job-password-encryption", "none")] : []),
     new Uint8Array([0x02]),
     intAttr("copies", Math.max(1, Math.min(99, options.copies))),
     textAttr(0x44, "sides", sides),
@@ -90,6 +92,14 @@ const corsHint = () => tr("ipp.cors");
 
 /** 같은 망의 IPP(631)로 PDF를 넣는다. 양면은 sides 속성으로 요청한다. 실패해도 기기 인쇄 창은 열지 않는다. */
 export async function sendIppPdf(host: string, pdf: Uint8Array, options: IppOptions) {
+  return sendIppDoc(host, pdf, options, "application/pdf");
+}
+
+/** 프린터가 이 형식을 받지 않는다고 거절했는지(IPP 0x040A document-format-not-supported) */
+export class IppFormatRejected extends Error {}
+
+/** 같은 망의 IPP(631)로 문서를 넣는다 — PDF · PWG 래스터 · URF · JPEG (표준 팩 3.0) */
+export async function sendIppDoc(host: string, data: Uint8Array, options: IppOptions, format: string) {
   let last = "";
   for (const attempt of IPP_TRIES) {
     let response: Response;
@@ -97,7 +107,7 @@ export async function sendIppPdf(host: string, pdf: Uint8Array, options: IppOpti
       response = await fetch(`http://${host}:631${attempt.path}`, {
         method: "POST",
         headers: { "Content-Type": "application/ipp" },
-        body: printJobPacket(host, pdf, options, attempt),
+        body: printJobPacket(host, data, options, attempt, format),
         targetAddressSpace: "local",
       } as RequestInit);
     } catch {
@@ -109,6 +119,7 @@ export async function sendIppPdf(host: string, pdf: Uint8Array, options: IppOpti
     const isIpp = (response.headers.get("content-type") || "application/ipp").includes("application/ipp");
     const status = isIpp ? ippStatus(new Uint8Array(await response.arrayBuffer().catch(() => new ArrayBuffer(0)))) : null;
     if (response.ok && status !== null && status < 0x0100) return;
+    if (response.ok && status === 0x040a) throw new IppFormatRejected(tr("ipp.rejected", { host, code: "0x040a" }));
     last = status !== null && response.ok ? `0x${status.toString(16).padStart(4, "0")}` : String(response.status);
     if (!ippRetryable(response.status, status)) break;
   }

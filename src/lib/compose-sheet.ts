@@ -149,3 +149,32 @@ export function stampSheet(canvas: HTMLCanvasElement, index: number, total: numb
   }
   return canvas;
 }
+
+/** 180° 돌린 새 캔버스 (짧은 쪽 수동 양면의 뒷면) — 원본은 비운다 */
+export function rotate180(source: HTMLCanvasElement) {
+  const out = document.createElement("canvas");
+  out.width = source.width;
+  out.height = source.height;
+  const ctx = out.getContext("2d");
+  if (ctx) {
+    ctx.translate(out.width, out.height);
+    ctx.rotate(Math.PI);
+    ctx.drawImage(source, 0, 0);
+  }
+  source.width = 0;
+  source.height = 0;
+  return out;
+}
+
+/** 흰 쪽 (홀수 쪽 수동 양면의 마지막 뒷면) */
+export function blankSheet(size: { width: number; height: number }) {
+  const out = document.createElement("canvas");
+  out.width = size.width;
+  out.height = size.height;
+  const ctx = out.getContext("2d");
+  if (ctx) {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, out.width, out.height);
+  }
+  return out;
+}

@@ -66,3 +66,22 @@ test("쪽 끝 · 작업 끝", () => {
   const f = Buffer.from(escprJobFooter()).toString("latin1");
   assert.ok(f.startsWith("\x1bj\x00\x00\x00\x00endj\x1b@\x1b(R\x08\x00\x00REMOTE1JE\x01\x00\x00\x1b\x00\x00\x00"));
 });
+
+test("자동 양면: 원격 DP 00 02 · seti 마지막 바이트(긴 쪽 2 · 짧은 쪽 1) · 꼬리 LD, 단면이면 셋 다 없음", async () => {
+  const { escprJobHeader, escprJobFooter } = await import("./escpr.ts");
+  const hex = (u: Uint8Array) => Buffer.from(u).toString("hex");
+  const DP = Buffer.from("DP").toString("hex") + "02000002";
+  const LD = Buffer.from("LD").toString("hex") + "0000";
+  const seti = Buffer.from("seti").toString("hex");
+  const tail = (h: string) => h.slice(h.indexOf(seti) + seti.length, h.indexOf(seti) + seti.length + 20).slice(-2);
+  const long = hex(escprJobHeader({ paper: "A4", color: true, duplex: "long" }));
+  const short = hex(escprJobHeader({ paper: "A4", color: true, duplex: "short" }));
+  const simplex = hex(escprJobHeader({ paper: "A4", color: true }));
+  assert.ok(long.includes(DP));
+  assert.ok(!simplex.includes(DP));
+  assert.equal(tail(long), "02");
+  assert.equal(tail(short), "01");
+  assert.equal(tail(simplex), "00");
+  assert.ok(hex(escprJobFooter({ duplex: "long" })).includes(LD));
+  assert.ok(!hex(escprJobFooter()).includes(LD));
+});

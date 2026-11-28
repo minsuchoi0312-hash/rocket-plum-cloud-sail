@@ -90,6 +90,8 @@ export type PrintOptionsProps = {
   setPhotoTurn: Set<number>;
   secureOn: boolean;
   setSecureOn: Set<boolean>;
+  /** 이 경로가 보안 인쇄(PIN)를 실을 수 있는지: yes · ipp(프린터에 따라) · no */
+  secureSupport?: "yes" | "ipp" | "no";
   pin: string;
   setPin: Set<string>;
   pinRef: MutableRefObject<HTMLInputElement | null>;
@@ -105,11 +107,11 @@ export function PrintOptions(props: PrintOptionsProps) {
     photoFilter, onPhotoFilter, photoLayout, onPhotoLayout, idLayout, cutLines, setCutLines,
     memoSize, setMemoSize, memoHeader, setMemoHeader, memoTitle, setMemoTitle, onTextFile,
     advancedOpen, setAdvancedOpen, margin, setMargin, marginMm, pageNumber, setPageNumber, wmChoice, setWmChoice, wmCustom, setWmCustom, stampActive,
-    nup, setNup, orient, setOrient, photoFit, setPhotoFit, photoTurn, setPhotoTurn, secureOn, setSecureOn, pin, setPin, pinRef, jobUser, setJobUser,
+    nup, setNup, orient, setOrient, photoFit, setPhotoFit, photoTurn, setPhotoTurn, secureOn, setSecureOn, secureSupport = "yes", pin, setPin, pinRef, jobUser, setJobUser,
   } = props;
   return (
     <>
-    {docKind !== "test" ? <PresetBar current={presetCurrent} activeId={activePresetId} disabled={sending} onApply={applyPreset} onSaved={onPresetSaved} onNotice={setNotice} /> : null}
+    {docKind !== "test" ? <PresetBar current={presetCurrent} activeId={activePresetId} pdf={docKind === "pdf"} disabled={sending} onApply={applyPreset} onSaved={onPresetSaved} onNotice={setNotice} /> : null}
     <OfficeOptions paper={paper} gray={gray} duplex={duplex} copies={copies} route={route} colorRaster={colorRaster} simplexOnly={simplexOnly} locked={sending} controls={jobControls} copyMax={99} onPaper={setPaper} onGray={setGray} onDuplex={setDuplex} onCopies={setCopies} />
     {docKind === "pdf" ? (
       <div className="mt-3 space-y-2">
@@ -306,11 +308,13 @@ export function PrintOptions(props: PrintOptionsProps) {
             </button>
           </div>
         ) : null}
-        <label className="flex items-center gap-2 text-fg">
-          <input type="checkbox" checked={secureOn} onChange={(event) => setSecureOn(event.target.checked)} />
+        {/* 보안 인쇄: PIN 을 못 싣는 팩이면 끄고 이유를 보여 준다(켜 둔 채 그냥 인쇄되지 않게) */}
+        <label className={`flex items-center gap-2 ${secureSupport === "no" ? "text-faint" : "text-fg"}`}>
+          <input type="checkbox" checked={secureOn && secureSupport !== "no"} disabled={secureSupport === "no"} onChange={(event) => setSecureOn(event.target.checked)} />
           {tr("po.secure")}
         </label>
-        {secureOn ? (
+        {secureSupport === "no" ? <p className="text-xs text-muted">{tr("po.secureNo")}</p> : secureSupport === "ipp" ? <p className="text-xs text-muted">{tr("po.secureIpp")}</p> : null}
+        {secureOn && secureSupport !== "no" ? (
           <div className="flex gap-2">
             <input ref={pinRef} value={pin} onChange={(event) => setPin(event.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" type="password" autoComplete="off" placeholder={tr("po.pinPh")} aria-label={tr("po.pinAria")} className="field h-10 w-28 rounded-xl px-3 outline-none" />
             <input value={jobUser} onChange={(event) => setJobUser(event.target.value)} placeholder={tr("po.userPh")} aria-label={tr("po.userAria")} className="field h-10 min-w-0 flex-1 rounded-xl px-3 outline-none" />

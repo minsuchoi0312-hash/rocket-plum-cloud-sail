@@ -11,6 +11,7 @@ import { useI18n } from "@/lib/i18n";
 export function PresetBar({
   current,
   activeId,
+  pdf = true,
   disabled,
   onApply,
   onSaved,
@@ -18,6 +19,8 @@ export function PresetBar({
 }: {
   current: PresetSettings;
   activeId: string | null;
+  /** 지금 문서가 PDF 인지 — 여백 설명을 PDF 에만 보인다 */
+  pdf?: boolean;
   disabled?: boolean;
   onApply: (preset: Preset) => void;
   onSaved?: (preset: Preset) => void;
@@ -57,7 +60,7 @@ export function PresetBar({
   const card = (preset: Preset) => (
     <button key={preset.id} type="button" disabled={disabled} onClick={(event) => tap(preset, event.currentTarget)} aria-pressed={activeId === preset.id} className={`chip preset-card min-w-0 rounded-2xl px-3 py-2.5 text-left ${activeId === preset.id ? "is-on" : ""}`}>
       <span className="block truncate text-sm font-semibold">{preset.label}</span>
-      <span className="preset-hint mt-0.5 block text-xs leading-snug opacity-80">{describeSettings(preset.settings)}</span>
+      <span className="preset-hint mt-0.5 block text-xs leading-snug opacity-80">{describeSettings(preset.settings, pdf)}</span>
     </button>
   );
 

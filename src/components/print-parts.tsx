@@ -26,6 +26,7 @@ export function ReadyCard({
   direct,
   route,
   viaHelper = false,
+  ipp = false,
   onRemember,
   onForget,
 }: {
@@ -35,13 +36,17 @@ export function ReadyCard({
   route: PrintRoute;
   /** PC 도우미(9100)로 보내는 중이면 USB 문구 대신 도우미 문구를 보여 준다 */
   viaHelper?: boolean;
+  /** 와이파이 IPP(표준 팩)로 바로 보내는 중 */
+  ipp?: boolean;
   onRemember: () => void;
   onForget: () => void;
 }) {
   const printer = match.printer;
   const inkjet = isInkjet(match);
   const phone = phoneApp();
-  const line = tr(inkjet ? "rc.inkjet" : viaHelper ? (phone ? "ph.ready" : "rc.helper") : route === "usb-pdf" ? "rc.usbPdf" : route === "usb-pcl" ? "rc.usbPcl" : "rc.preview");
+  /* 실제로 보낼 길을 먼저 본다: 도우미(팩) · IPP 로 보내면 잉크젯도 바로 인쇄된다. '잉크젯은 못 해요'는 브라우저 USB 일 때만 */
+  const sending = viaHelper || ipp;
+  const line = tr(viaHelper ? (phone ? "ph.ready" : "rc.helper") : ipp ? "rc.ipp" : inkjet ? "rc.inkjet" : route === "usb-pdf" ? "rc.usbPdf" : route === "usb-pcl" ? "rc.usbPcl" : "rc.preview");
   return (
     <div>
       <p className="text-xs text-muted">{tr("rc.confirmed")}</p>
@@ -49,7 +54,7 @@ export function ReadyCard({
         {printer.brand} {printer.model}
       </h2>
       <p className="mt-3 text-sm leading-relaxed text-fg">{line}</p>
-      {inkjet ? null : <p className="mt-2 text-sm text-muted">{tr(viaHelper ? (phone ? "ph.readyDirect" : "rc.helperDirect") : direct ? "rc.direct" : "rc.previewOnly")}</p>}
+      {inkjet && !sending ? null : <p className="mt-2 text-sm text-muted">{tr(viaHelper ? (phone ? "ph.readyDirect" : "rc.helperDirect") : ipp ? "rc.ippDirect" : direct ? "rc.direct" : "rc.previewOnly")}</p>}
       <p className="mt-3 text-xs leading-relaxed text-faint">{tr("rc.memory")}</p>
       {saved ? (
         <button type="button" onClick={onForget} className="mt-3 flex h-11 w-full items-center justify-center gap-1 rounded-2xl border border-line text-sm">
@@ -109,6 +114,8 @@ export function OfficeOptions({
   const [moreOpen, setMoreOpen] = useState(false);
   const morePicked = (MORE_PAPERS as readonly string[]).includes(paper);
   const colorOn = !(monoUsb || gray);
+  /* 자동 양면이 없는 팩도 양면을 고를 수 있다 — 수동 양면(앞면 → 뒤집어 넣기 → 뒷면)으로 뽑는다 */
+  const shownDuplex: DuplexMode = duplex;
   const idle = !liveJob || locked;
   /* 토스 설정 화면처럼 줄마다 이름 + 분절 버튼, 장수는 − 값 + 캡슐 */
   return (
@@ -176,11 +183,12 @@ export function OfficeOptions({
         <span className="opt-label">{tr("opt.sides")}</span>
         <div className="seg" role="radiogroup" aria-label={tr("opt.sides")}>
           {sides.map(([id, text]) => (
-            <button key={id} type="button" role="radio" aria-checked={duplex === id && liveJob} disabled={idle || (simplexOnly && id !== "simplex")} onClick={() => onDuplex(id)} className={`seg-btn ${duplex === id && liveJob ? "is-on" : ""}`}>
+            <button key={id} type="button" role="radio" aria-checked={shownDuplex === id && liveJob} disabled={idle} onClick={() => onDuplex(id)} className={`seg-btn ${shownDuplex === id && liveJob ? "is-on" : ""}`}>
               {text}
             </button>
           ))}
         </div>
+        {simplexOnly && liveJob ? <p className="opt-note">{tr(duplex === "simplex" ? "opt.simplexOnly" : "opt.manualDuplex")}</p> : null}
       </div>
       <div className={`opt-row is-inline ${idle ? "is-idle" : ""}`}>
         <span className="opt-label">{tr("opt.copies")}</span>
@@ -241,6 +249,7 @@ export function PrintChooser({
   onPrint,
   onColorPrint,
   onPdf,
+  onSystemPrint,
   onCancel,
 }: {
   docKind: DocKind;
@@ -284,6 +293,8 @@ export function PrintChooser({
   onPrint: () => void;
   onColorPrint?: () => void;
   onPdf: () => void;
+  /** 앱: 안드로이드 인쇄 창으로 보내기 (없으면 버튼을 숨긴다) */
+  onSystemPrint?: () => void;
   onCancel: () => void;
 }) {
   const tabs = (["pdf", "photo", "memo", "test"] as const).map((id) => [id, docLabel(id)] as const);
@@ -464,6 +475,13 @@ export function PrintChooser({
               {tr("ch.pdf")}
             </button>
           </div>
+          {/* 앱: 안드로이드 인쇄 창 — 폰의 Mopria · 제조사 인쇄 서비스가 대신 인쇄(직접 못 보내는 프린터도) */}
+          {onSystemPrint ? (
+            <button type="button" onClick={onSystemPrint} disabled={!ready} className="chip weak sys-print-btn mt-2 w-full rounded-2xl text-left">
+              <span className="sys-print-title">{tr("ch.system")}</span>
+              <span className="sys-print-sub">{tr("ch.systemSub")}</span>
+            </button>
+          ) : null}
           <div className="bottom-cta">
             {canSend ? (
               <button type="button" onClick={onPrint} disabled={!ready} className="btn-send btn-solid btn-cta flex w-full items-center justify-center gap-2">

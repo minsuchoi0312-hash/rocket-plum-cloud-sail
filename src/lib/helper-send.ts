@@ -1,13 +1,14 @@
 import { tr } from "@/lib/i18n/core";
 import { cleanIPv4, cleanText } from "@/lib/sanitize";
 /** port: 9100(Raw) 기본, 8611 이면 폰 내장 도우미가 캐논 BJNP 로 보낸다 */
-export async function helperSend(base: string, code: string, host: string, bytes: Uint8Array, port = 9100) {
+/** lang: 보낸 인쇄 언어(pcl · ps · pdf · escpr · spl · pcl3 · bjnp) — 폰 도우미가 시스템 인쇄 목록에 올릴지 정할 때 쓴다 */
+export async function helperSend(base: string, code: string, host: string, bytes: Uint8Array, port = 9100, lang = "") {
   const root = base.replace(/\/$/, "");
   let response: Response;
   const copy = new Uint8Array(bytes.byteLength);
   copy.set(bytes);
   try {
-    response = await fetch(`${root}/print?host=${encodeURIComponent(host)}&port=${port}`, {
+    response = await fetch(`${root}/print?host=${encodeURIComponent(host)}&port=${port}${lang ? `&lang=${encodeURIComponent(lang)}` : ""}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/octet-stream",
@@ -47,9 +48,13 @@ export type HelperPrinter = {
 export type HelperDiscovery = { subnets: string[]; printers: HelperPrinter[]; ms: number };
 
 /** PC 도우미가 같은 망을 직접 훑어(9100/631 + 모델명 조회) 찾은 실제 프린터 목록 */
-export async function helperDiscover(base: string, code: string, subnet = "", signal?: AbortSignal): Promise<HelperDiscovery> {
+export async function helperDiscover(base: string, code: string, subnet = "", signal?: AbortSignal, deep = false): Promise<HelperDiscovery> {
   const root = base.replace(/\/$/, "");
-  const query = subnet ? `?subnet=${encodeURIComponent(subnet)}` : "";
+  /* deep=1: 폰 내장 도우미의 '꼼꼼히 찾기' (PC 도우미는 모르는 값이라 무시한다) */
+  const params = new URLSearchParams();
+  if (subnet) params.set("subnet", subnet);
+  if (deep) params.set("deep", "1");
+  const query = params.toString() ? `?${params}` : "";
   let response: Response;
   try {
     response = await fetch(`${root}/discover${query}`, {
@@ -88,10 +93,10 @@ export async function helperProgress(base: string, code: string): Promise<{ done
 
 export type HelperProbe ={ open: boolean; ms: number | null };
 
-/** 도우미로 한 대의 9100 응답·지연시간 확인 */
-export async function helperProbe(base: string, code: string, ip: string, signal?: AbortSignal): Promise<HelperProbe> {
+/** 도우미로 한 대의 포트(기본 9100) 응답·지연시간 확인 */
+export async function helperProbe(base: string, code: string, ip: string, signal?: AbortSignal, port = 9100): Promise<HelperProbe> {
   const root = base.replace(/\/$/, "");
-  const response = await fetch(`${root}/probe?ip=${encodeURIComponent(ip)}&port=9100`, { headers: code ? { "X-Helper-Code": code } : {}, signal });
+  const response = await fetch(`${root}/probe?ip=${encodeURIComponent(ip)}&port=${port}`, { headers: code ? { "X-Helper-Code": code } : {}, signal });
   if (response.status === 401) throw new Error(tr("st.err401"));
   if (!response.ok) throw new Error(tr("hs.checkFail", { code: response.status }));
   const body = (await response.json()) as { open?: boolean; ms?: number | null };

@@ -21,6 +21,8 @@ export type EscprOptions = {
   quality?: "draft" | "normal" | "high";
   /** 작업 이름(원격 JH, 영문 8자까지) */
   name?: string;
+  /** 자동 양면(epson-escpr 의 원격 DP · seti 제본 위치 · LD). 양면 장치가 있는 기종만 */
+  duplex?: "simplex" | "long" | "short";
 };
 
 export type EscprGeometry = { paperW: number; paperH: number; areaW: number; areaH: number };
@@ -85,20 +87,27 @@ export function escprJobHeader(options: EscprOptions): Uint8Array {
     remote("JH", [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ...ascii(name)]),
     /* 급지: 자동 선택 */
     remote("PP", [0x00, 0x01, 0xff]),
+    /* 자동 양면: 긴 쪽 · 짧은 쪽 같은 값 */
+    ...(duplexOn(options) ? [remote("DP", [0x00, 0x02])] : []),
     EXIT_REMOTE,
     ENTER_ESCPR,
     /* setq: 용지 종류(보통 용지 0) · 품질 · 색(0 컬러 / 1 흑백) · 밝기 · 대비 · 채도 · 색 평면(0 RGB) · 팔레트 크기 0 */
     command("q", "setq", [0x00, quality, options.color ? 0 : 1, 0, 0, 0, 0, ...be16(0)]),
     /* seti: 이미지 처리 기본값 (마지막 바이트 = 양면 제본 위치, 단면 0) */
-    command("q", "seti", [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    command("q", "seti", [0, 0, 0, 0, 0, 0, 0, 0, 0, options.duplex === "long" ? 2 : options.duplex === "short" ? 1 : 0]),
     /* setj: 용지 폭 · 길이 · 위 · 왼쪽 여백 · 인쇄 폭 · 높이 · 해상도(0 = 360dpi) · 방향(0 양방향) */
     command("j", "setj", [...be32(geo.paperW), ...be32(geo.paperH), ...be16(BORDER), ...be16(BORDER), ...be32(geo.areaW), ...be32(geo.areaH), 0x00, 0x00]),
   ]);
 }
 
 /** 작업 꼬리말 */
-export function escprJobFooter(): Uint8Array {
-  return concat([command("j", "endj"), INIT, ENTER_REMOTE, remote("JE", [0x00]), EXIT_REMOTE]);
+export function escprJobFooter(options?: { duplex?: EscprOptions["duplex"] }): Uint8Array {
+  /* 양면이면 JE 앞에 LD */
+  return concat([command("j", "endj"), INIT, ENTER_REMOTE, ...(options && duplexOn(options) ? [remote("LD", [])] : []), remote("JE", [0x00]), EXIT_REMOTE]);
+}
+
+function duplexOn(options: { duplex?: EscprOptions["duplex"] }) {
+  return options.duplex === "long" || options.duplex === "short";
 }
 
 /**
@@ -189,6 +198,8 @@ export function escprPageCommands(source: HTMLCanvasElement, options: EscprOptio
       if (!blank) out.push(sendLine(top + r, row, width));
     }
   }
+  /* 양면에서는 빈 쪽도 띠 하나(흰 점 1개)를 보내야 쪽이 넘어간다 */
+  if (out.length === 1 && duplexOn(options)) out.push(sendLine(0, Uint8Array.from([255, 255, 255]), 1));
   page.width = 0;
   page.height = 0;
   return out;

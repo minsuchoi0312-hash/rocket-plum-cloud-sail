@@ -32,6 +32,8 @@ export type CanonProfile = {
   /** 300dpi 모드 잉크 표 크기와 C · M · Y · K 자리 */
   inkSlots: number;
   inkAt: { C: number; M: number; Y: number; K: number };
+  /** 자동 양면 장치가 있는 기종 (Gutenprint CANON_CAP_DUPLEX) */
+  duplex?: boolean;
 };
 
 const SILENT = ["SetSilent=OFF"];
@@ -42,21 +44,33 @@ const KCMY30 = { inkSlots: 30, inkAt: { K: 0, C: 1, M: 3, Y: 5 } };
 
 /** 기종 표 (Gutenprint canon-printers.h · canon-modes.h 에서 옮긴 값) */
 const PROFILES: { match: RegExp; profile: CanonProfile }[] = [
-  { match: /\bmx\s?-?86\d/i, profile: { name: "PIXMA MX860", xml: false, pLen: 4, r: 0x64, cartridge: false, control: SILENT_EDGE, slot: 0xe, ...CMYK13 } },
-  { match: /\bmx\s?-?87\d/i, profile: { name: "PIXMA MX870", xml: true, pLen: 6, r: 0x64, cartridge: false, control: SILENT, slot: 0xe, ...CMYK13 } },
-  { match: /\bmx\s?-?88\d/i, profile: { name: "PIXMA MX880", xml: true, pLen: 6, r: 0, cartridge: false, control: SILENT, slot: 0xe, ...CMYK13 } },
-  { match: /\bmp\s?-?56\d/i, profile: { name: "PIXMA MP560", xml: true, pLen: 6, r: 0x64, cartridge: false, control: SILENT, slot: 0xe, ...CMYK13 } },
+  { match: /\bmx\s?-?86\d/i, profile: { name: "PIXMA MX860", xml: false, pLen: 4, r: 0x64, cartridge: false, control: SILENT_EDGE, slot: 0xe, ...CMYK13, duplex: true } },
+  { match: /\bmx\s?-?87\d/i, profile: { name: "PIXMA MX870", xml: true, pLen: 6, r: 0x64, cartridge: false, control: SILENT, slot: 0xe, ...CMYK13, duplex: true } },
+  { match: /\bmx\s?-?88\d/i, profile: { name: "PIXMA MX880", xml: true, pLen: 6, r: 0, cartridge: false, control: SILENT, slot: 0xe, ...CMYK13, duplex: true } },
+  { match: /\bmp\s?-?56\d/i, profile: { name: "PIXMA MP560", xml: true, pLen: 6, r: 0x64, cartridge: false, control: SILENT, slot: 0xe, ...CMYK13, duplex: true } },
   { match: /\bmp\s?-?62\d/i, profile: { name: "PIXMA MP620", xml: false, pLen: 4, r: 0x64, cartridge: false, control: SILENT, slot: 0xe, ...CMYK13 } },
-  { match: /\bmp\s?-?64\d/i, profile: { name: "PIXMA MP640", xml: true, pLen: 6, r: 0x64, cartridge: false, control: SILENT_EDGE, slot: 0xe, ...CMYK13 } },
-  { match: /\bmp\s?-?98\d/i, profile: { name: "PIXMA MP980", xml: false, pLen: 4, r: 0x64, cartridge: false, control: SILENT_EDGE, slot: 0xe, ...CMYK16 } },
-  { match: /\bmp\s?-?99\d/i, profile: { name: "PIXMA MP990", xml: true, pLen: 6, r: 0x64, cartridge: false, control: SILENT_EDGE, slot: 0xe, ...KCMY30 } },
+  { match: /\bmp\s?-?64\d/i, profile: { name: "PIXMA MP640", xml: true, pLen: 6, r: 0x64, cartridge: false, control: SILENT_EDGE, slot: 0xe, ...CMYK13, duplex: true } },
+  { match: /\bmp\s?-?98\d/i, profile: { name: "PIXMA MP980", xml: false, pLen: 4, r: 0x64, cartridge: false, control: SILENT_EDGE, slot: 0xe, ...CMYK16, duplex: true } },
+  { match: /\bmp\s?-?99\d/i, profile: { name: "PIXMA MP990", xml: true, pLen: 6, r: 0x64, cartridge: false, control: SILENT_EDGE, slot: 0xe, ...KCMY30, duplex: true } },
   { match: /\bmx\s?-?34\d/i, profile: { name: "PIXMA MX340", xml: true, pLen: 6, r: 0, cartridge: true, control: SILENT, slot: 0x4, ...CMYK13 } },
   { match: /\bmx\s?-?42\d/i, profile: { name: "PIXMA MX420", xml: true, pLen: 6, r: 0, cartridge: true, control: SILENT, slot: 0x4, ...CMYK13 } },
-  { match: /\bmg\s?-?51\d\d/i, profile: { name: "PIXMA MG5100", xml: true, pLen: 6, r: 0, cartridge: false, control: SILENT, slot: 0xe, ...CMYK13 } },
-  { match: /\bmg\s?-?52\d\d/i, profile: { name: "PIXMA MG5200", xml: true, pLen: 6, r: 0, cartridge: false, control: SILENT, slot: 0xe, ...CMYK13 } },
-  { match: /\bmg\s?-?61\d\d/i, profile: { name: "PIXMA MG6100", xml: true, pLen: 6, r: 0x64, cartridge: false, control: SILENT, slot: 0xe, ...KCMY30 } },
-  { match: /\bmg\s?-?81\d\d/i, profile: { name: "PIXMA MG8100", xml: true, pLen: 6, r: 0x64, cartridge: false, control: SILENT, slot: 0xe, ...KCMY30 } },
-  { match: /\bip\s?-?47\d\d/i, profile: { name: "PIXMA iP4700", xml: true, pLen: 6, r: 0x64, cartridge: false, control: SILENT_EDGE, slot: 0xe, ...CMYK13 } },
+  { match: /\bmg\s?-?51\d\d/i, profile: { name: "PIXMA MG5100", xml: true, pLen: 6, r: 0, cartridge: false, control: SILENT, slot: 0xe, ...CMYK13, duplex: true } },
+  { match: /\bmg\s?-?52\d\d/i, profile: { name: "PIXMA MG5200", xml: true, pLen: 6, r: 0, cartridge: false, control: SILENT, slot: 0xe, ...CMYK13, duplex: true } },
+  { match: /\bmg\s?-?61\d\d/i, profile: { name: "PIXMA MG6100", xml: true, pLen: 6, r: 0x64, cartridge: false, control: SILENT, slot: 0xe, ...KCMY30, duplex: true } },
+  { match: /\bmg\s?-?81\d\d/i, profile: { name: "PIXMA MG8100", xml: true, pLen: 6, r: 0x64, cartridge: false, control: SILENT, slot: 0xe, ...KCMY30, duplex: true } },
+  { match: /\bip\s?-?47\d\d/i, profile: { name: "PIXMA iP4700", xml: true, pLen: 6, r: 0x64, cartridge: false, control: SILENT_EDGE, slot: 0xe, ...CMYK13, duplex: true } },
+  /* 같은 명령 체계(ESC (P 4 · 6바이트, CMYK 1비트)라 표 한 줄로 되는 기종 — Gutenprint canon-printers.h 값 */
+  { match: /\bmg\s?-?53\d\d/i, profile: { name: "PIXMA MG5300", xml: true, pLen: 6, r: 0, cartridge: false, control: [], slot: 0xe, ...CMYK13, duplex: true } },
+  { match: /\bmg\s?-?62\d\d/i, profile: { name: "PIXMA MG6200", xml: true, pLen: 6, r: 0, cartridge: false, control: [], slot: 0xe, ...KCMY30, duplex: true } },
+  { match: /\bmg\s?-?82\d\d/i, profile: { name: "PIXMA MG8200", xml: true, pLen: 6, r: 0, cartridge: false, control: [], slot: 0xe, ...KCMY30, duplex: true } },
+  { match: /\bip\s?-?48\d\d/i, profile: { name: "PIXMA iP4800", xml: true, pLen: 6, r: 0x64, cartridge: false, control: SILENT, slot: 0xe, ...CMYK13, duplex: true } },
+  { match: /\bip\s?-?49\d\d/i, profile: { name: "PIXMA iP4900", xml: true, pLen: 6, r: 0, cartridge: false, control: [], slot: 0xe, ...CMYK13, duplex: true } },
+  { match: /\bmx\s?-?35\d/i, profile: { name: "PIXMA MX350", xml: true, pLen: 6, r: 0, cartridge: true, control: SILENT, slot: 0x4, ...CMYK13 } },
+  { match: /\bmx\s?-?(36\d|41\d)/i, profile: { name: "PIXMA MX360", xml: true, pLen: 6, r: 0, cartridge: true, control: SILENT, slot: 0x4, ...CMYK13 } },
+  { match: /\bmp\s?-?55\d/i, profile: { name: "PIXMA MP550", xml: true, pLen: 6, r: 0x64, cartridge: false, control: SILENT, slot: 0xe, ...CMYK13 } },
+  { match: /\bmp\s?-?54\d/i, profile: { name: "PIXMA MP540", xml: false, pLen: 4, r: 0x64, cartridge: false, control: SILENT, slot: 0xe, ...CMYK13 } },
+  { match: /\bmp\s?-?63\d/i, profile: { name: "PIXMA MP630", xml: false, pLen: 4, r: 0x64, cartridge: false, control: SILENT_EDGE, slot: 0xe, ...CMYK13, duplex: true } },
+  { match: /\bmp\s?-?(49[05]|28\d)/i, profile: { name: "PIXMA MP490", xml: true, pLen: 6, r: 0, cartridge: true, control: SILENT, slot: 0x4, ...CMYK13 } },
 ];
 
 /** 모델명(BJNP 1284 ID · mDNS 이름 등) → 설정. 표에 없는 캐논은 null */
@@ -74,6 +88,7 @@ const PAPER: Record<string, { code: number; w600: number; h600: number }> = {
   Letter: { code: 0x0d, w600: 5100, h600: 6600 },
   Legal: { code: 0x0f, w600: 5100, h600: 8400 },
   Postcard: { code: 0x14, w600: 2363, h600: 3497 },
+  A6: { code: 0x63, w600: 2481, h600: 3497 },
 };
 
 export type CanonGeometry = {
@@ -89,7 +104,12 @@ export type CanonGeometry = {
   h600: number;
 };
 
-/** A3 · B4 등 이 기종들이 못 받는 용지는 A4 로 */
+/** 이 기종들이 받는 용지인지 (A3 · B4 · A6 은 못 받는다) */
+export function canonPaperOk(paper: string) {
+  return Boolean(PAPER[paper]);
+}
+
+/** A3 · B4 등 이 기종들이 못 받는 용지는 A4 로 (인쇄 전에 canonPaperOk 로 막는다) */
 export function canonGeometry(paper: string): CanonGeometry {
   const key = PAPER[paper] ? paper : "A4";
   const mm = paperMm(key, "portrait");
@@ -137,13 +157,15 @@ export function canonJobFooter(profile: CanonProfile): Uint8Array {
 }
 
 /** 쪽 시작 명령들 (first = 작업의 첫 쪽) */
-export function canonPageSetup(profile: CanonProfile, geo: CanonGeometry, first: boolean): Uint8Array {
+export function canonPageSetup(profile: CanonProfile, geo: CanonGeometry, first: boolean, side?: { duplex: "long" | "short"; back: boolean }): Uint8Array {
   const parts: Uint8Array[] = [];
   if (first) {
     for (const cmd of profile.control) {
       parts.push(Uint8Array.from([0x1b, 0x5b, 0x4b, ...le16(2), 0x00, 0x1f]), ascii(`BJLSTART\nControlMode=Common\n${cmd}\nBJLEND\n`));
     }
     parts.push(Uint8Array.from([0x1b, 0x5b, 0x4b, ...le16(2), 0x00, 0x0f]));
+    /* 자동 양면: 첫 쪽에 ESC ($ (긴 쪽 · 짧은 쪽 같은 값) */
+    if (side && profile.duplex) parts.push(esc("$", [0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02]));
   }
   /* (b 압축 켬 · (q 쪽 ID · (d 300x300 */
   parts.push(esc("b", [0x01]), esc("q", [0x01]), esc("d", [...be16(CANON_DPI), ...be16(CANON_DPI)]));
@@ -187,6 +209,8 @@ export function canonPageSetup(profile: CanonProfile, geo: CanonGeometry, first:
   /* (l 급지 · 보통 용지 · 간격 */
   parts.push(esc("l", [(3 << 4) | (profile.slot & 0x0f), 0x00, 0x00]));
   if (profile.r) parts.push(esc("r", [profile.r]));
+  /* 긴 쪽 양면의 뒷면: ESC (u 01 (그림은 부르는 쪽에서 180° 돌려 준다) */
+  if (side && profile.duplex && side.duplex === "long" && side.back) parts.push(esc("u", [0x01]));
   /* 여러 줄 래스터: 켬 · 묶음당 8줄 · 색 순서 CMYK */
   parts.push(esc("I", [0x01]), esc("J", [LINES_PER_BLOCK]), Uint8Array.from([0x1b, 0x28, 0x4c, ...le16(4), ...ascii("CMYK")]));
   return concat(parts);
@@ -219,9 +243,9 @@ export function canonBlock(lines: Uint8Array[]): Uint8Array {
  * 페이지 캔버스 → 쪽 명령. color=false 면 C · M · Y 판을 비워 검정만 쓴다.
  * 이 기종들은 높이가 8의 배수면 마지막 묶음을 보내지 않는다(Gutenprint 와 같음 — 아래 여백 줄이라 비어 있다).
  */
-export function canonPageCommands(source: HTMLCanvasElement, options: { paper: string; color: boolean; profile: CanonProfile; first: boolean }): Uint8Array[] {
+export function canonPageCommands(source: HTMLCanvasElement, options: { paper: string; color: boolean; profile: CanonProfile; first: boolean; side?: { duplex: "long" | "short"; back: boolean } }): Uint8Array[] {
   const geo = canonGeometry(options.paper);
-  const out: Uint8Array[] = [canonPageSetup(options.profile, geo, options.first)];
+  const out: Uint8Array[] = [canonPageSetup(options.profile, geo, options.first, options.side)];
   const BAND = 256;
   const band = document.createElement("canvas");
   band.width = geo.width;

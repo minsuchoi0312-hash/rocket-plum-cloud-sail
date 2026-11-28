@@ -53,7 +53,8 @@ export function judgeHelper(r: { configured: boolean; ok: boolean; status?: numb
       : { id: 3, title: title(3), level: "skip", detail: tr("diag.helperSkip") };
   }
   if (r.status === 401) return { id: 3, title: title(3), level: "fail", detail: tr("diag.helper401"), fix: fix("diag.fixHelperTab", "helper-tab") };
-  if (!r.ok) return { id: 3, title: title(3), level: "fail", detail: tr("diag.helperDown"), fix: fix("diag.fixLauncher", "launcher") };
+  /* 앱: 도우미는 앱 안에 있다 — PC 실행기 대신 앱 다시 열기 */
+  if (!r.ok) return inApp() ? { id: 3, title: title(3), level: "fail", detail: tr("diag.helperDownApp"), fix: fix("diag.fixReload", "reload") } : { id: 3, title: title(3), level: "fail", detail: tr("diag.helperDown"), fix: fix("diag.fixLauncher", "launcher") };
   const metric = `${r.ms ?? "?"}ms`;
   const nets = r.subnets?.length ? tr("diag.nets", { nets: r.subnets.map((s) => `${s}.x`).join(", ") }) : tr("diag.netsNone");
   if (!r.codeSet) return { id: 3, title: title(3), level: "warn", detail: tr("diag.helperNoCode", { nets }), metric, fix: fix("diag.fixHelperTab", "helper-tab") };
@@ -85,6 +86,9 @@ export function judgeRoute(r: { usb: boolean; cmd: string; helper: boolean; caps
     if (pcl) return { id: 5, title: title(5), level: "pass", detail: tr("diag.routeUsbPcl") };
     return { id: 5, title: title(5), level: "warn", detail: tr("diag.routeUsbUnknown"), fix: r.canTrial ? fix("diag.fixTrial", "pcl-trial") : undefined };
   }
+  /* 앱: 폰이 직접 보낸다(PC 도우미 · CORS 없음). 9100 이면 알맞은 팩으로, IPP 면 표준 팩으로 */
+  if (inApp() && c && r.helper && (c.raw9100 || c.ipp631)) return { id: 5, title: title(5), level: "pass", detail: tr(c.raw9100 ? "diag.routeApp9100" : "diag.routeAppIpp") };
+  if (inApp() && !c?.raw9100 && !c?.ipp631) return { id: 5, title: title(5), level: "warn", detail: tr("diag.routeNoneApp"), fix: fix("diag.fixSearch", "wifi-tab") };
   if (c && r.helper && c.raw9100) {
     if (c.pdfDirect) return { id: 5, title: title(5), level: "pass", detail: tr("diag.routeHelperPdf") };
     if (c.pcl5 || c.pdfDirect === false) return { id: 5, title: title(5), level: "pass", detail: tr(c.pdfDirect === false ? "diag.routeHelperPclNoPdf" : "diag.routeHelperPcl") };

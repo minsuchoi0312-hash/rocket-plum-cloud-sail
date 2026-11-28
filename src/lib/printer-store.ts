@@ -14,6 +14,8 @@ export type SavedPrinter = {
   host?: string;
   /** 다시 연결할 방식 */
   link?: "wifi" | "usb" | "helper";
+  /** 검색이 확인한 프린터 능력 — 다시 연결할 때 알맞은 팩을 고르려고(IPP · 9100 · 캐논 BJNP · 인쇄 언어) */
+  caps?: { ipp?: boolean; raw9100?: boolean; canon?: boolean; cmd?: string };
 };
 
 type PrinterState = {
@@ -32,7 +34,10 @@ export const usePrinterStore = create<PrinterState>()(
         const rest = get().saved.filter((row) => row.uid !== item.uid);
         /* 다시 연결해도 사용자가 붙인 별칭은 지키기 */
         const clean = { ...item, title: cleanText(item.title, 80) || item.uid, alias: item.alias ? cleanText(item.alias, 30) || undefined : undefined };
-        const merged = before?.alias && !clean.alias ? { ...clean, alias: before.alias } : clean;
+        const withAlias = before?.alias && !clean.alias ? { ...clean, alias: before.alias } : clean;
+        /* 능력을 모르는 채로 다시 기억하면(직접 입력 · 다시 연결) 예전에 확인한 능력을 지킨다 */
+        const caps = clean.caps ? { ...clean.caps, cmd: cleanText(clean.caps.cmd || "", 400) || undefined } : before?.caps;
+        const merged = caps ? { ...withAlias, caps } : withAlias;
         set({ saved: [merged, ...rest].slice(0, 24) });
       },
       forget: (uid) => set({ saved: get().saved.filter((row) => row.uid !== uid) }),

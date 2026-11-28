@@ -256,9 +256,11 @@ export function lanSearch(d: {
 
   async function findOnWifi(mode: "quick" | "full" = "quick", subnetOverride?: string) {
     if (lanBusy || sending) return;
-    /* 앱(APK): 폰 내장 도우미가 mDNS · SNMP · 포트로 직접 찾는다 — 빠른 · 전체 · 대역 칩 모두 */
+    /* 앱(APK): 폰 내장 도우미가 mDNS · SNMP · 포트로 직접 찾는다.
+       빠른 찾기 = 지금 와이파이 /24 를 짧게, 전체 검색 = 꼼꼼히(오래 기다리고 여러 번 묻고, 폰의 근거리 네트워크 모두 · 넓은 사무실망은 /22 까지),
+       대역 칩 · 직접 입력 = 그 대역을 빠르게 */
     if (useHelper && isPhoneHelper(helperUrl)) {
-      await findViaHelper(subnetOverride || (mode === "full" && isValidSubnet(subnetInput) ? subnetInput.trim() : ""));
+      await findViaHelper(subnetOverride || "", mode === "full" && !subnetOverride);
       return;
     }
     if (mode === "quick" && !subnetOverride && useHelper && helperUrl.trim()) {
@@ -310,7 +312,14 @@ export function lanSearch(d: {
   }
 
   /** PC 도우미가 직접 9100/631을 훑고 모델명까지 읽어 온 실제 목록 */
-  async function findViaHelper(subnetArg?: string) {
+  /** 찾은 대역 이름: 한두 곳은 그대로, 많으면 "192.168.0.x 외 3곳" */
+  function whereOf(subnets: string[], fallback: string) {
+    if (!subnets.length) return fallback;
+    if (subnets.length <= 2) return subnets.map((net) => `${net}.x`).join(", ");
+    return tr("ph.whereMore", { first: `${subnets[0]}.x`, n: subnets.length - 1 });
+  }
+
+  async function findViaHelper(subnetArg?: string, deep = false) {
     if (lanBusy || sending) return;
     const phone = isPhoneHelper(helperUrl);
     if (!helperUrl.trim()) {
@@ -325,7 +334,8 @@ export function lanSearch(d: {
     /* 폰은 지금 붙은 와이파이 대역을 직접 읽으니, 예전에 저장된 대역 대신 고른 대역만 쓴다 */
     const pickedSubnet = subnetArg ?? (phone ? "" : subnetInput);
     const subnet = isValidSubnet(pickedSubnet) ? pickedSubnet.trim() : "";
-    setLanNote(phone ? m("ph.scanning", { where: subnet ? `${subnet}.x` : tr("ph.thisWifi") }) : m("fx.helperScanning", { where: subnet ? `${subnet}.1~254` : tr("fx.thisPcNet") }));
+    const deepScan = phone && deep;
+    setLanNote(phone ? m(deepScan ? "ph.scanningDeep" : "ph.scanning", { where: subnet ? `${subnet}.x` : tr("ph.thisWifi") }) : m("fx.helperScanning", { where: subnet ? `${subnet}.1~254` : tr("fx.thisPcNet") }));
     /* 폰 내장 도우미는 /progress 로 진행률을 알려 준다 — 웹 검색처럼 % 막대로 보여 주기 */
     let polling = true;
     const poll = async () => {
@@ -342,7 +352,7 @@ export function lanSearch(d: {
     };
     void poll();
     try {
-      const result = await helperDiscover(helperUrl, helperCode, subnet, ac.signal);
+      const result = await helperDiscover(helperUrl, helperCode, subnet, ac.signal, deepScan);
       polling = false;
       setHelperOk(true);
       setUseHelper(true);
@@ -370,7 +380,7 @@ export function lanSearch(d: {
         return;
       }
       if (!result.printers.length) {
-        setLanNote(phone ? m("ph.none", { where: result.subnets.map((net) => `${net}.x`).join(", ") || tr("ph.thisWifi") }) : m("fx.helperNone", { where: result.subnets.join(", ") || tr("fx.thisPcNet") }));
+        setLanNote(phone ? m(deepScan ? "ph.noneDeep" : "ph.none", { where: whereOf(result.subnets, tr("ph.thisWifi")) }) : m("fx.helperNone", { where: result.subnets.join(", ") || tr("fx.thisPcNet") }));
         return;
       }
       const ordered = [...result.printers].sort((a, b) => Number(b.raw9100) - Number(a.raw9100));

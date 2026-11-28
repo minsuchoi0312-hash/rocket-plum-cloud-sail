@@ -2,10 +2,10 @@
  * 1. 연결된 프린터 패널(와이파이 IP · USB 선 · PC 도우미) + 최근 프린터 + 2. 무엇을 보낼까요 + 최근 인쇄.
  * atlas-app.tsx에서 분리. 상태는 부모가 갖고 여기서는 그리기만 한다.
  */
-import { useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { ChevronDown, ChevronRight, ChevronUp, Copy, FileText, History, Image as ImageIcon, Monitor, Printer, QrCode, ScanQr, Search, Sheet, Stethoscope, StickyNote, Upload, Usb, Wifi, X } from "@/components/icons";
 import { helperPing } from "@/lib/helper-send";
-import { SUBNET_PRESETS, type ScanProgress } from "@/lib/lan-find";
+import { SUBNET_PRESETS, parseSubnet, toSubnet, type ScanProgress } from "@/lib/lan-find";
 import { type SavedPrinter } from "@/lib/printer-store";
 import type { PrintRecord } from "@/lib/print-history";
 import type { PrintRoute } from "@/lib/print-route";
@@ -24,6 +24,9 @@ import { isPhoneHelper, phoneApp } from "@/lib/phone-helper";
 import { MyPrinters } from "@/components/my-printers";
 
 type Set<T> = Dispatch<SetStateAction<T>>;
+
+/** '못 찾았어요' 안내들 — 이때는 확인할 것과 다음 행동 버튼을 같이 보여 준다 */
+const NONE_KEYS = new Set<MsgKey>(["ph.none", "ph.noneDeep", "fx.quickNone", "fx.fullNone", "fx.helperNone"]);
 
 export type HelperStatus = { state: "checking" | "on" | "off"; ms?: number | null };
 
@@ -89,7 +92,7 @@ export type PrinterPanelProps = {
   probes: Record<string, ProbeState>;
   recentPrinters: SavedPrinter[];
   reconnect: (item: SavedPrinter) => void;
-  rememberHost: (host: string, title: string, viaHelper: boolean) => void;
+  rememberHost: (host: string, title: string, viaHelper: boolean, caps?: SavedPrinter["caps"]) => void;
   route: PrintRoute;
   saveAlias: (uid: string) => void;
   scanMode: "quick" | "full" | "helper" | null;
@@ -138,6 +141,31 @@ export function PrinterPanel(props: PrinterPanelProps) {
   const tab: LinkTab = phone && linkTab === "helper" ? "wifi" : linkTab;
   /* 첫 화면 밀도: '찾은 프린터'는 직접 검색했거나 2대 이상일 때만 펼친다(링크로 1대 연결 시 위 상태와 중복) */
   const [searched, setSearched] = useState(false);
+  /* 대역 직접 입력 오류 — 입력칸 바로 아래에 보여 준다(멀리 있는 안내 줄 대신) */
+  const [subnetErr, setSubnetErr] = useState<MsgKey | null>(null);
+  const scanPct = lanBusy && scanProg && scanProg.total > 0 ? Math.round((scanProg.done / scanProg.total) * 100) : null;
+  /* 지금(또는 마지막) 검색이 '전체 검색(꼼꼼히)'인지 — 그 줄에 진행률 · 안내를 보여 준다 */
+  const [deepRun, setDeepRun] = useState(false);
+  const otherNetsRef = useRef<HTMLDetailsElement>(null);
+  const ipFoldRef = useRef<HTMLDetailsElement>(null);
+  /* 못 찾았을 때: 안내 문구 대신 '확인할 것 + 다음에 해 볼 것' 상자 */
+  const noneKey = !lanBusy && lanNote && typeof lanNote === "object" && NONE_KEYS.has(lanNote.k) ? lanNote.k : null;
+  const deepNone = noneKey === "ph.noneDeep" || noneKey === "fx.fullNone";
+  const runQuick = () => {
+    setSearched(true);
+    setDeepRun(false);
+    void findOnWifi("quick");
+  };
+  const runFull = () => {
+    setSearched(true);
+    setDeepRun(true);
+    void findOnWifi("full");
+  };
+  const openFold = (fold: HTMLDetailsElement | null) => {
+    if (!fold) return;
+    fold.open = true;
+    requestAnimationFrame(() => fold.scrollIntoView({ block: "start", behavior: "smooth" }));
+  };
   const showFound = foundList.length > 0 && (searched || foundList.length >= 2 || !selected);
   /* 최근 프린터 중 지금 연결된 것 */
   const isCurrent = (item: SavedPrinter) => Boolean(selected && ((item.host && selected.host === item.host) || (!item.host && selected.usbKey && selected.title === item.title)));
@@ -222,10 +250,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
             {tab === "wifi" ? (
               <div className="space-y-2.5">
                 {/* 토스식: 주요 행동은 큰 버튼 하나, 나머지(전체 검색 · 다른 네트워크 · IP 입력)는 아래 목록에 접어 둔다 */}
-                <button type="button" disabled={lanBusy || sending} onClick={() => {
-                  setSearched(true);
-                  void findOnWifi("quick");
-                }} className="btn-solid btn-cta flex w-full items-center justify-center gap-2 disabled:opacity-50">
+                <button type="button" disabled={lanBusy || sending} onClick={runQuick} className="btn-solid btn-cta flex w-full items-center justify-center gap-2 disabled:opacity-50">
                   <Search className="size-5" aria-hidden="true" />
                   {phone ? (lanBusy ? t("ph.finding") : t("ph.find")) : lanBusy && scanMode === "quick" ? t("pp.findingQuick") : lanBusy && scanMode === "helper" ? t("pp.helperFinding") : useHelper && helperUrl.trim() ? t("pp.findHelper") : t("pp.findQuick")}
                 </button>
@@ -234,7 +259,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
                     <div className="flex items-center justify-between gap-2 text-sm">
                       <span className="flex min-w-0 items-baseline gap-2 tabular-nums text-fg">
                         <b className="text-[18px] font-bold text-accent">{Math.round((scanProg.done / scanProg.total) * 100)}%</b>
-                        <span className="truncate text-muted">{t("pp.scanProg", { done: scanProg.done, total: scanProg.total, found: scanProg.found })}</span>
+                        <span className={`truncate ${scanProg.found > 0 ? "font-semibold text-fg" : "text-muted"}`}>{t("pp.scanProg", { done: scanProg.done, total: scanProg.total, found: scanProg.found })}</span>
                       </span>
                       <button type="button" onClick={stopScan} className="inline-flex items-center gap-1 font-semibold text-accent">
                         <X className="size-3.5" aria-hidden="true" />
@@ -267,40 +292,93 @@ export function PrinterPanel(props: PrinterPanelProps) {
                     <ChevronRight className="doc-chev" aria-hidden="true" />
                   </button>
                 ) : null}
-                <button type="button" disabled={lanBusy || sending} onClick={() => {
-                  setSearched(true);
-                  void findOnWifi("full");
-                }} className="opt-item">
+                {/* 전체 검색 — 앱: 꼼꼼히(오래 기다리고 여러 번 묻고, 폰의 근거리 네트워크 모두). 도는 동안 이 줄에 진행률 */}
+                <button type="button" disabled={lanBusy || sending} onClick={runFull} aria-busy={lanBusy && deepRun ? true : undefined} className="opt-item">
                   <span className="min-w-0 flex-1">
                     <span className="opt-item-title">{t("pp.full")}</span>
-                    <span className="opt-item-sub">{t("pp.fullTitle")}</span>
+                    <span className="opt-item-sub">{phone ? (lanBusy && deepRun ? t("ph.deepBusy") : t("ph.fullSub")) : t("pp.fullTitle")}</span>
                   </span>
-                  <span className="opt-item-meta">1~254</span>
+                  {phone ? (lanBusy && deepRun && scanPct !== null ? <span className="opt-item-meta tabular-nums text-accent">{scanPct}%</span> : null) : <span className="opt-item-meta">1~254</span>}
                   <ChevronRight className="doc-chev" aria-hidden="true" />
                 </button>
-                <details className="opt-fold">
+                <details ref={otherNetsRef} className="opt-fold">
                   <summary className="opt-item">
                     <span className="min-w-0 flex-1">
                       <span className="opt-item-title">{t("pp.otherNets")}</span>
-                      {subnetInput ? <span className="opt-item-sub tabular-nums">{subnetInput}</span> : null}
+                      {/* 지금 고른 대역 — 치는 중인 값이 아니라 쓸 수 있는 대역만(정리된 모양으로) */}
+                      {toSubnet(subnetInput) ? <span className="opt-item-sub tabular-nums">{toSubnet(subnetInput)}</span> : null}
                     </span>
                   </summary>
                   <div className="opt-fold-body">
-                  <div className="flex flex-wrap gap-1.5">
+                  <p className="subnet-hint">{t("pp.otherNetsHint")}</p>
+                  {/* 대역 칩 — 같은 폭 격자, 이름(공유기 · 통신사)을 크게, 숫자는 그 아래 */}
+                  <div className="subnet-grid">
                     {SUBNET_PRESETS.map((preset) => (
-                      <button key={preset.subnet} type="button" disabled={lanBusy || sending} onClick={() => pickPreset(preset.subnet)} className={`chip preset rounded-full px-2.5 py-1 text-left disabled:opacity-50 ${subnetInput === preset.subnet ? "is-on" : ""}`}>
-                        <span className="block text-xs font-semibold tabular-nums">{preset.subnet}</span>
-                        <span className="block text-[13px] opacity-90">{t(preset.labelKey)}</span>
+                      <button
+                        key={preset.subnet}
+                        type="button"
+                        disabled={lanBusy || sending}
+                        aria-pressed={subnetInput === preset.subnet}
+                        onClick={() => {
+                          setSubnetErr(null);
+                          setSearched(true);
+                          setDeepRun(false);
+                          pickPreset(preset.subnet);
+                        }}
+                        className={`chip subnet-chip ${subnetInput === preset.subnet ? "is-on" : ""}`}
+                      >
+                        <span className="subnet-chip-name">{t(preset.labelKey)}</span>
+                        <span className="subnet-chip-net">{preset.subnet}</span>
                       </button>
                     ))}
                   </div>
-                  <label className="mt-3 block text-xs font-medium text-muted" htmlFor="subnet-field">
+                  <label className="subnet-label" htmlFor="subnet-field">
                     {t("pp.subnetManual")}
                   </label>
-                  <input id="subnet-field" value={subnetInput} onChange={(event) => setSubnetInput(event.target.value)} inputMode="decimal" placeholder="192.168.50" aria-label={t("pp.subnetAria")} className="field mt-1 h-11 w-full rounded-xl px-3 text-sm outline-none" />
+                  {/* 직접 입력한 대역도 칩처럼 바로 검색 — 버튼 또는 키보드의 검색(엔터).
+                      192.168.0 · 192.168.0.x · /24 · 복사기 IP 그대로 · 쉼표 · 전각 숫자 모두 받는다(parseSubnet) */}
+                  <form
+                    className="ip-join mt-1.5"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      const parsed = parseSubnet(subnetInput);
+                      if (!parsed.ok) {
+                        setSubnetErr(parsed.reason === "wide" ? "pp.subnetWide" : parsed.reason === "public" ? "pp.subnetPublic" : "pp.subnetBad");
+                        return;
+                      }
+                      setSubnetErr(null);
+                      setSearched(true);
+                      setDeepRun(false);
+                      pickPreset(parsed.subnet);
+                    }}
+                  >
+                    <input
+                      id="subnet-field"
+                      value={subnetInput}
+                      onChange={(event) => {
+                        setSubnetInput(event.target.value);
+                        setSubnetErr(null);
+                      }}
+                      inputMode="decimal"
+                      enterKeyHint="search"
+                      autoComplete="off"
+                      spellCheck={false}
+                      placeholder={t("pp.subnetPh")}
+                      aria-label={t("pp.subnetAria")}
+                      aria-invalid={subnetErr ? true : undefined}
+                      aria-describedby="subnet-tip"
+                      className="field h-12 min-w-0 flex-1 px-3 text-[16px] tabular-nums outline-none"
+                    />
+                    <button type="submit" disabled={lanBusy || sending || !subnetInput.trim()} aria-busy={lanBusy || undefined}>
+                      {lanBusy ? (scanPct !== null ? `${scanPct}%` : "…") : t("pp.subnetGo")}
+                    </button>
+                  </form>
+                  <p id="subnet-tip" className={subnetErr ? "subnet-err" : "subnet-tip"} role={subnetErr ? "alert" : undefined}>
+                    {t(subnetErr ?? "pp.subnetTip")}
+                  </p>
                   </div>
                 </details>
-                <details className="opt-fold" open={Boolean(ipInput) || showIpGuide}>
+                <details ref={ipFoldRef} className="opt-fold" open={Boolean(ipInput) || showIpGuide}>
                   <summary className="opt-item">
                     <span className="min-w-0 flex-1">
                       <span className="opt-item-title">{t("pp.ipLabel")}</span>
@@ -325,6 +403,9 @@ export function PrinterPanel(props: PrinterPanelProps) {
                       value={ipInput}
                       onChange={(event) => setIpInput(event.target.value)}
                       inputMode="decimal"
+                      enterKeyHint="go"
+                      autoComplete="off"
+                      spellCheck={false}
                       placeholder="192.168.0.10"
                       aria-label={t("pp.ipLabel")}
                       className="field h-12 min-w-0 flex-1 px-3 text-sm outline-none"
@@ -347,7 +428,42 @@ export function PrinterPanel(props: PrinterPanelProps) {
                 </div>
                 {/* 검색은 사용자가 누를 때만 한다(자동 · 백그라운드 전체 검색 없음) */}
                 <p className="px-1 text-xs text-faint">{t("pp.scanOwn")}</p>
-                {lanNote ? <p className="text-sm text-muted">{msgText(lanNote)}</p> : null}
+                {noneKey ? (
+                  /* 못 찾았을 때 — 무엇을 확인할지 + 바로 해 볼 다음 행동 */
+                  <div className="none-box" role="status">
+                    <p className="none-title">{msgText(lanNote)}</p>
+                    <ul className="none-tips">
+                      <li>{t("pp.noneTip1")}</li>
+                      <li>{t("pp.noneTip2")}</li>
+                      <li>{t("pp.noneTip3")}</li>
+                    </ul>
+                    <div className="none-acts">
+                      {deepNone ? null : (
+                        <button type="button" disabled={sending} onClick={runFull} className="chip none-act is-main">
+                          <Search className="size-4" aria-hidden="true" />
+                          {t("pp.actFull")}
+                        </button>
+                      )}
+                      <button type="button" onClick={() => openFold(otherNetsRef.current)} className="chip none-act">
+                        {t("pp.actOther")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowIpGuide(true);
+                          openFold(ipFoldRef.current);
+                          /* 바로 칠 수 있게 커서를 IP 칸에 */
+                          requestAnimationFrame(() => document.getElementById("printer-ip")?.focus({ preventScroll: true }));
+                        }}
+                        className="chip none-act"
+                      >
+                        {t("pp.actIp")}
+                      </button>
+                    </div>
+                  </div>
+                ) : lanNote ? (
+                  <p className="text-sm text-muted" aria-live="polite">{msgText(lanNote)}</p>
+                ) : null}
               </div>
             ) : null}
 
@@ -468,14 +584,20 @@ export function PrinterPanel(props: PrinterPanelProps) {
                       setOverrideQuery(null);
                       setAskName("");
                       if (item.host) {
-                        rememberHost(item.host, item.title, useHelper);
+                        rememberHost(item.host, item.title, useHelper, item.ipp !== undefined || item.raw9100 !== undefined ? { ipp: item.ipp, raw9100: item.raw9100, canon: item.canon, cmd: item.cmd } : undefined);
                         toast(m("pp.connected", { name: deviceText(item.title) }));
                       } else setStep(stageForQuery(item.query, item.cmd));
                     };
+                    /* 검색이 포트를 확인한 프린터(앱 · 도우미)만: 9100 · IPP · 캐논 BJNP 중 하나라도 열리면 바로 인쇄, 아니면 확인 필요 */
+                    const ready = Boolean(item.raw9100 || item.ipp || item.canon);
+                    const probed = item.raw9100 !== undefined || item.ipp !== undefined;
                     return (
                       <li key={item.id} className="reveal flex items-center gap-3 border-b border-line py-3 last:border-b-0">
                         <button type="button" disabled={sending && !on} onClick={on ? undefined : connect} className="min-w-0 flex-1 text-left">
-                          <span className={`block truncate text-[16px] font-semibold ${on ? "text-accent" : "text-fg"}`}>{deviceText(item.title)}</span>
+                          <span className="flex min-w-0 items-center gap-2">
+                            <span className={`truncate text-[16px] font-semibold ${on ? "text-accent" : "text-fg"}`}>{deviceText(item.title)}</span>
+                            {probed ? <span className={`found-badge ${ready ? "is-ready" : ""}`}>{t(ready ? "pp.badgeReady" : "pp.badgeCheck")}</span> : null}
+                          </span>
                           <span className="mt-0.5 block truncate text-sm text-muted">
                             {on ? <span className="font-semibold text-ok">{t("pp.live")} · </span> : null}
                             {deviceText(item.subtitle) || viaLabel(item.via)}

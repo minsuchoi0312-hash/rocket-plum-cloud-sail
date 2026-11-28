@@ -1,99 +1,77 @@
 /**
- * "이 프린터는 ○○ 팩이 필요해요" — 찾은 프린터에 맞는 인쇄 팩을 설치하고 이어서 인쇄한다.
- * 준비 중인 팩이면 대신 보낼 수 있는 팩(표준 · 레이저)을 권한다.
+ * "이 프린터의 전용 팩은 아직 준비 중이에요" — 대신 보낼 수 있는 길을 고르게 한다.
+ *  · 대신 보낼 팩(표준 IPP · 레이저)이 있으면 그 팩으로 인쇄
+ *  · 앱이면 안드로이드 인쇄(폰의 Mopria · 제조사 인쇄 서비스)로
+ * 팩은 모두 앱 안에 들어 있어 따로 설치하지 않는다(예전의 '설치' 진행 막대는 하는 일이 없어 없앴다).
  */
-import { useRef, useState } from "react";
-import { CircleCheck, Package, X } from "@/components/icons";
+import { useRef } from "react";
+import { Package, X } from "@/components/icons";
 import { useI18n } from "@/lib/i18n";
-import { installPack, packInfo, type PackChoice, type PackDef } from "@/lib/print-packs";
+import { packModels, type PackChoice, type PackDef } from "@/lib/print-packs";
 import { useModal } from "@/components/use-modal";
 
 type Props = {
   choice: PackChoice;
   model: string;
-  /** 설치가 끝났거나 대신 보낼 팩을 골랐을 때 (그 팩으로 인쇄를 이어 간다) */
+  /** 대신 보낼 팩을 골랐을 때 (그 팩으로 인쇄를 이어 간다) */
   onReady: (pack: PackDef) => void;
+  /** 안드로이드 인쇄로 보내기 (앱에서만) */
+  onSystemPrint?: () => void;
   onClose: () => void;
 };
 
-export function PackSheet({ choice, model, onReady, onClose }: Props) {
+export function PackSheet({ choice, model, onReady, onSystemPrint, onClose }: Props) {
   const { t } = useI18n();
   const dialogRef = useRef<HTMLDivElement>(null);
-  const [percent, setPercent] = useState<number | null>(null);
-  const [done, setDone] = useState(false);
-  const [error, setError] = useState("");
-  useModal(dialogRef, () => {
-    if (percent === null || done) onClose();
-  });
+  useModal(dialogRef, onClose);
   const need = choice.need;
-  const target = need.ready ? need : choice.fallback;
-  const info = target ? packInfo(target.id) : { models: 0, kb: 0 };
+  const target = choice.fallback;
   const name = t(need.name);
-  const busy = percent !== null && !done;
-
-  async function install(pack: PackDef) {
-    setError("");
-    setPercent(0);
-    try {
-      await installPack(pack.id, setPercent);
-      setDone(true);
-      window.setTimeout(() => onReady(pack), 650);
-    } catch {
-      setPercent(null);
-      setError(t("pk.fail"));
-    }
-  }
+  const models = target ? packModels(target.id) : 0;
+  /* 제조사 전용 방식(호스트 기반 · 승화형 · 도트 · 대형): '준비 중'이 아니라 앱이 직접 못 그리는 기기 */
+  const vendor = need.id === "vendor";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 p-3 sm:items-center" onClick={() => (busy ? null : onClose())}>
-      <div ref={dialogRef} tabIndex={-1} className="card pack-sheet flex w-full max-w-lg flex-col p-5 outline-none" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label={t("pk.need", { pack: name })}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 p-3 sm:items-center" onClick={onClose}>
+      <div ref={dialogRef} tabIndex={-1} className="card pack-sheet flex w-full max-w-lg flex-col p-5 outline-none" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label={t(vendor ? "pk.vendorTitle" : "pk.soon")}>
         <div className="flex items-start justify-between gap-3">
           <span className="pack-icon" aria-hidden="true">
-            {done ? <CircleCheck className="size-7" /> : <Package className="size-7" />}
+            <Package className="size-7" />
           </span>
-          <button type="button" onClick={onClose} disabled={busy} className="icon-btn -mr-1 -mt-1 inline-flex size-9 items-center justify-center rounded-full disabled:opacity-40" aria-label={t("pk.close")}>
+          <button type="button" onClick={onClose} className="icon-btn -mr-1 -mt-1 inline-flex size-9 items-center justify-center rounded-full" aria-label={t("pk.close")}>
             <X className="size-4" />
           </button>
         </div>
 
-        <h2 className="mt-3 text-[22px] font-bold leading-tight text-fg">{done ? t("pk.done") : need.ready ? t("pk.need", { pack: name }) : t("pk.soon")}</h2>
-        <p className="mt-1.5 text-[15px] leading-relaxed text-muted">{need.ready ? t("pk.needSub", { model: model || choice.matched }) : t("pk.soonSub", { model: model || choice.matched, pack: name })}</p>
+        <h2 className="mt-3 text-[22px] font-bold leading-tight text-fg">{t(vendor ? "pk.vendorTitle" : "pk.soon")}</h2>
+        <p className="mt-1.5 text-[15px] leading-relaxed text-muted">{vendor ? t("pk.vendorText", { model: model || choice.matched }) : t("pk.soonSub", { model: model || choice.matched, pack: name })}</p>
 
         {target ? (
           <div className="pack-row mt-4">
             <div className="min-w-0 flex-1">
               <p className="truncate text-[16px] font-semibold text-fg">{t(target.name)}</p>
               <p className="mt-0.5 truncate text-[13px] text-muted">
-                {t(target.sub)} · v{target.version}
-                {target.builtin ? "" : ` · ${t("pk.models", { n: info.models })} · ${info.kb}KB`}
+                {t(target.sub)}
+                {models ? ` · ${t("pk.models", { n: models })}` : ""}
               </p>
             </div>
-            {done ? <CircleCheck className="size-6 shrink-0 text-accent" aria-hidden="true" /> : null}
           </div>
         ) : null}
-
-        {percent !== null ? (
-          <div className="mt-4" aria-live="polite">
-            <div className="scan-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
-              <span style={{ width: `${percent}%` }} />
-            </div>
-            <p className="mt-1.5 text-[13px] tabular-nums text-muted">{done ? t("pk.done") : t("pk.installing", { p: percent })}</p>
-          </div>
-        ) : null}
-
-        {error ? <p className="mt-3 text-sm text-bad">{error}</p> : null}
 
         <div className="mt-5 grid gap-2">
-          {target && !done ? (
-            <button type="button" disabled={busy} onClick={() => (target.builtin ? onReady(target) : void install(target))} className="btn-solid h-[52px] w-full rounded-2xl text-[16px] font-semibold disabled:opacity-60">
-              {busy ? t("pk.installing", { p: percent ?? 0 }) : need.ready ? t("pk.install") : t("pk.useFallback", { pack: t(target.name) })}
+          {target ? (
+            <button type="button" onClick={() => onReady(target)} className="btn-solid h-[52px] w-full rounded-2xl text-[16px] font-semibold">
+              {t("pk.useFallback", { pack: t(target.name) })}
             </button>
           ) : null}
-          {!done ? (
-            <button type="button" disabled={busy} onClick={onClose} className="chip h-12 w-full rounded-2xl text-[15px] disabled:opacity-50">
-              {target ? t("pk.later") : t("pk.close")}
+          {onSystemPrint ? (
+            <button type="button" onClick={onSystemPrint} className={`${target ? "chip" : "btn-solid"} h-12 w-full rounded-2xl text-[15px] font-semibold`}>
+              {t("ch.system")}
             </button>
           ) : null}
+          <button type="button" onClick={onClose} className="chip h-12 w-full rounded-2xl text-[15px]">
+            {target || onSystemPrint ? t("pk.later") : t("pk.close")}
+          </button>
         </div>
       </div>
     </div>

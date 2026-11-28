@@ -26,6 +26,59 @@ export function isValidSubnet(value: string) {
   return SUBNET.test(value.trim());
 }
 
+/** 사람이 친 주소를 기계가 읽게: 전각 숫자 · 쉼표 · 가운뎃점 → 숫자와 점, 공백 · http:// · :포트 · 뒤 경로 제거.
+ *  CIDR(/24)는 남겨 둔다(대역 해석에서 쓴다). */
+function cleanAddr(value: string) {
+  let text = value.normalize("NFKC").trim().toLowerCase();
+  text = text.replace(/^[a-z]+:\/\//, "");
+  text = text.replace(/[,，。．·・․]/g, ".").replace(/\s+/g, "");
+  const cidr = /\/(\d{1,2})$/.exec(text);
+  text = text.replace(/\/.*$/, "");
+  text = text.replace(/:\d{1,5}$/, "");
+  return cidr ? `${text}/${cidr[1]}` : text;
+}
+
+/** 직접 친 복사기 IP: "192,168,0,10" · "http://192.168.0.10:9100/" · 전각 숫자 → 192.168.0.10. 아니면 null */
+export function toIPv4(value: string): string | null {
+  const text = cleanAddr(value).replace(/\/\d{1,2}$/, "");
+  return IPV4.test(text) ? text.split(".").map(Number).join(".") : null;
+}
+
+/** 사설 대역(공유기 안쪽)인지 — 폰 · PC 도우미도 이 대역만 검색한다 */
+export function isPrivateSubnet(subnet: string) {
+  const [a, b] = subnet.split(".").map(Number);
+  return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254);
+}
+
+export type SubnetParse = { ok: true; subnet: string } | { ok: false; reason: "format" | "wide" | "public" };
+
+/** 직접 입력한 대역을 '앞 세 마디'로 해석:
+ *  192.168.0 · 192.168.0. · 192.168.0.x · 192.168.0.* · 192.168.0.1-254 · 192.168.0.1~254 · 192.168.0.0/24
+ *  · 복사기 IP 그대로(192.168.0.100) · 쉼표 · 전각 숫자 → 192.168.0
+ *  /24보다 넓은 대역(/16 등)은 한 번에 못 찾으니 wide, 공유기 밖(공인) 대역은 public */
+export function parseSubnet(value: string): SubnetParse {
+  let text = cleanAddr(value);
+  const cidr = /\/(\d{1,2})$/.exec(text);
+  if (cidr) {
+    if (Number(cidr[1]) < 24) return { ok: false, reason: "wide" };
+    text = text.replace(/\/\d{1,2}$/, "");
+  }
+  text = text.replace(/\.(\d{1,3})?[-~](\d{1,3})$/, "").replace(/\.(x|\*)?$/, "");
+  let subnet: string | null = null;
+  if (SUBNET.test(text)) subnet = text;
+  else if (IPV4.test(text)) subnet = text.split(".").slice(0, 3).join(".");
+  if (!subnet) return { ok: false, reason: "format" };
+  subnet = subnet.split(".").map(Number).join(".");
+  if (!isPrivateSubnet(subnet)) return { ok: false, reason: "public" };
+  return { ok: true, subnet };
+}
+
+/** 대역만 필요할 때: 쓸 수 없으면 null */
+export function toSubnet(value: string): string | null {
+  const parsed = parseSubnet(value);
+  return parsed.ok ? parsed.subnet : null;
+}
+
 function isPrivateIPv4(ip: string) {
   return PRIVATE.test(ip) && !ip.startsWith("127.");
 }

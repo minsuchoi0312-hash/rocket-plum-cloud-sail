@@ -28,7 +28,6 @@ const PACKAGES = [
   ["tslib", "tslib"],
   ["tailwindcss", "Tailwind CSS"],
   ["pretendard", "Pretendard (글꼴)", "dist/LICENSE.txt"],
-  ["@fontsource/gowun-batang", "Gowun Batang (글꼴)"],
 ];
 
 /** node_modules 에 없는 안드로이드 라이브러리 — Apache-2.0 전문은 PDF.js 것을 함께 쓴다 */

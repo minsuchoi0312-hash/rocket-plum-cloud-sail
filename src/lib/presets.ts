@@ -103,12 +103,13 @@ export function deleteCustomPreset(id: string, store: Store | null = defaultStor
   return next;
 }
 
-export function describeSettings(s: PresetSettings) {
+/** pdf: 여백은 PDF 에만 쓰이므로 사진 · 메모에서는 여백을 적지 않는다 */
+export function describeSettings(s: PresetSettings, pdf = true) {
   return [
     tr(s.gray ? "pre.gray" : "pre.color"),
     tr(s.duplex === "simplex" ? "pre.simplex" : s.duplex === "long" ? "pre.long" : "pre.short"),
     s.nup === 1 ? tr("pre.nup1") : tr("pre.nupN", { n: s.nup }),
-    tr(s.margin === "none" ? "pre.mNone" : s.margin === "narrow" ? "pre.mNarrow" : "pre.mNormal"),
+    pdf ? tr(s.margin === "none" ? "pre.mNone" : s.margin === "narrow" ? "pre.mNarrow" : "pre.mNormal") : "",
     s.secure ? tr("pre.secureTag") : "",
   ]
     .filter(Boolean)

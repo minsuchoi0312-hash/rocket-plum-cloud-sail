@@ -50,6 +50,19 @@ test("0x11 압축: 긴 같은 바이트(거리 1)와 128바이트 넘는 날 데
   assert.deepEqual(unpack(packed, data.length), data);
 });
 
+test("0x11 압축: 되풀이 없는 띠(빽빽한 사진)도 빠지지 않고 원래대로 풀린다", () => {
+  const data = new Uint8Array(608 * 128);
+  let seed = 12345;
+  for (let i = 0; i < data.length; i++) {
+    seed = (seed * 1103515245 + 12345) >>> 0;
+    data[i] = seed >>> 24;
+  }
+  const packed = splCompress(data);
+  assert.ok(packed, "압축 실패로 띠가 빠지면 안 됨");
+  assert.deepEqual(unpack(packed, data.length), data);
+  assert.ok(splBandPacket(0, 608, 128, data), "패킷도 만들어져야 함");
+});
+
 test("띠 패킷: 머리 · 서명 · 체크섬", () => {
   const data = sampleBand(620, 128);
   const p = splBandPacket(3, 620, 128, data)!;
@@ -75,7 +88,7 @@ test("A4 · 600dpi 크기, 기종별 설정", () => {
   assert.equal(splGeometry("A4", splProfile("ML-2160")!).bandBytes, 620);
   assert.equal(splProfile("ML-1610")!.dpi, 300);
   assert.equal(splProfile("ML-2010")!.qpdl, 2);
-  assert.equal(splProfile("SCX-4100"), null);
+  assert.equal(splProfile("SCX-4100")?.comp, 0x0d);
   assert.equal(splProfile("CLP-315"), null);
   const head = splPageHeader(geo, m2020, 2);
   assert.deepEqual([...head], [0, 6, 0, 2, 2, 0x09, 0xb0, 0x0d, 0xb5, 1, 0, 1, 0, 0, 3, 1, 6]);

@@ -78,7 +78,8 @@ export function clearHistory() {
 const KIND_KEY: Record<HistoryKind, MsgKey> = { pdf: "hist.pdf", photo: "hist.photo", memo: "hist.memo", test: "hist.test" };
 
 /** 인쇄 경로는 언어와 무관한 코드로 저장하고 보여 줄 때 번역한다. 예전 버전이 저장한 한국어 이름도 알아본다. */
-const ROUTE_KEY: Record<string, MsgKey> = { ipp: "ap.routeIpp", "와이파이 IPP": "ap.routeIpp", helper9100: "ap.viaHelper9100", "PC 도우미 9100": "ap.viaHelper9100" };
+/* phone9100 · phone8611: 앱(폰)이 직접 보낸 작업 — PC 도우미가 아니다 */
+const ROUTE_KEY: Record<string, MsgKey> = { ipp: "ap.routeIpp", "와이파이 IPP": "ap.routeIpp", helper9100: "ap.viaHelper9100", "PC 도우미 9100": "ap.viaHelper9100", phone9100: "ph.route", phone8611: "ph.route8611" };
 const ROUTE_FIXED: Record<string, string> = { "usb-pdf": "USB PDF Direct", "usb-pcl": "USB PCL5e" };
 
 export function historyRouteLabel(route: string) {

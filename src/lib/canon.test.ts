@@ -91,3 +91,26 @@ test("줄 · 묶음: 빈 줄은 0x80, 잉크 줄은 PackBits + 0x80", () => {
   assert.deepEqual([...block.subarray(0, 3)], [0x1b, 0x28, 0x46]);
   assert.equal(block[3] | (block[4] << 8), line.length + 1);
 });
+
+test("자동 양면: 첫 쪽 ESC ($, 긴 쪽 뒷면만 ESC (u 01, 단면 · 양면 없는 기종은 둘 다 없음", async () => {
+  const { canonPageSetup, canonGeometry, canonProfile, canonPaperOk } = await import("./canon.ts");
+  const hex = (u: Uint8Array) => Buffer.from(u).toString("hex");
+  const DOLLAR = "1b282409000100020000000000000002".slice(0, 28);
+  const U = "1b287501000" + "1";
+  const mx870 = canonProfile("Canon MX870 series")!;
+  const geo = canonGeometry("A4");
+  assert.ok(hex(canonPageSetup(mx870, geo, true, { duplex: "long", back: false })).includes("1b28240900010002"));
+  assert.ok(!hex(canonPageSetup(mx870, geo, true)).includes("1b28240900"));
+  assert.ok(hex(canonPageSetup(mx870, geo, false, { duplex: "long", back: true })).includes(U));
+  assert.ok(!hex(canonPageSetup(mx870, geo, false, { duplex: "short", back: true })).includes(U));
+  assert.ok(!hex(canonPageSetup(mx870, geo, false, { duplex: "long", back: false })).includes(U));
+  const mx340 = canonProfile("Canon MX340 series")!;
+  assert.equal(mx340.duplex, undefined);
+  assert.ok(!hex(canonPageSetup(mx340, geo, true, { duplex: "long", back: false })).includes("1b28240900"));
+  void DOLLAR;
+  /* A6 는 되고, A3 · B4 는 이 기종들이 못 받는다 */
+  assert.equal(canonPaperOk("A6"), true);
+  assert.equal(canonPaperOk("A3"), false);
+  /* 표 한 줄로 늘린 기종 */
+  for (const model of ["Canon MG5300 series", "Canon MG6200 series", "Canon iP4800 series", "Canon iP4900 series", "Canon MX410 series", "Canon MP550 series", "Canon MP280 series"]) assert.ok(canonProfile(model), model);
+});

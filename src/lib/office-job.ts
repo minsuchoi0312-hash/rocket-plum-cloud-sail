@@ -87,7 +87,7 @@ function concat(parts: Uint8Array[]) {
   return out;
 }
 
-function pjl(options: { copies: number; duplex: DuplexMode; paper: OfficePaper; language: "PDF" | "PCL"; pages: number; secure?: { pin: string; user: string } }) {
+function pjl(options: { copies: number; duplex: DuplexMode; paper: OfficePaper; language: "PDF" | "PCL" | "POSTSCRIPT"; pages: number; secure?: { pin: string; user: string } }) {
   const count = Math.min(99, Math.max(1, options.copies));
   /* 1부는 COPIES=1 (코니카 28BW-4 실기에서 양면이 확인된 머리와 같게). 여러 쪽 여러 부만 QTY(한 부씩 묶어 찍기) */
   const lines = ['\x1b%-12345X@PJL JOB NAME="NUGUNA PRINT"', options.pages > 1 && count > 1 ? `@PJL SET QTY=${count}` : `@PJL SET COPIES=${count}`];
@@ -112,6 +112,81 @@ export function wrapPdfJob(pdf: Uint8Array, options: { copies: number; duplex: D
     pdf,
     encoder.encode("\r\n\x1b%-12345X@PJL EOJ\r\n\x1b%-12345X"),
   ]);
+}
+
+/* ───────── PostScript 컬러 (레이저 팩 1.5) ─────────
+   사무용 컬러 복합기 대부분(코니카 · 리코 · 제록스 · 교세라 KPDL · 신도리코 · 브라더 BR-Script …)은 PostScript 를 받는다.
+   쪽마다 JPEG 그림 하나를 DCTDecode 로 넣어 컬러로 보낸다(ASCII85 — 9100 에서 제어 문자가 작업 끝으로 읽히지 않게).
+   부수 · 양면 · 보안 인쇄는 PCL 과 같은 PJL 머리로. */
+
+/** 인쇄 언어 목록에 PostScript 가 있는지 (IPP 형식 · 1284 CMD · 제조사 이름) */
+export function speaksPostScript(cmd?: string) {
+  return /postscript|(^|[,;:\s])ps\d?\s*($|[,;])|kpdl|br-?script|\bps3\b/i.test(cmd || "");
+}
+
+/** ASCII85 (Adobe) — '~>' 로 끝난다 */
+export function ascii85(bytes: Uint8Array) {
+  const out: string[] = [];
+  let line = 0;
+  const push = (text: string) => {
+    out.push(text);
+    line += text.length;
+    if (line >= 72) {
+      out.push("\n");
+      line = 0;
+    }
+  };
+  for (let i = 0; i < bytes.length; i += 4) {
+    const n = Math.min(4, bytes.length - i);
+    let value = 0;
+    for (let k = 0; k < 4; k++) value = value * 256 + (k < n ? bytes[i + k] : 0);
+    if (n === 4 && value === 0) {
+      push("z");
+      continue;
+    }
+    const digits: string[] = [];
+    for (let k = 0; k < 5; k++) {
+      digits.unshift(String.fromCharCode(33 + (value % 85)));
+      value = Math.floor(value / 85);
+    }
+    push(digits.slice(0, n + 1).join(""));
+  }
+  out.push("~>\n");
+  return out.join("");
+}
+
+export function psJobHeader(options: { copies: number; duplex: DuplexMode; paper: OfficePaper; pages: number; secure?: { pin: string; user: string } }) {
+  const points = paperPoints(options.paper);
+  const duplex = options.duplex !== "simplex";
+  /* 부수는 PJL 한 곳에서만(PS NumCopies 를 같이 쓰면 곱해질 수 있다). Policies PageSize 3 = 가장 가까운 용지로 */
+  return encoder.encode(
+    `${pjl({ ...options, language: "POSTSCRIPT" })}%!PS-Adobe-3.0\n%%Creator: Nuguna Print\n%%Pages: ${options.pages}\n%%EndComments\n` +
+      `<< /PageSize [${Math.round(points.width)} ${Math.round(points.height)}] /Duplex ${duplex} /Tumble ${options.duplex === "short"} /Policies << /PageSize 3 >> >> setpagedevice\n`,
+  );
+}
+
+/**
+ * 쪽 하나: JPEG(dpi 기준 실제 크기)를 용지 가운데에 놓는다 — PCL 래스터와 같은 크기 · 여백.
+ * 가로로 긴 그림은 반시계 90° 눕혀 세로 용지에.
+ */
+export function psPage(jpeg: Uint8Array, width: number, height: number, paper: OfficePaper, index: number, dpi = 300) {
+  const points = paperPoints(paper);
+  const pw = Math.round(points.width);
+  const ph = Math.round(points.height);
+  const iw = (width * 72) / dpi;
+  const ih = (height * 72) / dpi;
+  const f = (n: number) => n.toFixed(2);
+  const landscape = width > height && pw < ph;
+  const place = landscape ? `${f((pw + ih) / 2)} ${f((ph - iw) / 2)} translate 90 rotate ${f(iw)} ${f(ih)} scale` : `${f((pw - iw) / 2)} ${f((ph - ih) / 2)} translate ${f(iw)} ${f(ih)} scale`;
+  return encoder.encode(
+    `%%Page: ${index + 1} ${index + 1}\ngsave\n${place}\n/DeviceRGB setcolorspace\n` +
+      `<< /ImageType 1 /Width ${width} /Height ${height} /BitsPerComponent 8 /Decode [0 1 0 1 0 1] /ImageMatrix [${width} 0 0 -${height} 0 ${height}] /DataSource currentfile /ASCII85Decode filter /DCTDecode filter >> image\n` +
+      `${ascii85(jpeg)}grestore\nshowpage\n`,
+  );
+}
+
+export function psJobFooter() {
+  return encoder.encode("%%EOF\n\x1b%-12345X@PJL EOJ\r\n\x1b%-12345X");
 }
 
 /** 화면 · PDF용 150dpi 크기 */
