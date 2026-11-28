@@ -2067,6 +2067,27 @@ function AtlasMain() {
   const statusText = tr(selected?.live && selected.usbKey ? "ap.stUsb" : phoneHelper && selected?.host ? "ph.st" : helperLive ? "ap.stHelper" : selected?.host ? "ap.stWifi" : "ap.stPreview");
   const selectedName = selected ? (saved.find((row) => (row.host && row.host === selected.host) || `saved:${row.uid}` === selected.id)?.alias || selected.title) : "";
 
+  /* 도움말 카드 — 홈은 PrinterPanel 왼쪽 줄(가로 화면), 인쇄 화면은 맨 아래 */
+  const helpCard = (
+    <button
+      type="button"
+      onClick={() => {
+        setSupportTab("help");
+        setShowDiag(true);
+      }}
+      className="help-row"
+    >
+      <span className="doc-ico is-help" aria-hidden="true">
+        <CircleHelp weight="fill" className="size-[22px]" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[16px] font-semibold text-fg">{tr("ap.helpCard")}</span>
+        <span className="mt-0.5 block truncate text-sm text-muted">{tr(phoneApp() ? "ap.helpTopicsApp" : "ap.helpTopics")}</span>
+      </span>
+      <ChevronRightIcon className="doc-chev" aria-hidden="true" />
+    </button>
+  );
+
   return (
     <main data-lang={lang} className="shell mx-auto flex w-full max-w-lg flex-col gap-3 px-4 py-5 sm:py-8">
       {dragOver ? (
@@ -2188,7 +2209,7 @@ function AtlasMain() {
       ) : null}
       {step === "print" && (printer.status || printer.loading) ? <PrinterStatusCard status={printer.status} loading={printer.loading} error={printer.error} onRefresh={() => void printer.refresh()} compact /> : null}
       {step === "connect" ? (
-        <PrinterPanel {...{ addTypedIp, album, aliasDraft, setAliasDraft, appOrigin, checkPrinter, connectUsb, editingUid, setEditingUid, findOnWifi, findViaHelper, forget, registerPrinter, disconnect, foundList, helperCode, setHelperCode, helperOk, setHelperOk, helperShare, helperUrl, setHelperUrl, history, ipInput, setIpInput, lanBusy, lanNote, setLanNote, linkOpen, setLinkOpen, linkTab, setLinkTab, memo, notice, onPrint, openChooser, pdfName, photoUrl, pickPreset, probes, recentPrinters, reconnect, rememberHost, route, saveAlias, scanMode, scanProg, scanning, selected, selectedId, selectedName, sending, setAskName, setOverrideQuery, setQrTarget, setSelectedId, setShowDiag, onScanQr: qrScanOk ? () => void scanQrConnect() : null, setShowIpGuide, showIpGuide, setStep, setSubnetInput, subnetInput, setSupportTab, setUseHelper, useHelper, startWith, statusDot, statusText, stopScan, usbMissed, usbOk, helperStatus, onLauncher }} statusCard={selected?.host || selected?.usbKey ? <PrinterStatusCard status={printer.status} loading={printer.loading} error={printer.error} onRefresh={() => void printer.refresh()} helperNeeded={!helperAlive && !selected?.usbKey} /> : null} />
+        <PrinterPanel helpCard={helpCard} {...{ addTypedIp, album, aliasDraft, setAliasDraft, appOrigin, checkPrinter, connectUsb, editingUid, setEditingUid, findOnWifi, findViaHelper, forget, registerPrinter, disconnect, foundList, helperCode, setHelperCode, helperOk, setHelperOk, helperShare, helperUrl, setHelperUrl, history, ipInput, setIpInput, lanBusy, lanNote, setLanNote, linkOpen, setLinkOpen, linkTab, setLinkTab, memo, notice, onPrint, openChooser, pdfName, photoUrl, pickPreset, probes, recentPrinters, reconnect, rememberHost, route, saveAlias, scanMode, scanProg, scanning, selected, selectedId, selectedName, sending, setAskName, setOverrideQuery, setQrTarget, setSelectedId, setShowDiag, onScanQr: qrScanOk ? () => void scanQrConnect() : null, setShowIpGuide, showIpGuide, setStep, setSubnetInput, subnetInput, setSupportTab, setUseHelper, useHelper, startWith, statusDot, statusText, stopScan, usbMissed, usbOk, helperStatus, onLauncher }} statusCard={selected?.host || selected?.usbKey ? <PrinterStatusCard status={printer.status} loading={printer.loading} error={printer.error} onRefresh={() => void printer.refresh()} helperNeeded={!helperAlive && !selected?.usbKey} /> : null} />
       ) : (
         <section className="panel step-in rounded-3xl p-4 sm:p-5">
           {step === "confirm" ? (
@@ -2335,23 +2356,8 @@ function AtlasMain() {
           )}
         </section>
       )}
-      <button
-        type="button"
-        onClick={() => {
-          setSupportTab("help");
-          setShowDiag(true);
-        }}
-        className="help-row"
-      >
-        <span className="doc-ico is-help" aria-hidden="true">
-          <CircleHelp weight="fill" className="size-[22px]" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[16px] font-semibold text-fg">{tr("ap.helpCard")}</span>
-          <span className="mt-0.5 block truncate text-sm text-muted">{tr(phoneApp() ? "ap.helpTopicsApp" : "ap.helpTopics")}</span>
-        </span>
-        <ChevronRightIcon className="doc-chev" aria-hidden="true" />
-      </button>
+      {/* 홈에서는 PrinterPanel 안(가로 화면 왼쪽 줄)에 넣는다 */}
+      {step === "connect" ? null : helpCard}
       {saved.length > 0 ? (
         /* 토스 text-button: 누를 수 있다는 걸 보이게 파란 글자 + 다시 고침 아이콘 */
         <button type="button" onClick={() => setScanId((value) => value + 1)} className="text-btn self-center">

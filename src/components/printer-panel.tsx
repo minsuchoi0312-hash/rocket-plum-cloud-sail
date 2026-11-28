@@ -20,7 +20,7 @@ import type { DocKind } from "@/components/paper-preview";
 import { docLabel } from "@/components/print-parts";
 import type { QrTarget } from "@/components/printer-qr-modal";
 import { HistoryList, type SupportTab } from "@/components/support-center";
-import { isPhoneHelper } from "@/lib/phone-helper";
+import { isPhoneHelper, phoneApp } from "@/lib/phone-helper";
 import { MyPrinters } from "@/components/my-printers";
 
 type Set<T> = Dispatch<SetStateAction<T>>;
@@ -124,6 +124,8 @@ export type PrinterPanelProps = {
   /** 연결 카드 아래에 보일 복사기 상태 카드 */
   statusCard?: ReactNode;
   onLauncher: (os: "win" | "mac") => void;
+  /** 도움말 카드 — 가로 화면에선 왼쪽 줄 프린터 카드 아래, 세로 화면에선 맨 아래(CSS order) */
+  helpCard?: ReactNode;
 };
 
 export function PrinterPanel(props: PrinterPanelProps) {
@@ -141,7 +143,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
     <section className="home-cols step-in flex flex-col gap-3">
       {/* 넓은 화면: 왼쪽 = 프린터 연결 · 상태, 오른쪽 = 내 프린터 · 인쇄하기 · 최근 인쇄 */}
       <div className="home-col">
-      <div className="card p-5">
+      <div className="card home-printer p-5">
         {/* 머리글 — 제목 + 아이콘만 있는 버튼 (자가진단 · 접기/펼치기) */}
         <div className="card-head">
           <h2 className="card-title">{t("pp.step1")}</h2>
@@ -502,6 +504,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
       </div>
 
       {statusCard}
+      {props.helpCard ? <div className="home-help">{props.helpCard}</div> : null}
       </div>
 
       <div className="home-col">
@@ -524,7 +527,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
         helperShare={helperShare}
       />
 
-      <div className="card p-5">
+      <div className="card home-print p-5">
         <div className="card-head">
           <h2 className="card-title">{t("pp.step2")}</h2>
         </div>
@@ -556,7 +559,8 @@ export function PrinterPanel(props: PrinterPanelProps) {
             </li>
           ))}
         </ul>
-        <p className="mt-2 hidden text-xs text-faint sm:block">{t("pp.dropHint")}</p>
+        {/* 끌어놓기 · Ctrl+V 안내는 PC 브라우저에서만 (앱은 가로 태블릿이어도 숨김) */}
+        {phoneApp() ? null : <p className="mt-2 hidden text-xs text-faint sm:block">{t("pp.dropHint")}</p>}
       </div>
 
       {history.length > 0 ? (

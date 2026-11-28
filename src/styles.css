@@ -3334,3 +3334,53 @@ html:not([data-palette]):not([data-theme="light"]) {
     min-height: 104px;
   }
 }
+
+/* 홈 도움말 카드 — 세로 화면: 맨 아래(최근 인쇄 다음), 가로 화면: 왼쪽 줄 프린터 카드 아래 빈 곳 */
+.home-help {
+  order: 1;
+}
+
+.home-help > .help-row {
+  width: 100%;
+}
+
+@media (min-width: 840px) {
+  .home-help {
+    order: 0;
+  }
+}
+
+/* 넓은 화면 두 줄 — 아래 끝을 딱 맞춘다.
+   짧은 쪽 줄의 큰 카드가 늘어난다: 오른쪽이 짧으면 인쇄하기(안의 타일도 같이 커짐), 왼쪽이 짧으면 프린터 카드 */
+@media (min-width: 840px) {
+  .home-cols {
+    align-items: stretch;
+  }
+
+  .home-col > .home-printer,
+  .home-col > .home-print {
+    flex: 1 1 auto;
+  }
+
+  .home-print {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .home-print .doc-grid {
+    flex: 1 1 auto;
+    grid-auto-rows: 1fr;
+  }
+}
+
+@media (min-width: 840px) {
+  /* 늘어난 줄 높이를 타일이 그대로 채운다 (타일 사이 빈틈 없이) */
+  .home-print .doc-grid > li {
+    display: flex;
+  }
+
+  .home-print .doc-grid .doc-tile {
+    flex: 1 1 auto;
+    height: auto;
+  }
+}

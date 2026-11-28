@@ -312,7 +312,7 @@ export function PrintChooser({
         <div className="mt-3 space-y-2">
           <label className="pick flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl text-sm">
             <Upload className="size-4" aria-hidden="true" />
-            {tr("ch.pickPdf")} <span className="hidden text-xs text-muted sm:inline">{tr("ch.orDrop")}</span>
+            {tr("ch.pickPdf")} {phoneApp() ? null : <span className="hidden text-xs text-muted sm:inline">{tr("ch.orDrop")}</span>}
             <input type="file" accept="application/pdf,.pdf" disabled={sending} className="sr-only" onChange={(event) => onPdfFile(event.target.files?.[0])} />
           </label>
           {pdfName ? (
@@ -373,7 +373,7 @@ export function PrintChooser({
         <div className="mt-3 space-y-2">
           <label className="pick flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl text-sm text-fg">
             <Upload className="size-4" aria-hidden="true" />
-            {tr("ch.pickPhotos")} <span className="hidden text-xs text-muted sm:inline">{tr("ch.paste")}</span>
+            {tr("ch.pickPhotos")} {phoneApp() ? null : <span className="hidden text-xs text-muted sm:inline">{tr("ch.paste")}</span>}
             <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.heic,.heif" multiple disabled={sending} className="sr-only" onChange={(event) => {
               const files = [...(event.target.files ?? [])];
               event.target.value = "";
