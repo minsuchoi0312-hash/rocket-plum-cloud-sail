@@ -9,15 +9,15 @@
 
 | id | 이름 | 강조(밝게 / 어둡게) | 바탕(밝게) |
 |---|---|---|---|
-| blue (기본) | 기본 파랑 | #3182f6 / #3485fa | #f2f4f6 |
+| blue (기본) | 기본 파랑 | #1f6fe5 / #3485fa (어둡게 버튼 바탕은 #1f6fe5) | #f2f4f6 |
 | paper | 종이 · 잉크 | 잉크 #1c1b19 / 종이 #f3efe6 (+ CMYK 표식) | #f4f1ea |
 | forest | 숲 | #0e7c54 / #3ccf91 | #eef4f0 |
-| sunset | 노을 | #d24a1c / #ff8a5c | #f8f1ec |
+| sunset | 노을 | #c24016 / #ff8a5c | #f8f1ec |
 | grape | 포도 | #6741d9 / #a08cff | #f3f1f9 |
 
 - 저장: `atlas-theme`(system | light | dark, 없으면 system), `atlas-palette-light` · `atlas-palette-dark`(없으면 예전 `atlas-palette`, 그것도 없으면 blue). 적용은 `applyAppearance()`(src/lib/palette.ts), 첫 그림 전 스크립트는 `APPEARANCE_BOOT`(__root.tsx) · 안드로이드 사본 `index.html`(같은 내용 직접 복사).
 - 새 테마를 넣을 땐 palette.ts 목록 + styles.css 블록(밝게 · 어둡게 둘 다) + i18n `pal.*` 네 언어.
-- 밝게 강조색은 흰 글자와 대비 4.5:1 이상.
+- 버튼 글자 · 카드 위 강조 글자는 대비 4.5:1 이상(2026-11-28 10개 조합 측정 통과). 토스 원래 파랑 #3182f6 은 흰 글자 3.7:1 이라 한 단계 진하게 바꿨다.
 
 아래 2~4절은 **종이 · 잉크** 테마의 값이다. 모양(3절)은 모든 테마 공통.
 

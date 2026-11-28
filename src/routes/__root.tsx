@@ -9,7 +9,7 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "누구나프린트" },
-      { name: "description", content: "설치 없이 바로 인쇄하세요. 사진이나 PDF를 선택하면 이 화면에서 복사기로 바로 보내요." },
+      { name: "description", content: "설치 없이 바로 인쇄해요. 사진이나 PDF를 고르면 이 화면에서 복사기로 바로 보내요." },
       { name: "theme-color", content: "#17171C" },
       { name: "apple-mobile-web-app-title", content: "누구나프린트" },
     ],

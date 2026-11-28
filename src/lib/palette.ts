@@ -6,10 +6,10 @@
  * 색 값은 styles.css '색 테마' 블록. 여기 목록과 이름을 맞출 것.
  */
 export const PALETTES = [
-  { id: "blue", label: "pal.blue", light: ["#3182f6", "#f2f4f6"], dark: ["#3485fa", "#17171c"] },
+  { id: "blue", label: "pal.blue", light: ["#1f6fe5", "#f2f4f6"], dark: ["#3485fa", "#17171c"] },
   { id: "paper", label: "pal.paper", light: ["#c8175d", "#f4f1ea"], dark: ["#ff5c9d", "#12110f"] },
   { id: "forest", label: "pal.forest", light: ["#0e7c54", "#eef4f0"], dark: ["#3ccf91", "#111714"] },
-  { id: "sunset", label: "pal.sunset", light: ["#d24a1c", "#f8f1ec"], dark: ["#ff8a5c", "#191312"] },
+  { id: "sunset", label: "pal.sunset", light: ["#c24016", "#f8f1ec"], dark: ["#ff8a5c", "#191312"] },
   { id: "grape", label: "pal.grape", light: ["#6741d9", "#f3f1f9"], dark: ["#a08cff", "#14121b"] },
 ] as const;
 
@@ -86,4 +86,4 @@ export function savePalette(scheme: Scheme, id: PaletteId) {
  * 안드로이드 사본 index.html 에도 같은 내용이 있다(고치면 같이 고칠 것).
  */
 export const APPEARANCE_BOOT =
-  "try{var d=document.documentElement,t=localStorage.getItem('atlas-theme');if(t!=='light'&&t!=='dark')t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';d.dataset.theme=t;var p=localStorage.getItem('atlas-palette-'+t)||localStorage.getItem('atlas-palette');if(p&&p!=='blue')d.dataset.palette=p;}catch(e){}";
+  "try{var d=document.documentElement,t=localStorage.getItem('atlas-theme');if(t!=='light'&&t!=='dark')t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';d.dataset.theme=t;var p=localStorage.getItem('atlas-palette-'+t)||localStorage.getItem('atlas-palette');if(p&&p!=='blue'&&/^[a-z]{1,12}$/.test(p))d.dataset.palette=p;}catch(e){}";

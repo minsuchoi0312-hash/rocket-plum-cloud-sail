@@ -284,7 +284,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
                     {SUBNET_PRESETS.map((preset) => (
                       <button key={preset.subnet} type="button" disabled={lanBusy || sending} onClick={() => pickPreset(preset.subnet)} className={`chip preset rounded-full px-2.5 py-1 text-left disabled:opacity-50 ${subnetInput === preset.subnet ? "is-on" : ""}`}>
                         <span className="block text-xs font-semibold tabular-nums">{preset.subnet}</span>
-                        <span className="block text-[12px] opacity-80">{t(preset.labelKey)}</span>
+                        <span className="block text-[13px] opacity-90">{t(preset.labelKey)}</span>
                       </button>
                     ))}
                   </div>
