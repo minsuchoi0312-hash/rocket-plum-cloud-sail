@@ -844,6 +844,7 @@ export const zh: Record<MsgKey, string> = {
   "ap.addedPhotos": "已添加 {n} 张照片。",
   "ap.onlyPdfImg": "只能打开 PDF 和照片（JPG/PNG）文件。",
   "ap.presetApplied": "已应用“{name}” · {hint}",
+  "ap.presetOff": "已取消“{name}” · 已恢复原来的设置",
   "ap.idOriginal": "证件照和护照照片保持原图，以保留自然肤色。",
   "ap.text1mb": "文本文件最大 1 MB。",
   "ap.textLoaded": "已将 {name} 导入为便签（{n} 字）。",

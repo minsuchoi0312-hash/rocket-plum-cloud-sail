@@ -1,6 +1,7 @@
 /**
  * 원터치 인쇄 프리셋: 기본 4개는 2×2 그리드, 내 설정(최대 3개, PIN 미저장)은 그 아래 줄.
  * 하이라이트는 부모가 정한 activeId로만 표시 — 프리셋 적용 뒤 옵션을 하나라도 바꾸면 부모가 해제한다.
+ * 켜진 카드를 다시 누르면 해제: 부모(applyPreset)가 빠른 설정 전 설정으로 되돌린다.
  */
 import { useEffect, useState } from "react";
 import { Plus, X } from "@/components/icons";
@@ -42,8 +43,19 @@ export function PresetBar({
     onNotice(result.ok ? t("pbar.saved") : result.error || t("pbar.saveFail"));
   }
 
+  /* 누른 카드가 손가락 아래에 그대로 있게: 적용으로 위쪽 요약 줄이 생기거나 사라져 카드가 밀린 만큼 스크롤을 맞춘다
+     (밀리면 다시 눌러 해제할 때 옆 칸이 눌린다) */
+  function tap(preset: Preset, el: HTMLElement) {
+    const before = el.getBoundingClientRect().top;
+    onApply(preset);
+    requestAnimationFrame(() => {
+      const shift = el.getBoundingClientRect().top - before;
+      if (Math.abs(shift) >= 1) window.scrollBy({ top: shift, behavior: "instant" });
+    });
+  }
+
   const card = (preset: Preset) => (
-    <button key={preset.id} type="button" disabled={disabled} onClick={() => onApply(preset)} aria-pressed={activeId === preset.id} className={`chip preset-card min-w-0 rounded-2xl px-3 py-2.5 text-left ${activeId === preset.id ? "is-on" : ""}`}>
+    <button key={preset.id} type="button" disabled={disabled} onClick={(event) => tap(preset, event.currentTarget)} aria-pressed={activeId === preset.id} className={`chip preset-card min-w-0 rounded-2xl px-3 py-2.5 text-left ${activeId === preset.id ? "is-on" : ""}`}>
       <span className="block truncate text-sm font-semibold">{preset.label}</span>
       <span className="preset-hint mt-0.5 block text-xs leading-snug opacity-80">{describeSettings(preset.settings)}</span>
     </button>

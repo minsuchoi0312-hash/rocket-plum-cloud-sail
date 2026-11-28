@@ -844,6 +844,7 @@ export const ja: Record<MsgKey, string> = {
   "ap.addedPhotos": "写真を{n}枚追加しました。",
   "ap.onlyPdfImg": "開けるのはPDFと写真（JPG・PNG）のみです。",
   "ap.presetApplied": "「{name}」を適用しました・{hint}",
+  "ap.presetOff": "「{name}」を解除しました・元の設定に戻しました",
   "ap.idOriginal": "証明・パスポート写真は肌の色を保つため、元の画像のまま印刷します。",
   "ap.text1mb": "テキストファイルは1MBまで読み込めます。",
   "ap.textLoaded": "{name}をメモとして読み込みました（{n}文字）。",

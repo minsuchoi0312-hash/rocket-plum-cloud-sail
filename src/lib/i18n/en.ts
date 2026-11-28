@@ -844,6 +844,7 @@ export const en: Record<MsgKey, string> = {
   "ap.addedPhotos": "Added {n} photos.",
   "ap.onlyPdfImg": "Only PDF and photo (JPG/PNG) files can be opened.",
   "ap.presetApplied": "Applied '{name}' · {hint}",
+  "ap.presetOff": "Turned off '{name}' · back to your previous settings",
   "ap.idOriginal": "ID and passport photos stay original to keep natural skin tones.",
   "ap.text1mb": "Text files can be up to 1 MB.",
   "ap.textLoaded": "Loaded {name} as a memo ({n} characters).",

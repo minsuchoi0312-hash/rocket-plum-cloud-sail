@@ -134,6 +134,8 @@ export function PrinterPanel(props: PrinterPanelProps) {
   /* 앱(APK): 폰이 직접 찾고 보내니 PC 도우미 탭 · 상태는 감춘다 */
   const phone = useHelper && isPhoneHelper(helperUrl);
   const linkTabs = phone ? LINK_TABS.filter(([id]) => id !== "helper") : LINK_TABS;
+  /* 앱에선 저장된 프린터가 폰 도우미 연결(link "helper")로 기억돼 재연결 · 자가진단이 'helper' 탭을 고른다 → 와이파이 탭으로 보여 준다 */
+  const tab: LinkTab = phone && linkTab === "helper" ? "wifi" : linkTab;
   /* 첫 화면 밀도: '찾은 프린터'는 직접 검색했거나 2대 이상일 때만 펼친다(링크로 1대 연결 시 위 상태와 중복) */
   const [searched, setSearched] = useState(false);
   const showFound = foundList.length > 0 && (searched || foundList.length >= 2 || !selected);
@@ -204,12 +206,12 @@ export function PrinterPanel(props: PrinterPanelProps) {
                   key={id}
                   type="button"
                   role="tab"
-                  aria-selected={linkTab === id}
+                  aria-selected={tab === id}
                   onClick={() => {
                     setLinkTab(id);
                     if (id === "helper") setUseHelper(true);
                   }}
-                  className={`seg-btn ${linkTab === id ? "is-on" : ""}`}
+                  className={`seg-btn ${tab === id ? "is-on" : ""}`}
                 >
                   {icon}
                   <span>{t(key)}</span>
@@ -217,7 +219,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
               ))}
             </div>
 
-            {linkTab === "wifi" ? (
+            {tab === "wifi" ? (
               <div className="space-y-2.5">
                 {/* 토스식: 주요 행동은 큰 버튼 하나, 나머지(전체 검색 · 다른 네트워크 · IP 입력)는 아래 목록에 접어 둔다 */}
                 <button type="button" disabled={lanBusy || sending} onClick={() => {
@@ -349,7 +351,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
               </div>
             ) : null}
 
-            {linkTab === "usb" ? (
+            {tab === "usb" ? (
               <div className="space-y-2">
                 <button type="button" disabled={!usbOk} onClick={() => {
                   setSearched(true);
@@ -373,7 +375,7 @@ export function PrinterPanel(props: PrinterPanelProps) {
               </div>
             ) : null}
 
-            {linkTab === "helper" ? (
+            {tab === "helper" ? (
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm text-fg">
                   <input type="checkbox" checked={useHelper} onChange={(event) => setUseHelper(event.target.checked)} />

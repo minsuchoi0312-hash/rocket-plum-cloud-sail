@@ -3350,37 +3350,19 @@ html:not([data-palette]):not([data-theme="light"]) {
   }
 }
 
-/* 넓은 화면 두 줄 — 아래 끝을 딱 맞춘다.
-   짧은 쪽 줄의 큰 카드가 늘어난다: 오른쪽이 짧으면 인쇄하기(안의 타일도 같이 커짐), 왼쪽이 짧으면 프린터 카드 */
+/* 넓은 화면 두 줄 — 왼쪽이 짧으면 프린터 카드가 늘어나 아래 끝을 맞춘다.
+   오른쪽(내 프린터 · 인쇄하기 · 최근 인쇄)은 늘리지 않는다: 프린터가 연결돼 왼쪽에 상태 카드가 붙으면
+   왼쪽이 훨씬 길어져 인쇄하기 타일이 세로로 길쭉하게 늘어났다(2026-11-28). 타일은 늘 같은 모양. */
 @media (min-width: 840px) {
   .home-cols {
     align-items: stretch;
   }
 
-  .home-col > .home-printer,
-  .home-col > .home-print {
+  .home-col > .home-printer {
     flex: 1 1 auto;
   }
 
-  .home-print {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .home-print .doc-grid {
-    flex: 1 1 auto;
-    grid-auto-rows: 1fr;
-  }
-}
-
-@media (min-width: 840px) {
-  /* 늘어난 줄 높이를 타일이 그대로 채운다 (타일 사이 빈틈 없이) */
-  .home-print .doc-grid > li {
-    display: flex;
-  }
-
-  .home-print .doc-grid .doc-tile {
-    flex: 1 1 auto;
-    height: auto;
+  .home-col:has(> .home-print) {
+    align-self: start;
   }
 }

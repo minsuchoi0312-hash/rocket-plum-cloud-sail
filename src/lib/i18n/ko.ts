@@ -842,6 +842,7 @@ export const ko = {
   "ap.addedPhotos": "사진 {n}장을 넣었어요.",
   "ap.onlyPdfImg": "PDF나 사진(JPG·PNG) 파일만 열 수 있어요.",
   "ap.presetApplied": "'{name}' 설정을 적용했어요 · {hint}",
+  "ap.presetOff": "'{name}' 설정을 해제했어요 · 원래 설정으로 돌아갔어요",
   "ap.idOriginal": "증명·여권 사진은 피부색이 자연스럽게 나오도록 필터 없이 인쇄해요.",
   "ap.text1mb": "텍스트 파일은 1MB까지 불러올 수 있어요.",
   "ap.textLoaded": "{name} 파일을 메모로 불러왔어요 ({n}자).",

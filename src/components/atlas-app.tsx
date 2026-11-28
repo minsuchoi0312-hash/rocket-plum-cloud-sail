@@ -1789,7 +1789,26 @@ function AtlasMain() {
     /* 적용 직후 한 번: 바뀐 상태로 서명을 찍어 둔다 */
     if (presetMark && presetMark.sig === null) setPresetMark({ id: presetMark.id, sig: optionSig });
   }, [presetMark, optionSig]);
+  /* 빠른 설정을 누르기 전 설정 — 켜진 카드를 다시 누르면 이걸로 되돌린다(해제) */
+  const presetUndo = useRef<PresetSettings | null>(null);
   function applyPreset(preset: Preset) {
+    if (activePresetId === preset.id) {
+      const back = presetUndo.current;
+      presetUndo.current = null;
+      setPresetMark(null);
+      if (back) {
+        setGray(back.gray);
+        setDuplex(back.duplex);
+        setNup(back.nup);
+        setMargin(back.margin);
+        setSecureOn(back.secure);
+      }
+      /* 안내는 토스트로 — 카드 위 안내 줄이 생기면 카드가 밀려 다시 누르기(해제)가 빗나간다 */
+      toast(m("ap.presetOff", { name: preset.label }));
+      return;
+    }
+    /* 다른 빠른 설정에서 바로 옮겨 갈 때는 처음(빠른 설정 전) 상태를 그대로 둔다 */
+    if (!activePresetId) presetUndo.current = presetCurrent;
     setPresetMark({ id: preset.id, sig: null });
     const p = preset.settings;
     setGray(p.gray);
@@ -1797,7 +1816,7 @@ function AtlasMain() {
     setNup(p.nup);
     setMargin(p.margin);
     setSecureOn(p.secure);
-    setNotice(m("ap.presetApplied", { name: preset.label, hint: preset.hint }));
+    toast(m("ap.presetApplied", { name: preset.label, hint: preset.hint }));
     if (p.secure) {
       setAdvancedOpen(true);
       window.setTimeout(() => pinRef.current?.focus(), 80);
